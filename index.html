@@ -265,6 +265,9 @@
   .seq-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 3px; font-size: 12px; }
   .seq-chip button:hover { color: var(--accent); }
   .seqbar button[disabled] { opacity: 0.4; cursor: default; }
+  .seq-gap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .seq-gap input[type=range] { width: 90px; }
+  .seq-gap span { min-width: 44px; }
 
   /* Breeding modal */
   .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);
@@ -317,6 +320,7 @@
   <span class="seq-label">Sequence</span>
   <div class="seq-list" id="seqlist"></div>
   <button id="seqAdd" title="Append the current editor sound to the sequence">＋ Add current sound</button>
+  <label class="seq-gap" title="Silence inserted between each step">Gap <input type="range" id="seqGap" min="0" max="0.5" step="0.01" value="0"><span id="seqGapVal">0 ms</span></label>
   <span class="spacer"></span>
   <button id="seqPlay" class="primary">▶ Play sequence</button>
   <button id="seqExport">⬇ Export</button>
@@ -1951,6 +1955,12 @@ const MACROS = [
   { id: "m-punch", name: "Punch", left: "Soft", right: "Punchy",
     to: (v) => ({ attack: +(0.08 * (1 - v) + 0.001).toFixed(3), decay: +(0.4 - v * 0.28).toFixed(3), sustain: +((1 - v) * 0.6).toFixed(2), hold: +((1 - v) * 0.05).toFixed(3) }),
     from: () => clamp01(1 - state.sustain / 0.6) },
+  // Stretch/shrink the whole SFX in time. duration sets the buffer length; scaling
+  // decay+release too means percussive sounds actually ring longer, not just gain
+  // trailing silence. (Shares decay/release with Punch — last slider moved wins.)
+  { id: "m-length", name: "Length", left: "Short", right: "Long",
+    to: (v) => { const L = 0.1 * Math.pow(20, v); return { duration: +L.toFixed(2), decay: +Math.min(1, L * 0.45).toFixed(3), release: +Math.min(1.5, L * 0.4).toFixed(3) }; },
+    from: () => clamp01(Math.log(state.duration / 0.1) / Math.log(20)) },
   { id: "m-thick", name: "Thickness", left: "Thin", right: "Fat",
     to: (v) => ({ unison: Math.round(1 + v * 6), detune: +(v * 40).toFixed(1), subOsc: +(v * 0.6).toFixed(2), width: +(v * 0.9).toFixed(2) }),
     from: () => clamp01(state.subOsc / 0.6) },
@@ -2177,6 +2187,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !breedMo
 // snapshots the editor sound (a genome, like breeding) into an ordered list. Play/
 // Export render each step and concatenate the buffers gaplessly into one sound.
 let sequence = [];   // [{ genome, label }]
+let seqGap = 0;      // seconds of silence inserted between consecutive steps
 
 const seqList = document.getElementById("seqlist");
 const seqAddBtn = document.getElementById("seqAdd");
@@ -2219,17 +2230,27 @@ function moveSeq(from, to) {
   sequence.splice(to, 0, item);
   renderSeq();
 }
-// Render every step and concatenate the buffers back-to-back into one sound.
+// Render every step and concatenate into one sound, with `seqGap` seconds of
+// silence between consecutive steps (Float32Array is zero-filled, so the gap
+// regions are silent automatically).
 function renderSequenceBuffers() {
   const parts = sequence.map((s) => withState(s.genome, () => render()));
-  const total = parts.reduce((n, r) => n + r.L.length, 0);
+  const gapN = Math.round(seqGap * SR);
+  const total = parts.reduce((n, r) => n + r.L.length, 0) + gapN * Math.max(0, parts.length - 1);
   const L = new Float32Array(total), R = new Float32Array(total);
   let off = 0;
-  for (const r of parts) { L.set(r.L, off); R.set(r.R, off); off += r.L.length; }
+  parts.forEach((r, i) => {
+    L.set(r.L, off); R.set(r.R, off);
+    off += r.L.length + (i < parts.length - 1 ? gapN : 0);
+  });
   return { L, R };
 }
 function playSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); drawScope(L, R); playBuffer(L, R); }
 function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, "crunchyfx-sequence-" + sequence.length + "steps.wav"); }
+
+const seqGapInput = document.getElementById("seqGap");
+const seqGapVal = document.getElementById("seqGapVal");
+seqGapInput.addEventListener("input", () => { seqGap = +seqGapInput.value; seqGapVal.textContent = Math.round(seqGap * 1000) + " ms"; });
 
 seqAddBtn.addEventListener("click", () => { sequence.push({ genome: genomeFromState(), label: seqLabel }); renderSeq(); });
 seqPlayBtn.addEventListener("click", playSequence);
