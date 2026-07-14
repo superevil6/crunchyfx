@@ -1,0 +1,3 @@
+# Keep Claude's context/notes out of the repo. Everything else is tracked.
+CLAUDE.md
+.claude/

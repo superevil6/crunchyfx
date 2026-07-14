@@ -1,0 +1,2007 @@
+<title>crunchyfx — sound effect generator</title>
+<style>
+  :root {
+    --bg: #14121a;
+    --panel: #1e1b28;
+    --panel2: #262231;
+    --ink: #e8e4f0;
+    --muted: #9a92ad;
+    --accent: #ff7a45;
+    --accent2: #45d0ff;
+    --line: #322c40;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 70% -10%, #241f30, var(--bg));
+    color: var(--ink);
+    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 20px 24px 8px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+  h1 b { color: var(--accent); }
+  .tag { color: var(--muted); font-size: 13px; }
+  main {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    padding: 14px 24px 32px;
+    max-width: 1200px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px 16px;
+  }
+  .panel h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent2);
+    margin: 0 0 12px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 88px 1fr 52px;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .row label { color: var(--muted); font-size: 12px; }
+  .row output {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--ink);
+    font-size: 12px;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 3px;
+    background: var(--panel2);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid #1a1622;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid #1a1622;
+  }
+  select {
+    width: 100%;
+    background: var(--panel2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 8px;
+    font: inherit;
+  }
+  .waverow {
+    display: grid;
+    grid-template-columns: 88px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .wavelock {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--muted); cursor: pointer;
+    user-select: none;
+  }
+  .wavelock input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 24px;
+    background: rgba(20,18,26,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  button {
+    background: var(--panel2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font: inherit;
+    cursor: pointer;
+    transition: background .12s, transform .05s;
+  }
+  button:hover { background: #302a3d; }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: var(--accent);
+    color: #201005;
+    border-color: transparent;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #ff8a5c; }
+  button.accent2 { border-color: var(--accent2); color: var(--accent2); }
+  .spacer { flex: 1; }
+  canvas {
+    width: 100%;
+    height: 90px;
+    background: var(--panel2);
+    border-radius: 8px;
+    display: block;
+  }
+  .hint { color: var(--muted); font-size: 12px; }
+  kbd {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font: 11px ui-monospace, monospace;
+  }
+  .presetbar { display: flex; flex-direction: column; gap: 8px; }
+  .preset-section { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  .preset-section > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    padding: 9px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.4px;
+    color: var(--ink); display: flex; align-items: center; gap: 8px;
+  }
+  .preset-section > summary::-webkit-details-marker { display: none; }
+  .preset-section > summary::before {
+    content: "▶"; font-size: 9px; color: var(--muted); transition: transform 0.12s ease;
+  }
+  .preset-section[open] > summary::before { transform: rotate(90deg); }
+  .preset-section > summary:hover { color: var(--accent); }
+  .preset-section .sec-count { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .sec-buttons { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 12px; }
+  .presetbar button { padding: 6px 10px; font-size: 12px; }
+  .presetsearch { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  #presetSearch {
+    width: 280px; max-width: 100%;
+    background: var(--panel2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 10px; font: inherit;
+  }
+  #presetSearch::placeholder { color: var(--muted); }
+  #presetSearch:focus { outline: none; border-color: var(--accent2); }
+
+  /* Crunchiness macro slider */
+  .macro {
+    max-width: 1200px;
+    margin: 16px 24px 0;
+    background: linear-gradient(90deg, #221d2b, #2c2233);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+  }
+  .macro-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent); font-weight: 600; margin-bottom: 10px;
+  }
+  .macro-row { display: flex; align-items: center; gap: 14px; }
+  .macro-row + .macro-row { margin-top: 10px; }
+  .macro-name { min-width: 104px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .macro-end { font-size: 12px; color: var(--muted); min-width: 56px; }
+  .macro-end-r { text-align: right; }
+  #crunch { flex: 1; height: 6px; }
+  #crunch::-webkit-slider-thumb { width: 20px; height: 20px; }
+  #crunch::-moz-range-thumb { width: 20px; height: 20px; }
+
+  /* History rail (right side) */
+  body { padding-right: 300px; }
+  #history {
+    position: fixed; top: 0; right: 0;
+    width: 284px; height: 100vh;
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    z-index: 6;
+  }
+  .hist-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 16px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hist-head h2 {
+    margin: 0; font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--accent2);
+  }
+  .hist-head button { padding: 4px 9px; font-size: 11px; }
+  #histlist { flex: 1; overflow-y: auto; padding: 10px; }
+  .hist-empty { color: var(--muted); font-size: 12px; padding: 14px 6px; line-height: 1.6; }
+  .hist-item {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 8px; align-items: center;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px; margin-bottom: 8px;
+  }
+  .hist-thumb { width: 74px; height: 34px; background: #14121a; border-radius: 5px; display: block; }
+  .hist-meta { min-width: 0; }
+  .hist-label { display: block; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .hist-sub { display: block; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hist-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .hist-actions button { flex: 1; padding: 5px 0; font-size: 12px; }
+  .hist-item.silent { opacity: 0.6; border-color: #7a3b3b; }
+  .hist-item.silent .hist-label { color: #ff8a8a; }
+  #normbtn.off { opacity: 0.55; }
+  @media (max-width: 920px) {
+    body { padding-right: 0; }
+    #history {
+      position: static; width: auto; height: auto;
+      border-left: none; border-top: 1px solid var(--line);
+    }
+    #histlist { max-height: 320px; }
+  }
+</style>
+
+<header>
+  <h1>crunchy<b>fx</b></h1>
+  <span class="tag">a from-scratch sound effect generator</span>
+</header>
+
+<div class="controls">
+  <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
+  <button id="rand" class="accent2">🎲 Randomize</button>
+  <button id="export">⬇ Export WAV</button>
+  <span class="spacer"></span>
+  <button id="save">Save preset</button>
+  <button id="load">Load preset</button>
+  <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
+  <input type="file" id="loadfile" accept="application/json" hidden>
+</div>
+
+<div style="padding: 14px 24px 0; max-width: 1200px;">
+  <canvas id="scope" width="1160" height="90"></canvas>
+  <div class="presetsearch">
+    <input type="text" id="presetSearch" placeholder="Search presets… (e.g. fire)" autocomplete="off" spellcheck="false">
+    <span id="presetCount" class="hint"></span>
+  </div>
+  <div class="presetbar" id="presets" style="margin-top:10px"></div>
+</div>
+
+<div class="macro" id="macros">
+  <div class="macro-title">Quick shape — one slider each moves several controls at once</div>
+</div>
+
+<main id="panels"></main>
+
+<aside id="history">
+  <div class="hist-head">
+    <h2>History</h2>
+    <button id="clearhist">Clear</button>
+  </div>
+  <div id="histlist"></div>
+</aside>
+
+<script>
+"use strict";
+
+// ---------- Parameter model ----------
+// Each param: key, label, min, max, step, default, unit, group.
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck"];
+const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
+
+const PARAMS = [
+  // Oscillator
+  ["wave",       "Waveform",   0, WAVES.length - 1, 1, 2, "",   "Oscillator", "wave"],
+  ["freq",       "Frequency",  20, 4000, 1, 440, "Hz", "Oscillator"],
+  ["sweep",      "Pitch sweep",-1, 1, 0.01, 0, "",  "Oscillator"],
+  ["vibDepth",   "Vibrato",    0, 1, 0.01, 0, "",   "Oscillator"],
+  ["vibRate",    "Vib rate",   0, 40, 0.1, 6, "Hz", "Oscillator"],
+  ["unison",     "Unison",     1, 7, 1, 1, "v",     "Oscillator"],
+  ["detune",     "Detune",     0, 50, 0.5, 12, "ct","Oscillator"],
+  // Pulse width + PWM (applies to the pulse wave); pluck damping (Karplus-Strong)
+  ["pulseWidth", "Pulse width",0.05, 0.95, 0.01, 0.25, "", "Oscillator"],
+  ["pwmDepth",   "PWM depth",  0, 0.45, 0.01, 0, "",  "Oscillator"],
+  ["pwmRate",    "PWM rate",   0, 20, 0.1, 2, "Hz",   "Oscillator"],
+  ["pluckDamp",  "Pluck damp", 0, 1, 0.01, 0.5, "",   "Oscillator"],
+  // Mix
+  ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
+  ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
+  ["ringMod",    "Ring mod",   0, 1, 0.01, 0, "",   "Mix"],
+  ["ringFreq",   "Ring freq",  0, 2000, 1, 200, "Hz","Mix"],
+  // Body: a deep sine layer with its own long decay + pitch drop, for weight/depth
+  ["boom",       "Boom level", 0, 1, 0.01, 0, "",    "Body"],
+  ["boomFreq",   "Boom freq",  25, 200, 1, 80, "Hz", "Body"],
+  ["boomDrop",   "Boom drop",  0, 3, 0.01, 0.6, "oct","Body"],
+  ["boomDecay",  "Boom decay", 0.02, 1.2, 0.01, 0.25, "s", "Body"],
+  // Amp envelope
+  ["attack",     "Attack",     0, 0.5, 0.001, 0.005, "s", "Amp Envelope"],
+  ["decay",      "Decay",      0, 1, 0.001, 0.12, "s",  "Amp Envelope"],
+  ["sustain",    "Sustain",    0, 1, 0.01, 0.0, "",     "Amp Envelope"],
+  ["release",    "Release",    0, 1.5, 0.001, 0.1, "s", "Amp Envelope"],
+  ["hold",       "Hold",       0, 1, 0.001, 0.02, "s",  "Amp Envelope"],
+  // Filter
+  ["filterMode", "Filter type",0, FILTER_MODES.length - 1, 1, 0, "", "Filter", "enum", FILTER_MODES],
+  ["cutoff",     "Cutoff",     40, 12000, 1, 8000, "Hz", "Filter"],
+  ["reso",       "Resonance",  0, 0.95, 0.01, 0.1, "",   "Filter"],
+  ["filtEnv",    "Filter env", -1, 1, 0.01, 0, "",       "Filter"],
+  // Crunch
+  ["drive",      "Drive",      0, 1, 0.01, 0.1, "",  "Crunch"],
+  ["driveOS",    "Drive OS",   1, 8, 1, 1, "x",     "Crunch"],
+  ["bitcrush",   "Bit depth",  1, 16, 1, 16, "bit", "Crunch"],
+  ["downsample", "Downsample", 1, 32, 1, 1, "x",    "Crunch"],
+  // Space
+  ["width",      "Stereo width",0, 1, 0.01, 0.4, "", "Space"],
+  ["reverb",     "Reverb mix", 0, 1, 0.01, 0, "",    "Space"],
+  ["reverbSize", "Reverb size",0, 1, 0.01, 0.6, "",  "Space"],
+  ["reverbTone", "Reverb tone",0, 1, 0.01, 0.5, "",  "Space"],
+  ["delay",      "Delay mix",  0, 1, 0.01, 0, "",     "Space"],
+  ["delayTime",  "Delay time", 0.01, 0.5, 0.005, 0.15, "s", "Space"],
+  ["delayFb",    "Delay fbk",  0, 0.9, 0.01, 0.35, "", "Space"],
+  // Burst / full-auto: retrigger the whole shot N times at a fixed rate
+  ["repeat",     "Shots",      1, 12, 1, 1, "x",    "Burst"],
+  ["rate",       "Fire rate",  1, 30, 0.5, 10, "Hz","Burst"],
+  // Output
+  ["gain",       "Gain",       0, 1, 0.01, 0.7, "",     "Output"],
+  ["duration",   "Duration",   0.05, 2, 0.01, 0.4, "s", "Output"],
+];
+
+const state = {};
+for (const p of PARAMS) state[p[0]] = p[5];
+
+let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
+
+const SR = 44100;
+
+// ---------- DSP helpers ----------
+// PolyBLEP: a small correction added at each discontinuity to band-limit the
+// waveform, removing the harsh aliasing that makes naive saw/square sound "8-bit".
+function polyBlep(t, dt) {
+  if (t < dt) { t /= dt; return t + t - t * t - 1; }
+  if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
+  return 0;
+}
+
+// waveform: phase in [0,1), dt = freq/SR (needed for band-limiting).
+// duty is the pulse-wave width (0.05..0.95); ignored by the other shapes.
+function waveform(type, phase, dt, duty) {
+  switch (type) {
+    case 0: return Math.sin(2 * Math.PI * phase);            // sine (inherently band-limited)
+    case 1: {                                                // square (band-limited)
+      let v = phase < 0.5 ? 1 : -1;
+      v += polyBlep(phase, dt);
+      v -= polyBlep((phase + 0.5) % 1, dt);
+      return v;
+    }
+    case 2: {                                                // saw (band-limited)
+      return (2 * phase - 1) - polyBlep(phase, dt);
+    }
+    case 3: return 4 * Math.abs(phase - 0.5) - 1;            // triangle (negligible aliasing)
+    case 4: {                                                // pulse — variable duty (PWM), band-limited, DC-centered
+      const D = duty;
+      let v = phase < D ? 1 : -1;
+      v += polyBlep(phase, dt);
+      v -= polyBlep((phase + (1 - D)) % 1, dt);
+      return v - (2 * D - 1);                                // remove the pulse's DC offset
+    }
+    case 5: {                                                // FM — metallic / electric-piano character
+      const ratio = 2;                                       // integer keeps it periodic (no wrap click)
+      const index = 2.2 * Math.max(0.15, 1 - dt * 1.8);      // taper modulation up high to limit aliasing
+      return Math.sin(2 * Math.PI * phase + index * Math.sin(2 * Math.PI * ratio * phase));
+    }
+    case 6: {                                                // organ — additive harmonics, truly band-limited
+      const amps = [1, 0.6, 0.35, 0.5, 0.12, 0.3, 0.1, 0.22];
+      let v = 0, norm = 0;
+      for (let k = 0; k < amps.length; k++) {
+        const h = k + 1;
+        if (h * dt >= 0.5) break;                            // stop before Nyquist -> no aliasing
+        v += amps[k] * Math.sin(2 * Math.PI * h * phase);
+        norm += amps[k];
+      }
+      return norm > 0 ? v / norm : 0;
+    }
+    case 7: {                                                // half-sine — rectified, hollow/reedy
+      const s = Math.max(0, Math.sin(2 * Math.PI * phase));
+      return (s - 0.3183) * 1.4;                             // subtract mean (1/pi) to remove DC
+    }
+    default: return 0;
+  }
+}
+
+// Freeverb-style reverb applied in place to stereo buffers. 8 parallel damped
+// combs + 4 series allpass per channel; the right channel's delays are stretched
+// (stereospread) to decorrelate the two channels -> a wide, deep tail.
+function reverbProcess(L, R, size, tone, wet) {
+  const n = L.length;
+  const fb = 0.7 + size * 0.28;         // room size -> comb feedback (0.7..0.98)
+  const damp = (1 - tone) * 0.4;        // tone -> high-freq damping in the tail
+  const combT = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+  const apT = [556, 441, 341, 225];
+  const spread = 23;
+  const fixedGain = 0.015;
+  const src = [Float32Array.from(L), Float32Array.from(R)];
+  const dst = [L, R];
+  for (let c = 0; c < 2; c++) {
+    const off = c === 1 ? spread : 0;
+    const combBuf = combT.map(len => new Float32Array(len + off));
+    const combIdx = combT.map(() => 0);
+    const combLP = combT.map(() => 0);
+    const apBuf = apT.map(len => new Float32Array(len + off));
+    const apIdx = apT.map(() => 0);
+    const dry = src[c], out = dst[c];
+    for (let i = 0; i < n; i++) {
+      const input = dry[i] * fixedGain;
+      let mono = 0;
+      for (let k = 0; k < combBuf.length; k++) {
+        const buf = combBuf[k], idx = combIdx[k];
+        const y = buf[idx];
+        combLP[k] = y * (1 - damp) + combLP[k] * damp;   // lowpass in feedback path
+        buf[idx] = input + combLP[k] * fb;
+        combIdx[k] = idx + 1 === buf.length ? 0 : idx + 1;
+        mono += y;
+      }
+      for (let k = 0; k < apBuf.length; k++) {
+        const buf = apBuf[k], idx = apIdx[k];
+        const bufout = buf[idx];
+        const y = bufout - mono;
+        buf[idx] = mono + bufout * 0.5;
+        apIdx[k] = idx + 1 === buf.length ? 0 : idx + 1;
+        mono = y;
+      }
+      out[i] = dry[i] + wet * mono;
+    }
+  }
+}
+
+// ---------- Audibility ----------
+// A sound whose intrinsic peak is below this floor (~ -66 dB) is treated as
+// inaudible: normalization can't rescue it, so we re-roll or flag it instead.
+const AUDIBLE_FLOOR = 1e-3;  // below this (~ -60 dB) a sound counts as inaudible
+const NORM_TARGET = 0.9;     // loudness-normalize quiet sounds up to this peak...
+const NORM_MAX_BOOST = 300;  // ...capped at ~50 dB makeup so gated silence can't become hiss
+let normalizeOut = true;    // toggled by the Normalize button
+
+// ---------- DSP: render state -> stereo {L, R, rawPeak} ----------
+function render() {
+  const dur = state.duration;
+  const n = Math.max(1, Math.floor(dur * SR));
+  const L = new Float32Array(n);
+  const R = new Float32Array(n);
+
+  const susLevel = state.sustain;
+  const atk = state.attack, dec = state.decay, hold = state.hold, rel = state.release;
+  // burst: retrigger the shot `repeat` times at `rate` Hz. `slot` is one shot's
+  // length; each shot gets its own local time so the envelope, pitch sweep and
+  // filter env all re-fire per shot instead of once across the whole buffer.
+  const repeat = Math.max(1, Math.round(state.repeat || 1));
+  const rate = Math.max(0.5, state.rate || 10);
+  const slot = repeat > 1 ? 1 / rate : dur;
+  const relStart = Math.max(atk + hold + dec, slot - rel);
+
+  const baseFreq = state.freq;
+  const sweep = state.sweep;
+  const waveType = Math.round(state.wave);
+  const baseCut = state.cutoff;
+  const filtEnv = state.filtEnv;
+  const fmode = Math.round(state.filterMode);   // 0 LP, 1 HP, 2 BP, 3 notch, 4 peak
+
+  // deterministic LCG so exports are reproducible
+  let seed = 22222;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return (seed / 4294967296) * 2 - 1; };
+
+  // unison: V detuned voices, each with its own phase + equal-power stereo pan.
+  // Detune (beating) + stereo spread is what turns one thin voice into a thick one.
+  const V = Math.max(1, Math.round(state.unison));
+  const width = state.width;
+  const phases = new Float32Array(V);
+  const ratios = new Float32Array(V);
+  const panL = new Float32Array(V);
+  const panR = new Float32Array(V);
+  const voiceGain = 1 / Math.sqrt(V);
+  for (let v = 0; v < V; v++) {
+    phases[v] = V > 1 ? v / V : 0;                          // spread start phases
+    const d = V > 1 ? (v / (V - 1)) * 2 - 1 : 0;            // -1..1 across the voices
+    ratios[v] = Math.pow(2, (d * state.detune) / 1200);    // cents -> frequency ratio
+    const pan = d * width;                                  // spread across the stereo field
+    panL[v] = Math.cos((pan + 1) * Math.PI / 4);
+    panR[v] = Math.sin((pan + 1) * Math.PI / 4);
+  }
+
+  let subPhase = 0, vibPhase = 0;
+  let ic1L = 0, ic2L = 0, ic1R = 0, ic2R = 0;   // per-channel TPT filter state
+  let ringPhase = 0, pwmPhase = 0;              // ring-mod carrier + PWM LFO phases
+  let xprevL = 0, xprevR = 0;                   // previous pre-drive sample (for oversampling)
+  // Karplus-Strong plucked string (wave "pluck"): a noise-filled delay line whose
+  // averaging feedback both sets the pitch (length = SR/freq) and damps the tail.
+  const isPluck = waveType === 8;
+  const ksBuf = isPluck ? new Float32Array(2206) : null;   // max length at 20 Hz
+  let ksN = 0, ksIdx = 0, ksPrevShot = -1;
+  const ksRho = 0.999 - 0.02 * state.pluckDamp;            // string decay (higher damp -> shorter)
+
+  // Body layer: a clean low sine with its OWN exponential decay and a downward
+  // pitch drop, independent of the crack envelope. Because it rings longer than the
+  // transient (and is added after the drive stage so it isn't squashed), it's what
+  // gives the shot chest-thump depth instead of just a short click.
+  const boom = state.boom, boomF0 = state.boomFreq;
+  const boomDrop = state.boomDrop, boomDec = Math.max(0.01, state.boomDecay);
+  let boomPhase = 0, prevShot = -1;
+
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    const shotIdx = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
+    const lt = t - shotIdx * slot;                 // time since this shot fired
+    const prog = slot > 0 ? Math.min(1, lt / slot) : 0;
+
+    const sweepMul = Math.pow(2, sweep * 4 * prog);
+    const vib = state.vibDepth * Math.sin(vibPhase);
+    const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5);
+    // keep the fundamental in the reproducible band so upward sweeps don't push it
+    // ultrasonic (which aliases to garbage / near-silence instead of a real tone)
+    const fOsc = Math.min(f, 20000);
+    vibPhase += 2 * Math.PI * state.vibRate / SR;
+
+    // pulse-width for this sample: base width wobbled by the PWM LFO
+    let duty = state.pulseWidth;
+    if (state.pwmDepth > 0) {
+      pwmPhase += state.pwmRate / SR; if (pwmPhase >= 1) pwmPhase -= 1;
+      duty += state.pwmDepth * Math.sin(2 * Math.PI * pwmPhase);
+      if (duty < 0.05) duty = 0.05; else if (duty > 0.95) duty = 0.95;
+    }
+
+    let oscL = 0, oscR = 0;
+    if (isPluck) {
+      // (re-)excite the delay line at each shot, then pluck one sample out of it
+      if (shotIdx !== ksPrevShot) {
+        ksPrevShot = shotIdx;
+        ksN = Math.min(2205, Math.max(2, Math.round(SR / Math.max(20, fOsc))));
+        ksIdx = 0;
+        for (let j = 0; j < ksN; j++) ksBuf[j] = rnd();
+      }
+      const y = ksBuf[ksIdx];
+      const nxt = ksIdx + 1 >= ksN ? 0 : ksIdx + 1;
+      ksBuf[ksIdx] = (y + ksBuf[nxt]) * 0.5 * ksRho;   // lowpass-in-the-loop = damping
+      ksIdx = nxt;
+      oscL = y; oscR = y;                              // mono, centered (ignores unison)
+    } else {
+      // sum unison voices into L/R
+      for (let v = 0; v < V; v++) {
+        const dt = (fOsc * ratios[v]) / SR;
+        let ph = phases[v] + dt;
+        if (ph >= 1) ph -= 1;
+        phases[v] = ph;
+        const w = waveform(waveType, ph, dt, duty);
+        oscL += w * panL[v];
+        oscR += w * panR[v];
+      }
+      oscL *= voiceGain; oscR *= voiceGain;
+    }
+
+    // sub oscillator: clean sine an octave down, centered, for weight
+    if (state.subOsc > 0) {
+      subPhase += (fOsc * 0.5) / SR; if (subPhase >= 1) subPhase -= 1;
+      const sub = Math.sin(2 * Math.PI * subPhase) * state.subOsc;
+      const k = 1 - state.subOsc * 0.5;
+      oscL = oscL * k + sub; oscR = oscR * k + sub;
+    }
+
+    // noise (centered)
+    let sL = oscL, sR = oscR;
+    if (state.noise > 0) {
+      const nz = rnd() * state.noise, k = 1 - state.noise;
+      sL = oscL * k + nz; sR = oscR * k + nz;
+    }
+
+    // ring modulation: multiply the source by a sine carrier -> inharmonic,
+    // metallic/clangy partials. Dry/wet blended by the mix amount.
+    if (state.ringMod > 0) {
+      ringPhase += state.ringFreq / SR; if (ringPhase >= 1) ringPhase -= 1;
+      const rm = Math.sin(2 * Math.PI * ringPhase), mix = state.ringMod;
+      sL = sL * (1 - mix) + sL * rm * mix;
+      sR = sR * (1 - mix) + sR * rm * mix;
+    }
+
+    // amp envelope (AHDSR-ish)
+    let env;
+    if (lt < atk) env = atk > 0 ? lt / atk : 1;
+    else if (lt < atk + hold) env = 1;
+    else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); env = 1 - (1 - susLevel) * d; }
+    else if (lt < relStart) env = susLevel;
+    else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * (1 - r); }
+    if (env < 0) env = 0;
+    sL *= env; sR *= env;
+
+    // resonant low-pass — TPT / zero-delay-feedback state-variable filter
+    // (Zavalishin). Unconditionally stable at ALL cutoffs; the old Chamberlin SVF
+    // self-oscillated at Nyquist once cutoff neared SR/4, which turned bright sounds
+    // into 22 kHz buzz that plays back as clicks/silence.
+    let cut = baseCut * Math.pow(2, filtEnv * 3 * prog);
+    cut = Math.min(Math.max(cut, 20), 20000);
+    const g = Math.tan(Math.PI * cut / SR);
+    const k = Math.max(2 - 1.9 * state.reso, 0.1);       // damping = 1/Q
+    const a1 = 1 / (1 + g * (g + k)), a2 = g * a1, a3 = g * a2;
+    // The SVF yields all responses at once: v2 = LP, v1 = BP, hp = HP.
+    // notch = HP + LP, peak = LP - HP. fmode selects which one we keep.
+    {
+      const x = sL;
+      const v3 = x - ic2L;
+      const v1 = a1 * ic1L + a2 * v3;
+      const v2 = ic2L + a2 * ic1L + a3 * v3;
+      ic1L = 2 * v1 - ic1L; ic2L = 2 * v2 - ic2L;
+      const hp = x - k * v1 - v2;
+      sL = fmode === 0 ? v2 : fmode === 1 ? hp : fmode === 2 ? v1 : fmode === 3 ? hp + v2 : v2 - hp;
+    }
+    {
+      const x = sR;
+      const v3 = x - ic2R;
+      const v1 = a1 * ic1R + a2 * v3;
+      const v2 = ic2R + a2 * ic1R + a3 * v3;
+      ic1R = 2 * v1 - ic1R; ic2R = 2 * v2 - ic2R;
+      const hp = x - k * v1 - v2;
+      sR = fmode === 0 ? v2 : fmode === 1 ? hp : fmode === 2 ? v1 : fmode === 3 ? hp + v2 : v2 - hp;
+    }
+
+    // crunch: tanh drive + bitcrush
+    if (state.drive > 0) {
+      const d = 1 + state.drive * 40, norm = Math.tanh(d), amp = 0.6 + 0.4 * (1 - state.drive);
+      const OS = Math.max(1, Math.round(state.driveOS));
+      if (OS <= 1) {
+        sL = Math.tanh(sL * d) / norm * amp;
+        sR = Math.tanh(sR * d) / norm * amp;
+      } else {
+        // oversample the nonlinearity: interpolate from the previous input toward
+        // this one, shape each subsample, then average back down. The drive's new
+        // harmonics land above the base rate's Nyquist, so far less aliasing folds
+        // back — a cleaner crunch. Free here because rendering is offline.
+        const pL = xprevL, pR = xprevR;
+        let accL = 0, accR = 0;
+        for (let s = 1; s <= OS; s++) {
+          const f = s / OS;
+          accL += Math.tanh((pL + (sL - pL) * f) * d);
+          accR += Math.tanh((pR + (sR - pR) * f) * d);
+        }
+        xprevL = sL; xprevR = sR;
+        sL = accL / OS / norm * amp;
+        sR = accR / OS / norm * amp;
+      }
+    }
+    const bits = Math.round(state.bitcrush);
+    if (bits < 16) {
+      const levels = Math.pow(2, bits);
+      sL = Math.round(sL * levels) / levels;
+      sR = Math.round(sR * levels) / levels;
+    }
+
+    // add the deep body last, using local time so it re-fires per shot in bursts
+    if (boom > 0) {
+      if (shotIdx !== prevShot) { boomPhase = 0; prevShot = shotIdx; }  // retrigger phase
+      const bEnv = Math.exp(-lt / boomDec);                              // own long decay
+      const bf = boomF0 * Math.pow(2, -boomDrop * Math.min(1, lt / boomDec)); // pitch drop
+      boomPhase += bf / SR; if (boomPhase >= 1) boomPhase -= 1;
+      const b = Math.sin(2 * Math.PI * boomPhase) * bEnv * boom;
+      sL += b; sR += b;
+    }
+
+    L[i] = sL; R[i] = sR;
+  }
+
+  // downsample crunch (sample-and-hold)
+  const ds = Math.round(state.downsample);
+  if (ds > 1) {
+    let hL = 0, hR = 0;
+    for (let i = 0; i < n; i++) {
+      if (i % ds === 0) { hL = L[i]; hR = R[i]; }
+      L[i] = hL; R[i] = hR;
+    }
+  }
+
+  // feedback delay (per channel), then reverb -> space & depth
+  if (state.delay > 0) {
+    const dt = Math.max(1, Math.round(state.delayTime * SR));
+    const fbk = state.delayFb, wet = state.delay;
+    for (const buf of [L, R]) {
+      const acc = new Float32Array(n);
+      for (let i = 0; i < n; i++) acc[i] = buf[i] + (i >= dt ? fbk * acc[i - dt] : 0);
+      for (let i = dt; i < n; i++) buf[i] += wet * acc[i - dt];
+    }
+  }
+  if (state.reverb > 0) reverbProcess(L, R, state.reverbSize, state.reverbTone, state.reverb);
+
+  // measure intrinsic peak (before gain) for loudness normalization + audibility
+  let rawPeak = 0;
+  for (let i = 0; i < n; i++) {
+    const a = Math.abs(L[i]); if (a > rawPeak) rawPeak = a;
+    const b = Math.abs(R[i]); if (b > rawPeak) rawPeak = b;
+  }
+  // normalize quiet-but-present sounds up to a consistent level (capped so we never
+  // amplify near-silence into hiss); the user gain then trims from there.
+  let norm = 1;
+  if (normalizeOut && rawPeak > AUDIBLE_FLOOR) norm = Math.min(NORM_TARGET / rawPeak, NORM_MAX_BOOST);
+
+  // gain + short fade-out, then clip
+  const g = state.gain * norm;
+  const fade = Math.min(256, Math.floor(n * 0.02));
+  for (let i = 0; i < n; i++) {
+    let l = L[i] * g, r = R[i] * g;
+    if (i > n - fade) { const kf = (n - i) / fade; l *= kf; r *= kf; }
+    L[i] = Math.max(-1, Math.min(1, l));
+    R[i] = Math.max(-1, Math.min(1, r));
+  }
+  return { L, R, rawPeak };
+}
+
+// ---------- Audio playback ----------
+let audioCtx = null;
+function ensureCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function playBuffer(L, R) {
+  const ctx = ensureCtx();
+  const buf = ctx.createBuffer(2, L.length, SR);
+  buf.copyToChannel(L, 0);
+  buf.copyToChannel(R, 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start();
+}
+
+// Render the current state, play it, draw it, and log it to history.
+function play(label) {
+  const { L, R, rawPeak } = render();
+  const audible = rawPeak > AUDIBLE_FLOOR;
+  drawScope(L, R);
+  if (!audible) markScopeSilent();
+  playBuffer(L, R);
+  addHistory(label || "Edit", L, audible);
+}
+
+// Run fn() with the global `state` temporarily replaced by a snapshot, then
+// restore it. Lets us render/export any past sound without disturbing the editor.
+function withState(snap, fn) {
+  const backup = {};
+  for (const p of PARAMS) backup[p[0]] = state[p[0]];
+  for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
+  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; }
+}
+
+// ---------- WAV export (16-bit stereo PCM) ----------
+function encodeWav(L, R) {
+  const frames = L.length;
+  const dataBytes = frames * 2 * 2;   // 2 channels * 16-bit
+  const buffer = new ArrayBuffer(44 + dataBytes);
+  const view = new DataView(buffer);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);        // PCM
+  view.setUint16(22, 2, true);        // stereo
+  view.setUint32(24, SR, true);
+  view.setUint32(28, SR * 4, true);   // byte rate = SR * blockAlign
+  view.setUint16(32, 4, true);        // block align = 2ch * 2 bytes
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, dataBytes, true);
+  let off = 44;
+  const enc = (s) => { s = Math.max(-1, Math.min(1, s)); return s < 0 ? s * 0x8000 : s * 0x7FFF; };
+  for (let i = 0; i < frames; i++) {
+    view.setInt16(off, enc(L[i]), true); off += 2;
+    view.setInt16(off, enc(R[i]), true); off += 2;
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+function downloadWav(L, R, name) {
+  const blob = encodeWav(L, R);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function exportWav() {
+  const { L, R } = render();
+  downloadWav(L, R, "crunchyfx-" + Date.now() + ".wav");
+}
+
+// ---------- History ----------
+// Each entry is a snapshot of the parameters (not the audio) plus a tiny waveform
+// thumbnail, so it's cheap to keep many and you can re-render / tweak any of them.
+const histList = document.getElementById("histlist");
+const histItems = [];
+let histSeq = 0;
+const HIST_MAX = 50;
+
+function snapshotState() {
+  const s = {};
+  for (const p of PARAMS) s[p[0]] = state[p[0]];
+  return s;
+}
+function sameState(a, b) {
+  for (const p of PARAMS) if (a[p[0]] !== b[p[0]]) return false;
+  return true;
+}
+function thumbPeaks(L) {
+  const N = 96, out = new Float32Array(N), step = L.length / N;
+  for (let i = 0; i < N; i++) out[i] = L[Math.floor(i * step)] || 0;
+  return out;
+}
+function addHistory(label, L, audible = true) {
+  const snap = snapshotState();
+  if (histItems.length && sameState(histItems[0].state, snap)) return; // skip exact repeats
+  histItems.unshift({
+    id: ++histSeq, label, state: snap, peaks: thumbPeaks(L), silent: !audible,
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  });
+  if (histItems.length > HIST_MAX) histItems.pop();
+  renderHistory();
+}
+function drawThumb(canvas, peaks) {
+  const c = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  c.clearRect(0, 0, w, h);
+  c.strokeStyle = "#ff7a45";
+  c.lineWidth = 1;
+  c.beginPath();
+  const step = w / peaks.length;
+  for (let i = 0; i < peaks.length; i++) {
+    const y = h / 2 - peaks[i] * (h / 2 - 2);
+    i === 0 ? c.moveTo(i * step, y) : c.lineTo(i * step, y);
+  }
+  c.stroke();
+}
+function replaySnapshot(snap) {
+  withState(snap, () => { const { L, R } = render(); drawScope(L, R); playBuffer(L, R); });
+}
+function loadSnapshot(snap) {
+  const keepWave = state.wave;
+  for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
+  if (waveLocked) state.wave = keepWave;
+  syncUI();
+  const { L, R } = render(); drawScope(L, R); playBuffer(L, R);
+}
+function renderHistory() {
+  if (!histItems.length) {
+    histList.innerHTML = '<div class="hist-empty">No sounds yet.<br>Click a preset, hit Randomize, or tweak a slider — every sound you generate lands here.</div>';
+    return;
+  }
+  histList.innerHTML = "";
+  for (const item of histItems) {
+    const el = document.createElement("div");
+    el.className = "hist-item" + (item.silent ? " silent" : "");
+    el.innerHTML =
+      '<canvas class="hist-thumb" width="74" height="34"></canvas>' +
+      '<div class="hist-meta"><span class="hist-label"></span><span class="hist-sub"></span></div>' +
+      '<div class="hist-actions">' +
+        '<button data-a="play" title="Replay">▶</button>' +
+        '<button data-a="load" title="Load into editor (tweak from here)">✎</button>' +
+        '<button data-a="wav" title="Download WAV">⬇</button>' +
+      '</div>';
+    el.querySelector(".hist-label").textContent = item.label + (item.silent ? " ⚠" : "");
+    el.querySelector(".hist-sub").textContent =
+      Math.round(item.state.freq) + " Hz · " + (+item.state.duration).toFixed(2) + "s · " +
+      (item.silent ? "silent" : item.time);
+    drawThumb(el.querySelector("canvas"), item.peaks);
+    el.querySelector('[data-a="play"]').addEventListener("click", () => replaySnapshot(item.state));
+    el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state));
+    el.querySelector('[data-a="wav"]').addEventListener("click", () => withState(item.state, () => {
+      const { L, R } = render();
+      const slug = item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      downloadWav(L, R, "crunchyfx-" + (slug || "sound") + "-" + item.id + ".wav");
+    }));
+    histList.appendChild(el);
+  }
+}
+document.getElementById("clearhist").addEventListener("click", () => { histItems.length = 0; renderHistory(); });
+renderHistory();
+
+// ---------- Scope drawing ----------
+const scope = document.getElementById("scope");
+const sctx = scope.getContext("2d");
+function drawScope(L, R) {
+  const w = scope.width, h = scope.height;
+  sctx.clearRect(0, 0, w, h);
+  sctx.strokeStyle = "#322c40";
+  sctx.beginPath(); sctx.moveTo(0, h / 2); sctx.lineTo(w, h / 2); sctx.stroke();
+  const step = L.length / w;
+  const trace = (data, color, alpha) => {
+    sctx.globalAlpha = alpha;
+    sctx.strokeStyle = color;
+    sctx.lineWidth = 1.5;
+    sctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const v = data[Math.floor(x * step)] || 0;
+      const y = h / 2 - v * (h / 2 - 4);
+      x === 0 ? sctx.moveTo(x, y) : sctx.lineTo(x, y);
+    }
+    sctx.stroke();
+    sctx.globalAlpha = 1;
+  };
+  trace(R, "#45d0ff", 0.55);   // right channel, faint blue
+  trace(L, "#ff7a45", 1);      // left channel, accent
+}
+
+// Overlay a warning when the current sound has no audible output.
+function markScopeSilent() {
+  sctx.save();
+  sctx.fillStyle = "rgba(255,90,90,0.95)";
+  sctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
+  sctx.textAlign = "center";
+  sctx.fillText("⚠ no audible output — raise Cutoff / Gain or shorten the envelope", scope.width / 2, scope.height / 2 - 6);
+  sctx.restore();
+}
+
+// ---------- UI build ----------
+const groups = {};
+for (const p of PARAMS) {
+  const [key, label, min, max, step, def, unit, group, kind] = p;
+  (groups[group] ||= []).push(p);
+}
+
+const panels = document.getElementById("panels");
+const outputs = {};
+
+function fmt(p, val) {
+  const [key, , , , , , unit, , kind] = p;
+  if (kind === "wave") return WAVES[Math.round(val)];
+  if (kind === "enum") return p[9][Math.round(val)];
+  let s = (Math.abs(val) >= 100 || Number.isInteger(val)) ? Math.round(val) : val.toFixed(2);
+  return s + (unit ? " " + unit : "");
+}
+
+for (const [group, ps] of Object.entries(groups)) {
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  panel.innerHTML = `<h2>${group}</h2>`;
+  for (const p of ps) {
+    const [key, label, min, max, step, def, unit, , kind] = p;
+    if (kind === "wave") {
+      const row = document.createElement("div");
+      row.className = "waverow";
+      const sel = `<select data-key="${key}">${WAVES.map((w,i)=>`<option value="${i}">${w}</option>`).join("")}</select>`;
+      row.innerHTML = `<label>${label}</label>${sel}` +
+        `<label class="wavelock" title="Keep this waveform when switching presets / randomizing">` +
+        `<input type="checkbox" id="waveLock">🔒</label>`;
+      panel.appendChild(row);
+      const el = row.querySelector("select");
+      el.value = state[key];
+      el.addEventListener("change", () => { state[key] = +el.value; play(); });
+      row.querySelector("#waveLock").addEventListener("change", (e) => { waveLocked = e.target.checked; });
+    } else if (kind === "enum") {
+      const list = p[9];
+      const row = document.createElement("div");
+      row.className = "waverow";
+      const sel = `<select data-key="${key}">${list.map((w, i) => `<option value="${i}">${w}</option>`).join("")}</select>`;
+      row.innerHTML = `<label>${label}</label>${sel}`;
+      panel.appendChild(row);
+      const el = row.querySelector("select");
+      el.value = state[key];
+      el.addEventListener("change", () => { state[key] = +el.value; play(); });
+    } else {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<label>${label}</label>
+        <input type="range" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${state[key]}">
+        <output></output>`;
+      panel.appendChild(row);
+      const input = row.querySelector("input");
+      const out = row.querySelector("output");
+      outputs[key] = out;
+      out.textContent = fmt(p, state[key]);
+      input.addEventListener("input", () => {
+        state[key] = +input.value;
+        out.textContent = fmt(p, state[key]);
+        updateMacros();
+      });
+      input.addEventListener("change", () => play());
+    }
+  }
+  panels.appendChild(panel);
+}
+
+function syncUI() {
+  for (const p of PARAMS) {
+    const key = p[0];
+    const el = document.querySelector(`[data-key="${key}"]`);
+    if (el) el.value = state[key];
+    if (outputs[key]) outputs[key].textContent = fmt(p, state[key]);
+  }
+  updateMacros();
+}
+
+// ---------- Randomize + presets ----------
+// Peak of a candidate patch, rendered without disturbing the live editor state.
+function patchPeak(patch) {
+  return withState(patch, () => render()).rawPeak;
+}
+// Keep re-rolling `makePatch()` until it produces an audible sound (or we give up).
+// This is the "filter out sounds that can't be heard" half of the request.
+function audiblePatch(makePatch, tries = 16) {
+  let patch = makePatch();
+  for (let i = 0; i < tries; i++) {
+    if (i > 0) patch = makePatch();
+    if (patchPeak(patch) > AUDIBLE_FLOOR) return patch;
+  }
+  return patch; // gave up — caller still gets a (flagged) sound
+}
+
+function randomPatch() {
+  const patch = { duration: state.duration, gain: state.gain, repeat: state.repeat, rate: state.rate };
+  for (const p of PARAMS) {
+    const [key, , min, max, step, , , , kind] = p;
+    if (key in patch) continue; // keep these at current values
+    let v = min + Math.random() * (max - min);
+    v = Math.round(v / step) * step;
+    patch[key] = (kind === "wave" || kind === "enum") ? Math.round(v) : v;
+  }
+  if (waveLocked) patch.wave = state.wave;   // respect the waveform lock
+  return patch;
+}
+
+function randomize() {
+  applyPreset(audiblePatch(randomPatch), "Random");
+}
+
+const PRESETS = {
+  "Coin": { wave:1, freq:988, sweep:0.15, attack:0.002, hold:0.02, decay:0.15, sustain:0, release:0.08, cutoff:10000, drive:0.1, duration:0.35,
+            _vary:{ freq:0.16, decay:0.3, release:0.3, cutoff:0.15, drive:0.5 } },
+  "Laser": { wave:2, freq:1200, sweep:-0.5, attack:0, decay:0.2, sustain:0, release:0.1, cutoff:6000, reso:0.4, drive:0.2, duration:0.3,
+            _vary:{ freq:0.18, sweep:0.2, decay:0.25, cutoff:0.2, reso:0.35 } },
+  "Jump": { wave:1, freq:300, sweep:0.35, attack:0.005, decay:0.1, sustain:0.2, release:0.12, cutoff:8000, duration:0.3 },
+  "Explosion": { wave:0, freq:120, noise:0.85, sweep:-0.3, attack:0.001, decay:0.5, sustain:0, release:0.4, cutoff:4000, reso:0.2, drive:0.5, duration:0.9,
+            _vary:{ freq:0.22, decay:0.25, release:0.25, cutoff:0.25, drive:0.3, noise:0.08 } },
+  "Hit": { wave:2, freq:180, noise:0.5, sweep:-0.4, attack:0, decay:0.12, sustain:0, release:0.06, cutoff:5000, drive:0.4, bitcrush:8, duration:0.25,
+            _vary:{ freq:0.2, sweep:0.15, decay:0.3, cutoff:0.25, drive:0.3 } },
+  "Powerup": { wave:3, freq:520, sweep:0.5, vibDepth:0.1, vibRate:12, attack:0.005, decay:0.3, sustain:0.3, release:0.2, cutoff:9000, duration:0.6 },
+  "Blip": { wave:1, freq:660, attack:0, decay:0.05, sustain:0, release:0.02, cutoff:12000, bitcrush:6, duration:0.12,
+            _vary:{ freq:0.28, decay:0.3, cutoff:0.2 } },
+  "Deep Impact": { wave:2, freq:90, noise:0.35, subOsc:0.6, sweep:-0.2, unison:3, detune:18, width:0.7, attack:0.001, decay:0.5, sustain:0, release:0.6, cutoff:3500, reso:0.25, drive:0.35, reverb:0.35, reverbSize:0.75, reverbTone:0.35, duration:1.4 },
+  "Lush Powerup": { wave:2, freq:440, sweep:0.5, unison:5, detune:22, width:0.85, attack:0.005, decay:0.35, sustain:0.35, release:0.4, cutoff:9000, reverb:0.45, reverbSize:0.7, delay:0.3, delayTime:0.14, delayFb:0.35, duration:1.2 },
+  "Wide Pickup": { wave:3, freq:620, sweep:0.25, unison:4, detune:14, width:0.8, attack:0.002, decay:0.25, sustain:0.2, release:0.25, cutoff:11000, reverb:0.3, reverbSize:0.6, duration:0.8 },
+  // Gunshots: a filtered-noise blast (noise + fast AHD), a low-end muzzle thump
+  // (subOsc + downward sweep), tanh drive for the clipped "crack", and reverb/delay
+  // for the room slap. Zero sustain so the shot dies fast and the tail is all space.
+  "Gunshot": { wave:0, freq:120, noise:0.92, subOsc:0.5, sweep:-0.55, boom:0.6, boomFreq:75, boomDrop:0.7, boomDecay:0.22, attack:0, hold:0.004, decay:0.06, sustain:0, release:0.08, cutoff:6500, reso:0.12, filtEnv:-0.6, drive:0.6, width:0.3, reverb:0.35, reverbSize:0.55, reverbTone:0.3, duration:0.7,
+            _vary:{ freq:0.14, decay:0.35, cutoff:0.2, drive:0.25, sweep:0.15, reverb:0.2, boomFreq:0.15 } },
+  "Shotgun": { wave:0, freq:85, noise:0.9, subOsc:0.7, sweep:-0.45, boom:0.72, boomFreq:58, boomDrop:0.8, boomDecay:0.34, attack:0, hold:0.006, decay:0.12, sustain:0, release:0.15, cutoff:5000, reso:0.15, filtEnv:-0.7, drive:0.75, width:0.4, reverb:0.4, reverbSize:0.7, reverbTone:0.25, duration:1.0,
+            _vary:{ freq:0.14, decay:0.3, cutoff:0.2, drive:0.2, reverb:0.2, boomFreq:0.15 } },
+  "Rifle Crack": { wave:2, freq:150, noise:0.95, subOsc:0.35, sweep:-0.6, boom:0.5, boomFreq:85, boomDrop:0.6, boomDecay:0.18, attack:0, hold:0.002, decay:0.045, sustain:0, release:0.06, cutoff:9000, reso:0.18, filtEnv:-0.5, drive:0.55, width:0.35, delay:0.25, delayTime:0.08, delayFb:0.25, reverb:0.3, reverbSize:0.8, reverbTone:0.35, duration:0.9,
+            _vary:{ freq:0.16, decay:0.35, cutoff:0.2, drive:0.25, sweep:0.15, delayTime:0.4 } },
+  "Suppressed": { wave:0, freq:110, noise:0.7, subOsc:0.45, sweep:-0.4, boom:0.55, boomFreq:68, boomDrop:0.5, boomDecay:0.2, attack:0, hold:0.004, decay:0.08, sustain:0, release:0.09, cutoff:2600, reso:0.1, filtEnv:-0.4, drive:0.3, width:0.25, reverb:0.15, reverbSize:0.4, reverbTone:0.25, duration:0.55,
+            _vary:{ freq:0.12, decay:0.3, cutoff:0.18, drive:0.2 } },
+  // Full-auto: a tight rifle crack retriggered via repeat/rate. Very short decay so
+  // shots stay distinct at speed; jitter rate/freq so the string doesn't sound looped.
+  "Full Auto": { wave:2, freq:150, noise:0.95, subOsc:0.35, sweep:-0.6, boom:0.5, boomFreq:80, boomDrop:0.5, boomDecay:0.08, attack:0, hold:0.002, decay:0.04, sustain:0, release:0.05, cutoff:8500, reso:0.16, filtEnv:-0.5, drive:0.6, width:0.35, reverb:0.28, reverbSize:0.7, reverbTone:0.3, repeat:10, rate:13, duration:1.1,
+            _vary:{ rate:0.15, freq:0.1, cutoff:0.15, drive:0.2 } },
+  "3-Round Burst": { wave:2, freq:155, noise:0.95, subOsc:0.35, sweep:-0.6, boom:0.52, boomFreq:80, boomDrop:0.55, boomDecay:0.1, attack:0, hold:0.002, decay:0.045, sustain:0, release:0.05, cutoff:8800, reso:0.16, filtEnv:-0.5, drive:0.58, width:0.35, reverb:0.3, reverbSize:0.7, reverbTone:0.3, repeat:3, rate:12, duration:0.9,
+            _vary:{ rate:0.12, freq:0.12, cutoff:0.15, drive:0.2 } },
+  // Cinematic boom: massive sub, slow decay, dark far-off tail (big reverb + a slap
+  // delay). Low cutoff + downsample grit keep it feeling like pressure, not hiss.
+  "Cinematic Boom": { wave:0, freq:65, noise:0.8, subOsc:0.9, sweep:-0.35, boom:0.9, boomFreq:46, boomDrop:1.0, boomDecay:0.7, attack:0.001, hold:0.008, decay:0.75, sustain:0, release:0.6, cutoff:2800, reso:0.15, filtEnv:-0.6, drive:0.6, downsample:2, width:0.65, delay:0.22, delayTime:0.19, delayFb:0.3, reverb:0.6, reverbSize:0.92, reverbTone:0.18, duration:2.0,
+            _vary:{ freq:0.16, decay:0.25, cutoff:0.2, drive:0.25, reverb:0.15, delayTime:0.3, boomFreq:0.12 } },
+
+  // ---- Elemental / combat (game SFX) ----
+  // Fire: a sustained turbulent roar — broadband noise through a resonant lowpass
+  // for the "roar", light drive + downsample for the flicker/crackle grit.
+  "Fire": { wave:2, freq:220, noise:0.9, sweep:0, attack:0.04, hold:0, decay:0.35, sustain:0.55, release:0.45, cutoff:1600, reso:0.45, filtEnv:0.1, drive:0.35, downsample:3, width:0.5, reverb:0.22, reverbSize:0.55, reverbTone:0.4, duration:1.4,
+            _vary:{ cutoff:0.25, reso:0.3, decay:0.3, drive:0.3, freq:0.2 } },
+  // Ice: glassy triangle bell + frost hiss, shimmering via vibrato/unison, settling
+  // pitch drop, bright reverb + delay tail = crystalline "freezing over".
+  "Ice": { wave:3, freq:2200, sweep:-0.15, vibDepth:0.15, vibRate:14, unison:3, detune:16, width:0.75, noise:0.32, subOsc:0, attack:0.005, decay:0.5, sustain:0.12, release:0.5, cutoff:9500, reso:0.2, filtEnv:-0.2, drive:0.1, delay:0.25, delayTime:0.11, delayFb:0.3, reverb:0.5, reverbSize:0.72, reverbTone:0.75, duration:1.3,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2, delayTime:0.35, detune:0.4 } },
+  // Electric: a buzzy square + noise mangled by hard bitcrush/downsample and drive,
+  // stuttered by the burst engine so it reads as rapid crackle rather than one tone.
+  "Electric Crackle": { wave:1, freq:620, sweep:0.05, noise:0.5, attack:0, hold:0.001, decay:0.06, sustain:0.15, release:0.09, cutoff:6500, reso:0.5, filtEnv:0.2, drive:0.72, bitcrush:4, downsample:6, width:0.45, reverb:0.2, reverbSize:0.5, reverbTone:0.6, repeat:7, rate:24, duration:0.75,
+            _vary:{ rate:0.25, freq:0.3, cutoff:0.2, drive:0.2, bitcrush:0.3 } },
+  // Thunder: deep noise rumble + a long low body drop, slow envelope, huge dark
+  // reverb and long feedback delay for the rolling, distant echo.
+  "Thunder": { wave:0, freq:60, noise:0.85, subOsc:0.6, sweep:-0.25, boom:0.8, boomFreq:42, boomDrop:0.8, boomDecay:0.95, attack:0.02, hold:0.02, decay:0.9, sustain:0.25, release:1.0, cutoff:1400, reso:0.2, filtEnv:-0.4, drive:0.4, width:0.6, delay:0.32, delayTime:0.28, delayFb:0.45, reverb:0.7, reverbSize:0.95, reverbTone:0.15, duration:2.0,
+            _vary:{ freq:0.16, decay:0.25, cutoff:0.2, delayTime:0.3, boomFreq:0.15 } },
+  // Crunchy Hit: meaty impact — a punchy low body under a short mid noise burst,
+  // hit hard with drive + bitcrush + downsample so the connection sounds crunchy.
+  "Crunchy Hit": { wave:2, freq:140, noise:0.6, sweep:-0.5, boom:0.65, boomFreq:70, boomDrop:0.6, boomDecay:0.15, attack:0, hold:0.003, decay:0.08, sustain:0, release:0.08, cutoff:4000, reso:0.2, filtEnv:-0.5, drive:0.72, bitcrush:7, downsample:2, width:0.3, reverb:0.2, reverbSize:0.5, reverbTone:0.3, duration:0.45,
+            _vary:{ freq:0.18, decay:0.3, cutoff:0.25, drive:0.25, bitcrush:0.3 } },
+  // Punch / Kick: a dry, fast pitch-drop thud with a touch of air (noise) — the
+  // clean "whiff + connect" of a swing landing, no crunch.
+  "Punch / Kick": { wave:0, freq:170, noise:0.4, sweep:-0.6, boom:0.6, boomFreq:80, boomDrop:0.7, boomDecay:0.12, attack:0, hold:0.002, decay:0.06, sustain:0, release:0.06, cutoff:3500, reso:0.15, filtEnv:-0.6, drive:0.4, width:0.3, reverb:0.15, reverbSize:0.45, reverbTone:0.35, duration:0.32,
+            _vary:{ freq:0.2, decay:0.3, cutoff:0.25, sweep:0.15 } },
+
+  // ---- Magic / material / water (game SFX) ----
+  // Cure: an uplifting RISING chime — lush detuned bell, gentle shimmer, bright
+  // airy reverb + delay tail. Rising pitch reads as "restore / positive".
+  "Cure": { wave:3, freq:600, sweep:0.4, vibDepth:0.08, vibRate:6, unison:4, detune:12, width:0.7, attack:0.02, decay:0.4, sustain:0.4, release:0.55, cutoff:9000, reso:0.15, drive:0.08, delay:0.28, delayTime:0.16, delayFb:0.32, reverb:0.5, reverbSize:0.72, reverbTone:0.72, duration:1.4,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.18, delayTime:0.35, detune:0.4 } },
+  // Poison: a sickly wobble — heavy vibrato on a dark tone plus fizzing noise,
+  // grimed up with drive/bitcrush/downsample. The wobble = bubbling toxicity.
+  "Poison": { wave:0, freq:180, sweep:-0.1, vibDepth:0.5, vibRate:9, noise:0.4, attack:0.03, decay:0.5, sustain:0.4, release:0.4, cutoff:2500, reso:0.4, filtEnv:-0.15, drive:0.3, bitcrush:8, downsample:4, width:0.45, reverb:0.25, reverbSize:0.6, reverbTone:0.35, duration:1.2,
+            _vary:{ vibRate:0.3, vibDepth:0.25, freq:0.16, cutoff:0.2 } },
+  // Metal Clank: a metallic impact — a noise transient rung through a very high
+  // resonance (the filter "pings" like struck metal), short bitcrushed tail.
+  "Metal Clank": { wave:1, freq:340, sweep:-0.2, noise:0.3, attack:0, hold:0.002, decay:0.28, sustain:0, release:0.25, cutoff:3500, reso:0.88, filtEnv:0.1, drive:0.4, bitcrush:9, width:0.4, reverb:0.3, reverbSize:0.5, reverbTone:0.62, duration:0.6,
+            _vary:{ freq:0.2, cutoff:0.25, reso:0.1, decay:0.3 } },
+  // Water Ambient: a soft continuous stream bed — gentle filtered noise held on a
+  // sustain, slow attack, roomy tail. Loop it under a scene.
+  "Water Ambient": { wave:0, freq:160, noise:0.85, attack:0.12, decay:0.5, sustain:0.6, release:0.6, cutoff:2200, reso:0.28, filtEnv:0.05, drive:0.1, width:0.6, reverb:0.35, reverbSize:0.72, reverbTone:0.55, duration:1.8,
+            _vary:{ cutoff:0.2, reso:0.25, decay:0.2 } },
+  // Water Drop: the classic "bloop" — a sine with a fast UPWARD pitch rise and quick
+  // decay through some resonance, tiny splash of noise, short verb plink.
+  "Water Drop": { wave:0, freq:500, sweep:0.6, noise:0.1, attack:0, hold:0.001, decay:0.12, sustain:0, release:0.1, cutoff:5000, reso:0.5, width:0.35, reverb:0.35, reverbSize:0.6, reverbTone:0.6, duration:0.35,
+            _vary:{ freq:0.22, sweep:0.2, decay:0.3, reso:0.2 } },
+  // Wave of Water: a swelling wash — noise with a slow swell (attack) and a filter
+  // that OPENS over time (positive filt env = brightening crest), then recedes.
+  "Wave of Water": { wave:0, freq:150, noise:0.9, attack:0.3, hold:0.05, decay:0.4, sustain:0.2, release:0.55, cutoff:800, reso:0.2, filtEnv:0.7, drive:0.15, width:0.7, reverb:0.42, reverbSize:0.82, reverbTone:0.5, duration:1.7,
+            _vary:{ cutoff:0.25, filtEnv:0.15, decay:0.2, freq:0.15 } },
+
+  // ==== Combat ====
+  "Sword Swing": { wave:2, freq:400, noise:0.85, sweep:0.2, attack:0.02, hold:0, decay:0.12, sustain:0, release:0.1, cutoff:1200, reso:0.35, filtEnv:0.7, drive:0.2, width:0.5, reverb:0.15, reverbSize:0.5, reverbTone:0.5, duration:0.35,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2, decay:0.3 } },
+  "Sword Clash": { wave:1, freq:900, noise:0.35, sweep:-0.15, attack:0, hold:0.001, decay:0.3, sustain:0, release:0.28, cutoff:6000, reso:0.85, filtEnv:0.05, drive:0.35, bitcrush:11, width:0.4, delay:0.2, delayTime:0.06, delayFb:0.3, reverb:0.35, reverbSize:0.6, reverbTone:0.75, duration:0.6,
+            _vary:{ freq:0.18, cutoff:0.2, reso:0.1, delayTime:0.4 } },
+  "Shield Block": { wave:0, freq:300, sweep:-0.4, noise:0.2, boom:0.5, boomFreq:90, boomDrop:0.5, boomDecay:0.12, attack:0, hold:0.004, decay:0.18, sustain:0, release:0.15, cutoff:2600, reso:0.6, filtEnv:-0.3, drive:0.3, width:0.4, reverb:0.25, reverbSize:0.55, reverbTone:0.4, duration:0.4,
+            _vary:{ freq:0.16, cutoff:0.2, reso:0.15, decay:0.3 } },
+  "Glass Shatter": { wave:3, freq:2400, noise:0.85, attack:0, hold:0.001, decay:0.25, sustain:0.05, release:0.3, cutoff:9000, reso:0.35, filtEnv:-0.2, drive:0.3, bitcrush:7, downsample:2, width:0.55, delay:0.25, delayTime:0.05, delayFb:0.35, reverb:0.35, reverbSize:0.6, reverbTone:0.75, duration:0.7,
+            _vary:{ cutoff:0.2, decay:0.3, delayTime:0.4, bitcrush:0.3 } },
+
+  // ==== UI / feedback ====
+  "UI Click": { wave:1, freq:1200, attack:0, hold:0.001, decay:0.03, sustain:0, release:0.02, cutoff:8000, reso:0.1, duration:0.08,
+            _vary:{ freq:0.1 } },
+  "Confirm": { wave:0, freq:700, sweep:0.35, attack:0, hold:0.005, decay:0.1, sustain:0, release:0.08, cutoff:9000, reso:0.1, reverb:0.2, reverbSize:0.5, reverbTone:0.7, duration:0.25,
+            _vary:{ freq:0.08 } },
+  "Cancel": { wave:0, freq:600, sweep:-0.35, attack:0, hold:0.005, decay:0.1, sustain:0, release:0.08, cutoff:6000, reso:0.1, reverb:0.12, reverbSize:0.45, reverbTone:0.5, duration:0.22,
+            _vary:{ freq:0.08 } },
+  "Error Buzz": { wave:1, freq:160, noise:0.15, attack:0, decay:0.12, sustain:0.5, release:0.06, cutoff:2000, reso:0.3, drive:0.6, bitcrush:6, repeat:2, rate:8, duration:0.45,
+            _vary:{ freq:0.06 } },
+  "Level Up": { wave:2, freq:440, sweep:0.6, vibDepth:0.06, vibRate:7, unison:5, detune:16, width:0.8, attack:0.01, decay:0.4, sustain:0.4, release:0.6, cutoff:9500, reso:0.15, drive:0.15, delay:0.3, delayTime:0.14, delayFb:0.38, reverb:0.5, reverbSize:0.75, reverbTone:0.72, duration:1.5,
+            _vary:{ freq:0.12, delayTime:0.3, cutoff:0.18, detune:0.4 } },
+  "Game Over": { wave:2, freq:400, sweep:-0.5, vibDepth:0.05, vibRate:5, unison:3, detune:12, width:0.6, attack:0.02, decay:0.6, sustain:0.3, release:0.7, cutoff:4000, reso:0.2, drive:0.15, reverb:0.4, reverbSize:0.7, reverbTone:0.4, duration:1.6,
+            _vary:{ freq:0.1, decay:0.2, cutoff:0.2 } },
+
+  // ==== Magic / sci-fi ====
+  "Teleport": { wave:2, freq:400, sweep:0.7, vibDepth:0.1, vibRate:18, unison:3, detune:20, width:0.8, noise:0.1, attack:0.005, decay:0.35, sustain:0.1, release:0.4, cutoff:7000, reso:0.4, filtEnv:0.4, drive:0.2, bitcrush:9, delay:0.35, delayTime:0.1, delayFb:0.4, reverb:0.5, reverbSize:0.7, reverbTone:0.65, duration:0.9,
+            _vary:{ freq:0.2, sweep:0.2, delayTime:0.35, cutoff:0.2 } },
+  "Magic Sparkle": { wave:3, freq:1800, sweep:0.2, vibDepth:0.12, vibRate:16, unison:3, detune:22, width:0.8, attack:0.003, decay:0.4, sustain:0.1, release:0.5, cutoff:11000, reso:0.2, delay:0.3, delayTime:0.09, delayFb:0.4, reverb:0.55, reverbSize:0.7, reverbTone:0.8, duration:1.2,
+            _vary:{ freq:0.16, delayTime:0.35, vibRate:0.3, detune:0.4 } },
+  "Robot Beep": { wave:1, freq:900, sweep:0.1, attack:0, hold:0.002, decay:0.04, sustain:0.2, release:0.03, cutoff:7000, reso:0.2, bitcrush:5, downsample:3, repeat:6, rate:16, duration:0.6,
+            _vary:{ freq:0.3, rate:0.2, bitcrush:0.3 } },
+  "Alarm Siren": { wave:1, freq:700, vibDepth:0.6, vibRate:4, noise:0.05, attack:0.02, decay:0.2, sustain:0.7, release:0.15, cutoff:6000, reso:0.3, drive:0.35, width:0.4, duration:1.7,
+            _vary:{ freq:0.1, vibRate:0.2 } },
+
+  // ==== Ambient / nature ====
+  "Wind Gust": { wave:0, freq:200, noise:0.9, attack:0.35, hold:0.05, decay:0.4, sustain:0.3, release:0.6, cutoff:900, reso:0.3, filtEnv:0.6, drive:0.1, width:0.7, reverb:0.35, reverbSize:0.8, reverbTone:0.5, duration:1.9,
+            _vary:{ cutoff:0.25, filtEnv:0.15, decay:0.2 } },
+  "Boulder Rumble": { wave:2, freq:70, noise:0.7, subOsc:0.5, boom:0.6, boomFreq:45, boomDrop:0.5, boomDecay:0.6, sweep:-0.15, attack:0.03, decay:0.7, sustain:0.4, release:0.6, cutoff:1000, reso:0.25, drive:0.5, bitcrush:8, downsample:5, width:0.5, reverb:0.4, reverbSize:0.85, reverbTone:0.25, duration:1.8,
+            _vary:{ freq:0.15, cutoff:0.2, decay:0.2, drive:0.2 } },
+  "Footstep": { wave:0, freq:120, noise:0.7, sweep:-0.3, boom:0.4, boomFreq:70, boomDrop:0.4, boomDecay:0.08, attack:0, hold:0.002, decay:0.05, sustain:0, release:0.05, cutoff:1200, reso:0.2, drive:0.2, width:0.3, duration:0.2,
+            _vary:{ freq:0.18, cutoff:0.3, decay:0.3 } },
+  "Bounce": { wave:0, freq:280, sweep:0.5, vibDepth:0.4, vibRate:22, attack:0, hold:0.002, decay:0.18, sustain:0, release:0.12, cutoff:5000, reso:0.4, width:0.35, reverb:0.12, reverbSize:0.4, reverbTone:0.6, duration:0.3,
+            _vary:{ freq:0.2, vibRate:0.25, sweep:0.2 } },
+  "Bubble Pop": { wave:0, freq:600, sweep:0.7, attack:0, hold:0.001, decay:0.05, sustain:0, release:0.04, cutoff:4000, reso:0.55, width:0.3, reverb:0.12, reverbSize:0.4, reverbTone:0.6, duration:0.14,
+            _vary:{ freq:0.3, sweep:0.2, decay:0.3 } },
+
+  // ==== Creature ====
+  "Monster Growl": { wave:2, freq:90, noise:0.5, subOsc:0.4, boom:0.4, boomFreq:55, boomDrop:0.3, boomDecay:0.4, vibDepth:0.3, vibRate:7, sweep:-0.1, attack:0.04, decay:0.5, sustain:0.5, release:0.4, cutoff:1400, reso:0.4, filtEnv:-0.2, drive:0.6, bitcrush:9, downsample:3, width:0.5, reverb:0.3, reverbSize:0.65, reverbTone:0.3, duration:1.3,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2, drive:0.2 } },
+
+  // ==== Blades ==== filter-env sweep on noise = the "whoosh"; high reso = the metal zing
+  "Katana Slice": { wave:2, freq:600, noise:0.8, sweep:0.3, attack:0.008, hold:0, decay:0.1, sustain:0, release:0.08, cutoff:2500, reso:0.5, filtEnv:0.9, drive:0.25, width:0.55, reverb:0.18, reverbSize:0.5, reverbTone:0.72, duration:0.3,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2, decay:0.3 } },
+  "Heavy Cleave": { wave:2, freq:300, noise:0.8, sweep:-0.3, boom:0.55, boomFreq:65, boomDrop:0.6, boomDecay:0.18, attack:0.03, hold:0, decay:0.14, sustain:0, release:0.12, cutoff:1800, reso:0.4, filtEnv:0.3, drive:0.45, width:0.5, reverb:0.25, reverbSize:0.6, reverbTone:0.35, duration:0.5,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.3, drive:0.2 } },
+  "Dagger Stab": { wave:2, freq:350, noise:0.6, sweep:-0.4, boom:0.4, boomFreq:90, boomDrop:0.5, boomDecay:0.08, attack:0, hold:0.001, decay:0.05, sustain:0, release:0.05, cutoff:3000, reso:0.3, filtEnv:-0.3, drive:0.4, width:0.3, reverb:0.15, reverbSize:0.45, reverbTone:0.5, duration:0.2,
+            _vary:{ freq:0.18, cutoff:0.25, decay:0.3 } },
+  "Blade Sheathe": { wave:2, freq:800, noise:0.7, sweep:0.1, attack:0.02, hold:0, decay:0.18, sustain:0, release:0.12, cutoff:4000, reso:0.7, filtEnv:0.5, drive:0.2, bitcrush:12, width:0.5, delay:0.15, delayTime:0.08, delayFb:0.25, reverb:0.25, reverbSize:0.55, reverbTone:0.78, duration:0.4,
+            _vary:{ cutoff:0.2, reso:0.15, filtEnv:0.15, delayTime:0.35 } },
+  "Critical Slash": { wave:2, freq:700, noise:0.75, sweep:0.4, unison:2, detune:20, width:0.7, attack:0.005, hold:0, decay:0.14, sustain:0, release:0.14, cutoff:3000, reso:0.55, filtEnv:0.8, drive:0.35, bitcrush:12, delay:0.25, delayTime:0.07, delayFb:0.35, reverb:0.35, reverbSize:0.65, reverbTone:0.75, duration:0.55,
+            _vary:{ cutoff:0.2, filtEnv:0.15, sweep:0.2, delayTime:0.35 } },
+
+  // ==== Blunt / smashes ==== deep body + drive/bitcrush = weight and crunch of impact
+  "Hammer Smash": { wave:0, freq:110, noise:0.6, sweep:-0.5, boom:0.8, boomFreq:55, boomDrop:0.7, boomDecay:0.22, attack:0, hold:0.004, decay:0.1, sustain:0, release:0.12, cutoff:2500, reso:0.25, filtEnv:-0.5, drive:0.65, bitcrush:9, downsample:2, width:0.4, reverb:0.3, reverbSize:0.6, reverbTone:0.3, duration:0.6,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.3, drive:0.2 } },
+  "War Hammer Crush": { wave:0, freq:85, noise:0.7, subOsc:0.5, sweep:-0.4, boom:0.9, boomFreq:45, boomDrop:0.7, boomDecay:0.4, attack:0, hold:0.006, decay:0.2, sustain:0, release:0.4, cutoff:1800, reso:0.2, filtEnv:-0.5, drive:0.7, bitcrush:8, downsample:3, width:0.5, reverb:0.45, reverbSize:0.85, reverbTone:0.2, duration:1.2,
+            _vary:{ freq:0.15, cutoff:0.2, decay:0.25, drive:0.2 } },
+  "Anvil Strike": { wave:1, freq:520, noise:0.3, sweep:-0.1, attack:0, hold:0.001, decay:0.4, sustain:0, release:0.4, cutoff:5000, reso:0.9, filtEnv:0.05, drive:0.35, bitcrush:10, width:0.4, reverb:0.35, reverbSize:0.6, reverbTone:0.7, duration:0.8,
+            _vary:{ freq:0.18, cutoff:0.2, reso:0.08, decay:0.3 } },
+  "Mace Bash": { wave:2, freq:180, noise:0.5, sweep:-0.4, boom:0.6, boomFreq:75, boomDrop:0.5, boomDecay:0.14, attack:0, hold:0.002, decay:0.1, sustain:0, release:0.15, cutoff:3200, reso:0.6, filtEnv:-0.2, drive:0.55, bitcrush:9, width:0.4, reverb:0.28, reverbSize:0.55, reverbTone:0.5, duration:0.5,
+            _vary:{ freq:0.16, cutoff:0.2, reso:0.12, drive:0.2 } },
+  "Ground Slam": { wave:0, freq:70, noise:0.55, subOsc:0.55, sweep:-0.35, boom:0.9, boomFreq:40, boomDrop:0.6, boomDecay:0.6, attack:0, hold:0.005, decay:0.3, sustain:0.15, release:0.6, cutoff:1200, reso:0.25, filtEnv:-0.4, drive:0.55, downsample:4, width:0.55, reverb:0.5, reverbSize:0.9, reverbTone:0.2, duration:1.6,
+            _vary:{ freq:0.15, cutoff:0.2, decay:0.2, drive:0.2 } },
+
+  // ==== Magic & weaponry ====
+  "Fireball Cast": { wave:2, freq:280, noise:0.85, sweep:0.35, attack:0.01, hold:0, decay:0.2, sustain:0.1, release:0.25, cutoff:1600, reso:0.4, filtEnv:0.6, drive:0.4, downsample:2, width:0.6, reverb:0.3, reverbSize:0.65, reverbTone:0.45, duration:0.7,
+            _vary:{ cutoff:0.25, filtEnv:0.15, decay:0.3, drive:0.2 } },
+  "Frost Bolt": { wave:3, freq:1600, sweep:-0.2, vibDepth:0.1, vibRate:14, unison:2, detune:18, width:0.7, noise:0.3, attack:0.003, decay:0.25, sustain:0.05, release:0.3, cutoff:9000, reso:0.3, filtEnv:-0.2, drive:0.15, delay:0.22, delayTime:0.09, delayFb:0.3, reverb:0.4, reverbSize:0.6, reverbTone:0.75, duration:0.7,
+            _vary:{ freq:0.16, cutoff:0.2, delayTime:0.35, detune:0.4 } },
+  "Lightning Strike": { wave:1, freq:400, noise:0.8, sweep:-0.4, boom:0.7, boomFreq:50, boomDrop:0.6, boomDecay:0.5, attack:0, hold:0.001, decay:0.12, sustain:0, release:0.5, cutoff:7000, reso:0.4, filtEnv:-0.6, drive:0.6, bitcrush:6, downsample:3, width:0.55, reverb:0.5, reverbSize:0.88, reverbTone:0.3, duration:1.4,
+            _vary:{ freq:0.18, cutoff:0.2, decay:0.3, drive:0.2, boomFreq:0.15 } },
+  "Arcane Blast": { wave:2, freq:200, noise:0.6, subOsc:0.4, sweep:-0.25, boom:0.75, boomFreq:52, boomDrop:0.7, boomDecay:0.35, unison:3, detune:20, width:0.75, attack:0.002, decay:0.3, sustain:0.1, release:0.5, cutoff:4000, reso:0.4, filtEnv:-0.2, drive:0.45, delay:0.3, delayTime:0.12, delayFb:0.4, reverb:0.55, reverbSize:0.8, reverbTone:0.6, duration:1.4,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.25, delayTime:0.3 } },
+  "Holy Smite": { wave:3, freq:900, sweep:-0.3, vibDepth:0.05, vibRate:6, unison:5, detune:14, width:0.85, noise:0.15, attack:0.004, decay:0.4, sustain:0.2, release:0.6, cutoff:10000, reso:0.15, filtEnv:0.1, drive:0.2, delay:0.28, delayTime:0.15, delayFb:0.35, reverb:0.6, reverbSize:0.82, reverbTone:0.8, duration:1.5,
+            _vary:{ freq:0.14, cutoff:0.18, delayTime:0.3, detune:0.4 } },
+  "Dark Curse": { wave:2, freq:120, noise:0.4, subOsc:0.4, vibDepth:0.25, vibRate:5, sweep:-0.15, attack:0.1, decay:0.5, sustain:0.45, release:0.6, cutoff:1600, reso:0.5, filtEnv:-0.15, drive:0.5, bitcrush:8, downsample:4, width:0.5, reverb:0.45, reverbSize:0.8, reverbTone:0.25, duration:1.6,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2, drive:0.2 } },
+  "Mana Charge": { wave:2, freq:200, sweep:0.8, vibDepth:0.15, vibRate:16, unison:3, detune:18, width:0.7, noise:0.1, attack:0.3, decay:0.3, sustain:0.5, release:0.2, cutoff:2000, reso:0.5, filtEnv:0.7, drive:0.3, delay:0.25, delayTime:0.1, delayFb:0.35, reverb:0.35, reverbSize:0.6, reverbTone:0.6, duration:1.3,
+            _vary:{ freq:0.14, sweep:0.15, cutoff:0.2, filtEnv:0.15 } },
+  "Magic Missile": { wave:1, freq:800, sweep:0.4, noise:0.2, attack:0, hold:0.002, decay:0.1, sustain:0.05, release:0.15, cutoff:6000, reso:0.45, filtEnv:0.2, drive:0.4, bitcrush:7, delay:0.3, delayTime:0.08, delayFb:0.4, reverb:0.35, reverbSize:0.6, reverbTone:0.7, duration:0.5,
+            _vary:{ freq:0.2, sweep:0.2, delayTime:0.35, bitcrush:0.3 } },
+  "Crossbow Bolt": { wave:2, freq:260, noise:0.6, sweep:-0.5, boom:0.3, boomFreq:100, boomDrop:0.4, boomDecay:0.06, attack:0, hold:0.001, decay:0.05, sustain:0, release:0.08, cutoff:3500, reso:0.35, filtEnv:0.2, drive:0.35, width:0.4, reverb:0.15, reverbSize:0.45, reverbTone:0.5, duration:0.25,
+            _vary:{ freq:0.18, cutoff:0.25, sweep:0.15, decay:0.3 } },
+  "Wind Slash": { wave:0, freq:500, noise:0.9, sweep:0.5, attack:0.015, hold:0, decay:0.15, sustain:0, release:0.15, cutoff:1400, reso:0.45, filtEnv:0.85, drive:0.2, width:0.65, delay:0.2, delayTime:0.11, delayFb:0.3, reverb:0.3, reverbSize:0.7, reverbTone:0.6, duration:0.5,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2, delayTime:0.35 } },
+
+  // ==== Animals ==== vibrato = the vocal "wobble/flutter"; burst = multi-syllable calls
+  "Dog Bark": { wave:2, freq:250, sweep:-0.3, noise:0.3, boom:0.3, boomFreq:110, boomDrop:0.3, boomDecay:0.06, attack:0.002, hold:0.005, decay:0.08, sustain:0, release:0.06, cutoff:2200, reso:0.4, filtEnv:-0.2, drive:0.45, bitcrush:9, width:0.35, repeat:2, rate:5, duration:0.6,
+            _vary:{ freq:0.16, decay:0.3, cutoff:0.2, rate:0.2 } },
+  "Cat Meow": { wave:2, freq:520, sweep:0.15, vibDepth:0.15, vibRate:7, noise:0.05, attack:0.03, decay:0.25, sustain:0.4, release:0.3, cutoff:3000, reso:0.5, filtEnv:0.2, drive:0.25, width:0.3, duration:0.7,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2 } },
+  "Bird Chirp": { wave:0, freq:2500, sweep:0.5, attack:0.002, hold:0.001, decay:0.03, sustain:0, release:0.02, cutoff:8000, reso:0.4, width:0.4, repeat:3, rate:8, duration:0.6,
+            _vary:{ freq:0.2, rate:0.25, sweep:0.2 } },
+  "Frog Croak": { wave:2, freq:140, sweep:-0.05, vibDepth:0.4, vibRate:18, noise:0.15, attack:0.01, decay:0.15, sustain:0.3, release:0.1, cutoff:1400, reso:0.5, drive:0.45, bitcrush:7, downsample:5, width:0.3, repeat:2, rate:4, duration:0.7,
+            _vary:{ freq:0.15, vibRate:0.3, cutoff:0.2 } },
+  "Cricket Chirp": { wave:1, freq:4000, attack:0, hold:0.001, decay:0.02, sustain:0, release:0.01, cutoff:9000, reso:0.5, width:0.4, repeat:8, rate:22, duration:0.7,
+            _vary:{ freq:0.05, rate:0.15 } },
+  "Owl Hoot": { wave:0, freq:380, sweep:-0.1, vibDepth:0.05, vibRate:5, noise:0.12, attack:0.04, decay:0.2, sustain:0.3, release:0.2, cutoff:1800, reso:0.4, drive:0.15, width:0.35, repeat:2, rate:2.5, duration:1.3,
+            _vary:{ freq:0.12, rate:0.2, cutoff:0.2 } },
+  "Snake Hiss": { wave:0, freq:200, noise:0.95, attack:0.06, decay:0.4, sustain:0.6, release:0.4, cutoff:4500, reso:0.35, filtEnv:0.1, drive:0.15, width:0.5, duration:1.2,
+            _vary:{ cutoff:0.2, reso:0.25 } },
+  "Bee Buzz": { wave:2, freq:220, vibDepth:0.15, vibRate:24, noise:0.1, attack:0.03, decay:0.3, sustain:0.6, release:0.2, cutoff:2500, reso:0.3, drive:0.4, downsample:2, width:0.4, duration:1.3,
+            _vary:{ freq:0.14, vibRate:0.25, cutoff:0.2 } },
+  "Wolf Howl": { wave:2, freq:350, sweep:0.3, vibDepth:0.12, vibRate:6, noise:0.05, attack:0.1, decay:0.5, sustain:0.5, release:0.6, cutoff:2500, reso:0.4, filtEnv:0.2, drive:0.2, width:0.55, reverb:0.45, reverbSize:0.85, reverbTone:0.5, duration:1.8,
+            _vary:{ freq:0.12, vibRate:0.25, cutoff:0.2 } },
+  "Horse Neigh": { wave:2, freq:600, sweep:-0.4, vibDepth:0.3, vibRate:20, noise:0.15, attack:0.02, decay:0.3, sustain:0.3, release:0.25, cutoff:2800, reso:0.5, drive:0.35, bitcrush:10, width:0.4, duration:0.9,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2 } },
+  "Cow Moo": { wave:2, freq:200, sweep:-0.25, vibDepth:0.06, vibRate:5, noise:0.08, attack:0.05, decay:0.4, sustain:0.5, release:0.4, cutoff:1600, reso:0.4, drive:0.3, width:0.4, duration:1.3,
+            _vary:{ freq:0.12, cutoff:0.2 } },
+  "Rooster Crow": { wave:2, freq:700, sweep:-0.15, vibDepth:0.2, vibRate:8, noise:0.1, attack:0.02, decay:0.2, sustain:0.35, release:0.2, cutoff:3200, reso:0.5, drive:0.35, bitcrush:9, width:0.4, repeat:3, rate:3.5, duration:1.3,
+            _vary:{ freq:0.14, rate:0.2, cutoff:0.2 } },
+  "Duck Quack": { wave:2, freq:350, sweep:-0.2, vibDepth:0.1, vibRate:12, noise:0.15, attack:0.005, decay:0.08, sustain:0.2, release:0.06, cutoff:2400, reso:0.5, drive:0.4, bitcrush:8, downsample:4, width:0.35, repeat:3, rate:5, duration:0.9,
+            _vary:{ freq:0.16, rate:0.2, cutoff:0.2 } },
+  "Elephant Trumpet": { wave:2, freq:300, sweep:0.4, vibDepth:0.08, vibRate:9, noise:0.1, attack:0.03, decay:0.3, sustain:0.5, release:0.3, cutoff:2800, reso:0.5, filtEnv:0.2, drive:0.5, width:0.5, reverb:0.35, reverbSize:0.7, reverbTone:0.45, duration:1.2,
+            _vary:{ freq:0.14, cutoff:0.2, vibRate:0.25 } },
+
+  // ==== Nature ==== filtered noise beds; sustain>0 so they loop under a scene
+  "Rain": { wave:0, freq:200, noise:0.9, attack:0.15, decay:0.5, sustain:0.7, release:0.6, cutoff:5000, reso:0.15, drive:0.1, downsample:2, width:0.7, reverb:0.25, reverbSize:0.6, reverbTone:0.6, duration:1.9,
+            _vary:{ cutoff:0.2, reso:0.25 } },
+  "Rustling Leaves": { wave:0, freq:300, noise:0.85, attack:0.08, decay:0.35, sustain:0.5, release:0.4, cutoff:3500, reso:0.3, filtEnv:0.1, drive:0.15, downsample:4, bitcrush:11, width:0.65, reverb:0.2, reverbSize:0.5, reverbTone:0.55, duration:1.4,
+            _vary:{ cutoff:0.2, reso:0.2, decay:0.2 } },
+  "Waterfall": { wave:0, freq:150, noise:0.95, attack:0.2, decay:0.5, sustain:0.75, release:0.6, cutoff:2600, reso:0.2, drive:0.15, width:0.75, reverb:0.4, reverbSize:0.85, reverbTone:0.45, duration:2.0,
+            _vary:{ cutoff:0.2, reso:0.2 } },
+  "Ocean Surf": { wave:0, freq:120, noise:0.9, attack:0.4, hold:0.1, decay:0.5, sustain:0.35, release:0.7, cutoff:700, reso:0.2, filtEnv:0.7, drive:0.1, width:0.75, reverb:0.4, reverbSize:0.88, reverbTone:0.5, duration:2.0,
+            _vary:{ cutoff:0.25, filtEnv:0.15, decay:0.2 } },
+  "Earthquake Rumble": { wave:0, freq:55, noise:0.6, subOsc:0.6, boom:0.7, boomFreq:35, boomDrop:0.3, boomDecay:0.9, attack:0.1, decay:0.6, sustain:0.5, release:0.7, cutoff:700, reso:0.2, drive:0.45, downsample:5, width:0.6, reverb:0.5, reverbSize:0.92, reverbTone:0.2, duration:2.0,
+            _vary:{ freq:0.12, cutoff:0.2, decay:0.2 } },
+  "Dripping Cave": { wave:0, freq:700, sweep:0.6, noise:0.05, attack:0, hold:0.001, decay:0.09, sustain:0, release:0.08, cutoff:4500, reso:0.55, width:0.4, delay:0.35, delayTime:0.28, delayFb:0.35, reverb:0.55, reverbSize:0.8, reverbTone:0.6, repeat:3, rate:2, duration:1.8,
+            _vary:{ freq:0.25, rate:0.25, delayTime:0.3 } },
+
+  // ==== Horror ==== detuned unison = dissonant dread; sub/boom drops + dark long reverb
+  "Jump Scare Stinger": { wave:2, freq:600, noise:0.5, unison:5, detune:45, width:0.7, sweep:-0.3, boom:0.8, boomFreq:55, boomDrop:0.8, boomDecay:0.5, attack:0, hold:0.005, decay:0.3, sustain:0.1, release:0.6, cutoff:6000, reso:0.5, filtEnv:-0.4, drive:0.6, bitcrush:8, reverb:0.5, reverbSize:0.8, reverbTone:0.4, duration:1.4,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.25, drive:0.2 } },
+  "Horror Drone": { wave:2, freq:80, subOsc:0.4, unison:4, detune:40, width:0.6, vibDepth:0.05, vibRate:2, attack:0.3, decay:0.6, sustain:0.7, release:0.8, cutoff:900, reso:0.35, drive:0.35, downsample:3, reverb:0.5, reverbSize:0.9, reverbTone:0.2, duration:2.0,
+            _vary:{ freq:0.12, cutoff:0.2, detune:0.3 } },
+  "Ghostly Wail": { wave:0, freq:800, sweep:-0.3, vibDepth:0.2, vibRate:5, noise:0.05, unison:2, detune:25, width:0.7, attack:0.15, decay:0.5, sustain:0.4, release:0.7, cutoff:3000, reso:0.5, drive:0.2, delay:0.3, delayTime:0.2, delayFb:0.4, reverb:0.6, reverbSize:0.9, reverbTone:0.55, duration:1.9,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2, delayTime:0.3 } },
+  "Demonic Roar": { wave:2, freq:70, noise:0.4, subOsc:0.5, boom:0.6, boomFreq:40, boomDrop:0.4, boomDecay:0.5, vibDepth:0.2, vibRate:6, sweep:-0.2, attack:0.02, decay:0.5, sustain:0.5, release:0.5, cutoff:1200, reso:0.4, filtEnv:-0.2, drive:0.8, bitcrush:6, downsample:3, width:0.55, reverb:0.4, reverbSize:0.8, reverbTone:0.2, duration:1.6,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2, drive:0.15 } },
+  "Creepy Whisper": { wave:0, freq:300, noise:0.9, vibDepth:0.1, vibRate:4, attack:0.1, decay:0.4, sustain:0.5, release:0.4, cutoff:2000, reso:0.5, filtEnv:0.15, drive:0.15, width:0.6, reverb:0.4, reverbSize:0.75, reverbTone:0.5, duration:1.5,
+            _vary:{ cutoff:0.2, reso:0.2, vibRate:0.3 } },
+  "Heartbeat": { wave:0, freq:60, noise:0.1, boom:0.8, boomFreq:50, boomDrop:0.5, boomDecay:0.15, attack:0, hold:0.004, decay:0.08, sustain:0, release:0.1, cutoff:800, reso:0.2, drive:0.3, width:0.3, repeat:2, rate:6, duration:1.0,
+            _vary:{ freq:0.1, decay:0.2 } },
+  "Creaking Door": { wave:2, freq:180, sweep:0.3, vibDepth:0.3, vibRate:8, noise:0.2, attack:0.05, decay:0.5, sustain:0.4, release:0.3, cutoff:1400, reso:0.7, drive:0.4, bitcrush:8, downsample:4, width:0.4, reverb:0.3, reverbSize:0.6, reverbTone:0.4, duration:1.4,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2 } },
+  "Distant Scream": { wave:2, freq:700, sweep:-0.35, vibDepth:0.15, vibRate:7, noise:0.1, attack:0.05, decay:0.4, sustain:0.4, release:0.5, cutoff:2500, reso:0.5, drive:0.35, delay:0.25, delayTime:0.25, delayFb:0.4, reverb:0.6, reverbSize:0.9, reverbTone:0.4, duration:1.6,
+            _vary:{ freq:0.14, cutoff:0.2, vibRate:0.3 } },
+  "Sinister Laugh": { wave:2, freq:300, sweep:-0.1, vibDepth:0.15, vibRate:10, noise:0.1, attack:0.005, decay:0.1, sustain:0.2, release:0.1, cutoff:1800, reso:0.5, drive:0.4, bitcrush:8, width:0.4, repeat:5, rate:6, duration:1.3,
+            _vary:{ freq:0.14, rate:0.25, cutoff:0.2 } },
+  "Music Box": { wave:3, freq:1400, unison:2, detune:8, width:0.5, attack:0, hold:0.002, decay:0.35, sustain:0, release:0.3, cutoff:9000, reso:0.2, reverb:0.5, reverbSize:0.7, reverbTone:0.7, repeat:3, rate:3, duration:1.5,
+            _vary:{ freq:0.14, rate:0.2 } },
+  "Tension Riser": { wave:2, freq:150, sweep:0.7, unison:4, detune:25, width:0.6, noise:0.2, attack:0.8, decay:0.4, sustain:0.6, release:0.15, cutoff:800, reso:0.5, filtEnv:0.8, drive:0.35, reverb:0.4, reverbSize:0.8, reverbTone:0.4, duration:2.0,
+            _vary:{ cutoff:0.2, filtEnv:0.15, detune:0.3 } },
+  "Sub Drop Hit": { wave:0, freq:120, noise:0.1, boom:0.95, boomFreq:60, boomDrop:1.2, boomDecay:0.8, sweep:-0.5, attack:0, hold:0.005, decay:0.4, sustain:0.1, release:0.7, cutoff:1000, reso:0.15, drive:0.4, width:0.4, reverb:0.4, reverbSize:0.85, reverbTone:0.2, duration:1.8,
+            _vary:{ boomFreq:0.15, decay:0.2, cutoff:0.2 } },
+  "Ghost Breath": { wave:0, freq:250, noise:0.9, attack:0.25, hold:0.05, decay:0.3, sustain:0.2, release:0.35, cutoff:1600, reso:0.4, filtEnv:0.3, drive:0.15, width:0.6, reverb:0.45, reverbSize:0.8, reverbTone:0.45, repeat:2, rate:1.2, duration:2.0,
+            _vary:{ cutoff:0.2, reso:0.2 } },
+  "Nails on Chalkboard": { wave:2, freq:1800, noise:0.6, sweep:-0.1, vibDepth:0.1, vibRate:14, attack:0.02, decay:0.3, sustain:0.4, release:0.2, cutoff:5000, reso:0.8, drive:0.5, bitcrush:5, downsample:3, width:0.4, duration:1.0,
+            _vary:{ freq:0.16, cutoff:0.2, reso:0.1, drive:0.2 } },
+  "Ominous Bell": { wave:1, freq:180, sweep:-0.05, attack:0, hold:0.002, decay:0.9, sustain:0, release:0.9, cutoff:2500, reso:0.6, filtEnv:0.05, drive:0.25, bitcrush:11, width:0.4, reverb:0.55, reverbSize:0.9, reverbTone:0.4, duration:2.0,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.2 } },
+  "Rattling Chains": { wave:1, freq:900, noise:0.4, sweep:-0.1, attack:0, hold:0.001, decay:0.04, sustain:0, release:0.05, cutoff:5000, reso:0.7, drive:0.4, bitcrush:6, downsample:2, width:0.5, repeat:8, rate:16, duration:0.9,
+            _vary:{ freq:0.2, rate:0.25, cutoff:0.2 } },
+  "Radio Static": { wave:0, freq:400, noise:0.95, attack:0.01, decay:0.3, sustain:0.6, release:0.15, cutoff:6000, reso:0.2, drive:0.3, bitcrush:4, downsample:2, width:0.5, duration:1.3,
+            _vary:{ cutoff:0.2, bitcrush:0.3, downsample:0.3 } },
+  "Possessed Screech": { wave:2, freq:900, sweep:-0.4, vibDepth:0.25, vibRate:12, noise:0.3, attack:0.005, decay:0.3, sustain:0.4, release:0.3, cutoff:4000, reso:0.6, drive:0.8, bitcrush:5, downsample:2, width:0.5, reverb:0.4, reverbSize:0.75, reverbTone:0.4, duration:1.3,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2, drive:0.15 } },
+  "Dread Pulse": { wave:0, freq:70, subOsc:0.4, boom:0.6, boomFreq:45, boomDrop:0.3, boomDecay:0.25, noise:0.05, attack:0.02, decay:0.2, sustain:0.1, release:0.2, cutoff:700, reso:0.3, drive:0.4, width:0.4, repeat:5, rate:2.5, reverb:0.4, reverbSize:0.8, reverbTone:0.25, duration:2.0,
+            _vary:{ freq:0.12, cutoff:0.2, rate:0.2 } },
+  "Skittering Swarm": { wave:1, freq:2600, noise:0.6, sweep:0.1, attack:0, hold:0.001, decay:0.015, sustain:0, release:0.01, cutoff:7000, reso:0.5, drive:0.3, bitcrush:6, downsample:4, width:0.6, repeat:12, rate:28, duration:0.9,
+            _vary:{ freq:0.2, rate:0.2, cutoff:0.2 } },
+
+  // ==== Elemental oddities & goofy ====
+  "Meteor Descent": { wave:2, freq:400, noise:0.85, sweep:-0.5, attack:0.1, decay:0.5, sustain:0.5, release:0.3, cutoff:1400, reso:0.4, filtEnv:0.4, drive:0.4, downsample:2, width:0.6, reverb:0.35, reverbSize:0.75, reverbTone:0.4, duration:1.5,
+            _vary:{ cutoff:0.2, sweep:0.15, decay:0.2 } },
+  "Meteor Impact": { wave:0, freq:90, noise:0.75, subOsc:0.6, sweep:-0.5, boom:0.95, boomFreq:42, boomDrop:0.8, boomDecay:0.6, attack:0, hold:0.006, decay:0.3, sustain:0.1, release:0.7, cutoff:2000, reso:0.25, filtEnv:-0.5, drive:0.7, bitcrush:7, downsample:3, width:0.6, reverb:0.55, reverbSize:0.92, reverbTone:0.25, duration:2.0,
+            _vary:{ freq:0.15, cutoff:0.2, decay:0.2, drive:0.2 } },
+  "Comet Whoosh": { wave:0, freq:600, noise:0.8, sweep:-0.4, attack:0.03, decay:0.25, sustain:0.1, release:0.2, cutoff:2500, reso:0.5, filtEnv:0.6, drive:0.25, delay:0.25, delayTime:0.12, delayFb:0.35, reverb:0.4, reverbSize:0.7, reverbTone:0.6, duration:0.9,
+            _vary:{ cutoff:0.2, sweep:0.2, delayTime:0.3 } },
+  "Acid Sizzle": { wave:0, freq:300, noise:0.9, attack:0.02, decay:0.4, sustain:0.55, release:0.3, cutoff:3800, reso:0.4, filtEnv:-0.1, drive:0.3, bitcrush:6, downsample:5, width:0.5, reverb:0.2, reverbSize:0.5, reverbTone:0.55, duration:1.4,
+            _vary:{ cutoff:0.2, bitcrush:0.3, downsample:0.3 } },
+  "Acid Splash": { wave:0, freq:250, noise:0.85, sweep:-0.2, boom:0.3, boomFreq:80, boomDrop:0.4, boomDecay:0.1, attack:0, hold:0.003, decay:0.12, sustain:0.3, release:0.3, cutoff:3000, reso:0.45, filtEnv:-0.2, drive:0.35, bitcrush:7, downsample:4, width:0.5, reverb:0.25, reverbSize:0.55, reverbTone:0.5, duration:0.9,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.2 } },
+  "Toxic Bubble": { wave:0, freq:180, sweep:0.4, vibDepth:0.15, vibRate:10, noise:0.2, attack:0.005, decay:0.1, sustain:0, release:0.1, cutoff:1600, reso:0.6, drive:0.3, bitcrush:8, downsample:4, width:0.4, repeat:5, rate:6, reverb:0.25, reverbSize:0.5, reverbTone:0.4, duration:1.2,
+            _vary:{ freq:0.18, rate:0.2, cutoff:0.2 } },
+  "Gas Leak": { wave:0, freq:400, noise:0.95, attack:0.05, decay:0.3, sustain:0.7, release:0.3, cutoff:5500, reso:0.5, filtEnv:0.05, drive:0.15, width:0.4, duration:1.6,
+            _vary:{ cutoff:0.2, reso:0.25 } },
+  "Gas Puff": { wave:0, freq:300, noise:0.9, attack:0.03, hold:0.02, decay:0.25, sustain:0.1, release:0.25, cutoff:2200, reso:0.35, filtEnv:-0.3, drive:0.15, width:0.6, reverb:0.2, reverbSize:0.5, reverbTone:0.5, duration:0.7,
+            _vary:{ cutoff:0.2, decay:0.25 } },
+  "Steam Vent": { wave:0, freq:500, noise:0.95, attack:0.005, decay:0.2, sustain:0.5, release:0.4, cutoff:6500, reso:0.4, filtEnv:-0.4, drive:0.25, downsample:2, width:0.5, reverb:0.25, reverbSize:0.55, reverbTone:0.55, duration:1.2,
+            _vary:{ cutoff:0.2, decay:0.2 } },
+  "Cartoon Boing": { wave:0, freq:200, sweep:0.6, vibDepth:0.6, vibRate:16, attack:0, hold:0.003, decay:0.35, sustain:0, release:0.25, cutoff:4000, reso:0.5, width:0.4, reverb:0.15, reverbSize:0.4, reverbTone:0.6, duration:0.6,
+            _vary:{ freq:0.18, vibRate:0.25, sweep:0.2 } },
+  "Slide Whistle Up": { wave:0, freq:400, sweep:0.8, attack:0.01, decay:0.3, sustain:0.4, release:0.15, cutoff:6000, reso:0.4, width:0.3, reverb:0.15, reverbSize:0.4, reverbTone:0.6, duration:0.7,
+            _vary:{ freq:0.1, sweep:0.1 } },
+  "Slide Whistle Down": { wave:0, freq:1400, sweep:-0.8, attack:0.01, decay:0.3, sustain:0.4, release:0.15, cutoff:7000, reso:0.4, width:0.3, reverb:0.15, reverbSize:0.4, reverbTone:0.6, duration:0.7,
+            _vary:{ freq:0.1, sweep:0.1 } },
+  "Fart": { wave:2, freq:110, sweep:-0.3, vibDepth:0.3, vibRate:16, noise:0.1, attack:0.005, decay:0.25, sustain:0.3, release:0.15, cutoff:1000, reso:0.6, drive:0.5, bitcrush:5, downsample:6, width:0.3, duration:0.6,
+            _vary:{ freq:0.2, vibRate:0.3, cutoff:0.2, decay:0.3 } },
+  "Burp": { wave:2, freq:150, sweep:-0.4, vibDepth:0.2, vibRate:12, noise:0.1, attack:0, hold:0.005, decay:0.15, sustain:0.1, release:0.1, cutoff:1200, reso:0.55, drive:0.45, bitcrush:6, downsample:5, width:0.3, duration:0.4,
+            _vary:{ freq:0.2, vibRate:0.3, decay:0.3 } },
+  "Slime Splat": { wave:0, freq:260, sweep:-0.4, noise:0.6, boom:0.35, boomFreq:70, boomDrop:0.5, boomDecay:0.1, attack:0, hold:0.003, decay:0.14, sustain:0.05, release:0.15, cutoff:1800, reso:0.6, filtEnv:-0.3, drive:0.35, bitcrush:8, downsample:4, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.45, duration:0.5,
+            _vary:{ freq:0.18, cutoff:0.2, decay:0.3 } },
+  "Squeaky Toy": { wave:2, freq:900, sweep:0.4, vibDepth:0.2, vibRate:14, attack:0.01, decay:0.2, sustain:0.3, release:0.12, cutoff:5000, reso:0.6, drive:0.2, width:0.3, duration:0.4,
+            _vary:{ freq:0.16, vibRate:0.3, sweep:0.2 } },
+  "Bubble Blorp": { wave:0, freq:300, sweep:0.6, noise:0.05, attack:0, hold:0.002, decay:0.12, sustain:0, release:0.1, cutoff:2200, reso:0.7, width:0.35, reverb:0.3, reverbSize:0.55, reverbTone:0.55, duration:0.35,
+            _vary:{ freq:0.25, sweep:0.2, decay:0.3 } },
+  "Lava Bubble": { wave:0, freq:90, sweep:0.5, vibDepth:0.1, vibRate:6, noise:0.15, boom:0.4, boomFreq:55, boomDrop:0.4, boomDecay:0.2, attack:0.01, decay:0.2, sustain:0, release:0.2, cutoff:900, reso:0.6, drive:0.35, downsample:4, width:0.45, repeat:3, rate:3, reverb:0.3, reverbSize:0.7, reverbTone:0.25, duration:1.4,
+            _vary:{ freq:0.18, rate:0.2, cutoff:0.2 } },
+  "Mud Squelch": { wave:0, freq:200, sweep:-0.3, vibDepth:0.2, vibRate:9, noise:0.5, attack:0.005, decay:0.15, sustain:0.1, release:0.15, cutoff:1400, reso:0.55, filtEnv:-0.2, drive:0.3, bitcrush:7, downsample:5, width:0.4, duration:0.5,
+            _vary:{ freq:0.18, vibRate:0.3, cutoff:0.2 } },
+  "Magic Fizzle": { wave:2, freq:800, sweep:-0.6, noise:0.3, vibDepth:0.15, vibRate:12, attack:0.005, decay:0.3, sustain:0.15, release:0.25, cutoff:3000, reso:0.5, filtEnv:-0.3, drive:0.3, bitcrush:6, downsample:4, width:0.4, delay:0.2, delayTime:0.1, delayFb:0.3, reverb:0.3, reverbSize:0.6, reverbTone:0.5, duration:0.9,
+            _vary:{ freq:0.16, cutoff:0.2, sweep:0.2 } },
+
+  // ==== Fire ==== noise through a resonant lowpass = the roar; downsample/drive = flicker
+  "Flamethrower": { wave:2, freq:180, noise:0.95, subOsc:0.2, attack:0.06, decay:0.4, sustain:0.7, release:0.4, cutoff:2000, reso:0.45, filtEnv:0.1, drive:0.5, downsample:3, width:0.6, reverb:0.25, reverbSize:0.6, reverbTone:0.4, duration:1.8,
+            _vary:{ cutoff:0.2, reso:0.25, drive:0.2 } },
+  "Fire Whoosh": { wave:2, freq:300, noise:0.9, sweep:0.1, attack:0.02, hold:0, decay:0.25, sustain:0.15, release:0.25, cutoff:1200, reso:0.4, filtEnv:0.7, drive:0.4, downsample:2, width:0.6, reverb:0.3, reverbSize:0.65, reverbTone:0.45, duration:0.7,
+            _vary:{ cutoff:0.25, filtEnv:0.15, decay:0.3 } },
+  "Torch Ignite": { wave:0, freq:250, noise:0.9, attack:0.005, hold:0.005, decay:0.12, sustain:0.25, release:0.2, cutoff:2600, reso:0.35, filtEnv:-0.1, drive:0.35, downsample:3, width:0.5, reverb:0.2, reverbSize:0.5, reverbTone:0.5, duration:0.6,
+            _vary:{ cutoff:0.2, decay:0.3 } },
+  "Ember Crackle": { wave:0, freq:1200, noise:0.7, attack:0, hold:0.001, decay:0.02, sustain:0, release:0.02, cutoff:5000, reso:0.5, drive:0.4, bitcrush:6, downsample:4, width:0.6, repeat:10, rate:14, duration:1.0,
+            _vary:{ freq:0.2, rate:0.25, cutoff:0.2 } },
+  "Dragon Fire Breath": { wave:2, freq:150, noise:0.92, subOsc:0.4, boom:0.4, boomFreq:55, boomDrop:0.3, boomDecay:0.4, sweep:-0.1, attack:0.04, decay:0.5, sustain:0.55, release:0.5, cutoff:1600, reso:0.45, filtEnv:0.15, drive:0.6, downsample:3, width:0.65, reverb:0.4, reverbSize:0.8, reverbTone:0.3, duration:1.9,
+            _vary:{ freq:0.14, cutoff:0.2, reso:0.2, drive:0.2 } },
+  "Match Strike": { wave:0, freq:400, noise:0.9, sweep:-0.2, attack:0, hold:0.002, decay:0.06, sustain:0.15, release:0.25, cutoff:4000, reso:0.5, filtEnv:-0.4, drive:0.3, bitcrush:7, downsample:3, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.5, duration:0.6,
+            _vary:{ cutoff:0.2, decay:0.3 } },
+  "Inferno Roar": { wave:2, freq:120, noise:0.95, subOsc:0.35, attack:0.15, decay:0.5, sustain:0.75, release:0.5, cutoff:1600, reso:0.4, drive:0.55, downsample:4, width:0.7, reverb:0.4, reverbSize:0.88, reverbTone:0.3, duration:2.0,
+            _vary:{ cutoff:0.2, reso:0.2, drive:0.2 } },
+  "Fire Sparks": { wave:0, freq:2200, noise:0.5, sweep:0.2, attack:0, hold:0.001, decay:0.015, sustain:0, release:0.015, cutoff:7000, reso:0.55, drive:0.35, bitcrush:7, downsample:3, width:0.6, repeat:7, rate:10, duration:0.9,
+            _vary:{ freq:0.2, rate:0.25, cutoff:0.2 } },
+
+  // ==== Robots / mechanical ==== bitcrush/downsample = digital grit; fast vibrato = motor whir
+  "Robot Servo": { wave:1, freq:320, sweep:0.3, vibDepth:0.05, vibRate:30, noise:0.05, attack:0.01, decay:0.15, sustain:0.4, release:0.08, cutoff:3000, reso:0.5, drive:0.3, bitcrush:6, downsample:3, width:0.3, duration:0.4,
+            _vary:{ freq:0.16, sweep:0.2, cutoff:0.2 } },
+  "Robot Power Up": { wave:1, freq:150, sweep:0.7, noise:0.05, attack:0.05, decay:0.3, sustain:0.5, release:0.2, cutoff:1500, reso:0.5, filtEnv:0.6, drive:0.3, bitcrush:6, downsample:3, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.6, duration:1.1,
+            _vary:{ freq:0.14, sweep:0.15, cutoff:0.2 } },
+  "Robot Power Down": { wave:1, freq:600, sweep:-0.7, noise:0.05, attack:0.02, decay:0.4, sustain:0.4, release:0.3, cutoff:3500, reso:0.5, filtEnv:-0.6, drive:0.3, bitcrush:6, downsample:4, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.5, duration:1.1,
+            _vary:{ freq:0.14, sweep:0.15, cutoff:0.2 } },
+  "Robot Talk": { wave:1, freq:500, sweep:0.05, noise:0.02, attack:0, hold:0.002, decay:0.05, sustain:0.2, release:0.03, cutoff:4000, reso:0.4, drive:0.35, bitcrush:4, downsample:3, width:0.3, repeat:6, rate:11, duration:0.9,
+            _vary:{ freq:0.3, rate:0.2, bitcrush:0.3 } },
+  "Robot Stomp": { wave:1, freq:120, noise:0.3, boom:0.7, boomFreq:55, boomDrop:0.5, boomDecay:0.14, sweep:-0.3, attack:0, hold:0.004, decay:0.1, sustain:0, release:0.15, cutoff:2500, reso:0.55, filtEnv:-0.3, drive:0.5, bitcrush:7, downsample:2, width:0.4, reverb:0.25, reverbSize:0.55, reverbTone:0.35, duration:0.6,
+            _vary:{ freq:0.16, cutoff:0.2, decay:0.3 } },
+  "Mechanical Whir": { wave:2, freq:260, vibDepth:0.1, vibRate:28, noise:0.1, attack:0.05, decay:0.3, sustain:0.6, release:0.2, cutoff:2200, reso:0.4, drive:0.35, bitcrush:6, downsample:3, width:0.3, duration:1.3,
+            _vary:{ freq:0.14, vibRate:0.25, cutoff:0.2 } },
+  "Hydraulic Hiss": { wave:0, freq:300, noise:0.9, sweep:-0.1, boom:0.25, boomFreq:70, boomDrop:0.3, boomDecay:0.12, attack:0.005, decay:0.15, sustain:0.5, release:0.35, cutoff:3200, reso:0.4, filtEnv:-0.3, drive:0.25, downsample:2, width:0.4, duration:0.9,
+            _vary:{ cutoff:0.2, decay:0.2 } },
+  "Robot Alarm": { wave:1, freq:1000, noise:0.02, attack:0, hold:0.003, decay:0.06, sustain:0.5, release:0.04, cutoff:6000, reso:0.4, drive:0.3, bitcrush:5, width:0.3, repeat:6, rate:8, duration:1.0,
+            _vary:{ freq:0.1, rate:0.15 } },
+  "Scanner Ping": { wave:0, freq:800, sweep:0.5, attack:0, hold:0.002, decay:0.2, sustain:0.05, release:0.25, cutoff:7000, reso:0.4, drive:0.15, delay:0.35, delayTime:0.16, delayFb:0.45, reverb:0.35, reverbSize:0.7, reverbTone:0.7, duration:1.0,
+            _vary:{ freq:0.16, sweep:0.2, delayTime:0.3 } },
+  "Data Glitch": { wave:1, freq:1500, sweep:0.1, noise:0.15, attack:0, hold:0.001, decay:0.02, sustain:0.1, release:0.02, cutoff:6000, reso:0.5, drive:0.4, bitcrush:3, downsample:5, width:0.5, repeat:12, rate:26, duration:0.8,
+            _vary:{ freq:0.4, rate:0.2, bitcrush:0.3 } },
+  "Gear Grind": { wave:2, freq:130, vibDepth:0.15, vibRate:20, noise:0.3, attack:0.02, decay:0.3, sustain:0.55, release:0.2, cutoff:1400, reso:0.5, drive:0.5, bitcrush:5, downsample:6, width:0.4, duration:1.3,
+            _vary:{ freq:0.14, vibRate:0.3, cutoff:0.2, drive:0.2 } },
+  "Servo Twitch": { wave:1, freq:400, sweep:0.4, noise:0.03, attack:0, hold:0.002, decay:0.06, sustain:0, release:0.04, cutoff:3500, reso:0.5, drive:0.3, bitcrush:5, downsample:3, width:0.3, duration:0.18,
+            _vary:{ freq:0.2, sweep:0.2, decay:0.3 } },
+
+  // ============================================================================
+  // Batch 2 (2026-07-14): 30 more, spread across categories. Several lean on the
+  // newer engine features — pluck (wave 8), ring mod, PWM, bandpass filterMode,
+  // oversampled drive (driveOS) — noted in comments where they carry the sound.
+  // ============================================================================
+
+  // ---- Magic ----
+  "Healing Aura": { wave:6, freq:520, sweep:0.25, vibDepth:0.06, vibRate:5, unison:4, detune:14, width:0.75, attack:0.08, decay:0.5, sustain:0.5, release:0.7, cutoff:8000, reso:0.12, drive:0.08, delay:0.28, delayTime:0.18, delayFb:0.35, reverb:0.55, reverbSize:0.8, reverbTone:0.7, duration:1.8,
+            _vary:{ freq:0.12, detune:0.4, cutoff:0.18, delayTime:0.3 } },
+  // ring mod detunes the tone into something cursed/inharmonic as it falls
+  "Curse Whoosh": { wave:2, freq:500, sweep:-0.6, vibDepth:0.2, vibRate:7, ringMod:0.4, ringFreq:120, noise:0.2, attack:0.02, decay:0.5, sustain:0.15, release:0.5, cutoff:2600, reso:0.4, filtEnv:-0.3, drive:0.3, width:0.55, reverb:0.45, reverbSize:0.75, reverbTone:0.3, duration:1.3,
+            _vary:{ freq:0.18, ringFreq:0.3, cutoff:0.2 } },
+  "Shield Cast": { wave:3, freq:700, sweep:0.5, unison:3, detune:16, width:0.7, attack:0.01, decay:0.35, sustain:0.25, release:0.4, cutoff:9000, reso:0.25, filtEnv:0.3, drive:0.12, delay:0.2, delayTime:0.12, delayFb:0.3, reverb:0.5, reverbSize:0.7, reverbTone:0.75, duration:1.1,
+            _vary:{ freq:0.15, detune:0.4, cutoff:0.2 } },
+
+  // ---- UI ----
+  // pluck (Karplus-Strong) retriggered twice = a clean two-note notification
+  "Notification": { wave:8, freq:1046, pluckDamp:0.35, attack:0, hold:0.001, decay:0.2, sustain:0, release:0.2, cutoff:10000, reso:0.1, reverb:0.25, reverbSize:0.5, reverbTone:0.7, repeat:2, rate:9, duration:0.6,
+            _vary:{ freq:0.1, pluckDamp:0.3 } },
+  "Menu Open": { wave:0, freq:500, sweep:0.4, attack:0.005, hold:0.002, decay:0.12, sustain:0, release:0.1, cutoff:8000, reso:0.12, reverb:0.2, reverbSize:0.5, reverbTone:0.65, duration:0.3,
+            _vary:{ freq:0.1, sweep:0.15 } },
+
+  // ---- Explosions ----
+  // driveOS=4 oversamples the heavy tanh so the blast stays thick, not fizzy
+  "Grenade Blast": { wave:0, freq:110, noise:0.9, subOsc:0.6, sweep:-0.4, boom:0.8, boomFreq:55, boomDrop:0.8, boomDecay:0.3, attack:0, hold:0.004, decay:0.3, sustain:0, release:0.4, cutoff:4500, reso:0.18, filtEnv:-0.6, drive:0.65, driveOS:4, width:0.5, reverb:0.45, reverbSize:0.75, reverbTone:0.28, duration:1.2,
+            _vary:{ freq:0.16, decay:0.25, drive:0.2, boomFreq:0.15 } },
+  "Distant Boom": { wave:0, freq:70, noise:0.6, subOsc:0.7, sweep:-0.3, boom:0.7, boomFreq:40, boomDrop:0.7, boomDecay:0.6, attack:0.01, hold:0.01, decay:0.6, sustain:0, release:0.6, cutoff:1400, reso:0.15, filtEnv:-0.4, drive:0.4, width:0.6, delay:0.25, delayTime:0.24, delayFb:0.35, reverb:0.65, reverbSize:0.95, reverbTone:0.15, duration:1.9,
+            _vary:{ freq:0.15, cutoff:0.2, boomFreq:0.15, delayTime:0.3 } },
+
+  // ---- Machine ----
+  // ring mod + fast vibrato = a whining electric motor
+  "Servo Motor": { wave:2, freq:280, sweep:0.1, ringMod:0.5, ringFreq:90, vibDepth:0.05, vibRate:20, attack:0.02, decay:0.2, sustain:0.6, release:0.12, cutoff:3500, reso:0.4, filtEnv:0.1, drive:0.35, bitcrush:8, downsample:3, width:0.4, duration:0.8,
+            _vary:{ freq:0.2, ringFreq:0.3, cutoff:0.2 } },
+  // PWM widens/narrows the pulse as it powers down for a hollow collapsing tone
+  "Power Down": { wave:4, freq:600, sweep:-0.7, pulseWidth:0.4, pwmDepth:0.3, pwmRate:6, attack:0, decay:0.6, sustain:0.2, release:0.4, cutoff:5000, reso:0.3, filtEnv:-0.5, drive:0.3, bitcrush:7, downsample:4, width:0.4, duration:1.0,
+            _vary:{ freq:0.15, cutoff:0.2, pwmRate:0.3 } },
+
+  // ---- Nature ----
+  "Campfire Crackle": { wave:2, freq:300, noise:0.8, attack:0, hold:0.001, decay:0.04, sustain:0.1, release:0.05, cutoff:3000, reso:0.5, filtEnv:0.15, drive:0.4, bitcrush:6, downsample:5, width:0.5, reverb:0.2, reverbSize:0.5, reverbTone:0.5, repeat:8, rate:18, duration:0.9,
+            _vary:{ rate:0.25, freq:0.3, cutoff:0.2 } },
+  "Bird Trill": { wave:0, freq:2600, sweep:0.15, vibDepth:0.3, vibRate:22, attack:0.005, decay:0.08, sustain:0.2, release:0.06, cutoff:9000, reso:0.2, width:0.4, reverb:0.25, reverbSize:0.55, reverbTone:0.7, repeat:5, rate:11, duration:0.8,
+            _vary:{ freq:0.14, vibRate:0.3, rate:0.2 } },
+
+  // ---- Animal / Monster ----
+  // ring mod + burst = garbled goblin syllables
+  "Goblin Chatter": { wave:2, freq:320, sweep:0.1, ringMod:0.55, ringFreq:180, vibDepth:0.25, vibRate:14, attack:0.005, decay:0.06, sustain:0.3, release:0.05, cutoff:3500, reso:0.4, drive:0.3, bitcrush:7, width:0.45, repeat:6, rate:13, duration:0.9,
+            _vary:{ freq:0.25, ringFreq:0.3, rate:0.2 } },
+  "Beast Roar": { wave:2, freq:130, sweep:-0.2, vibDepth:0.15, vibRate:8, noise:0.35, ringMod:0.25, ringFreq:60, attack:0.03, decay:0.5, sustain:0.5, release:0.4, cutoff:1800, reso:0.5, filtEnv:0.2, drive:0.55, driveOS:2, width:0.5, reverb:0.35, reverbSize:0.7, reverbTone:0.3, duration:1.3,
+            _vary:{ freq:0.16, cutoff:0.2, ringFreq:0.3 } },
+  // FM carrier + ring mod = a dry insect wing buzz
+  "Insect Buzz": { wave:5, freq:220, vibDepth:0.1, vibRate:30, ringMod:0.4, ringFreq:140, attack:0.02, decay:0.3, sustain:0.7, release:0.2, cutoff:4000, reso:0.3, drive:0.3, width:0.4, duration:1.2,
+            _vary:{ freq:0.2, ringFreq:0.3, vibRate:0.3 } },
+
+  // ---- Horror ----
+  "Ghost Moan": { wave:0, freq:280, sweep:-0.1, vibDepth:0.35, vibRate:5, noise:0.15, attack:0.15, decay:0.6, sustain:0.5, release:0.8, cutoff:1600, reso:0.35, filtEnv:0.1, drive:0.15, width:0.6, delay:0.3, delayTime:0.3, delayFb:0.4, reverb:0.65, reverbSize:0.9, reverbTone:0.35, duration:2.0,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2 } },
+  "Jumpscare Hit": { wave:2, freq:800, noise:0.7, sweep:-0.3, attack:0, hold:0.002, decay:0.25, sustain:0.1, release:0.5, cutoff:6000, reso:0.5, filtEnv:-0.4, drive:0.7, driveOS:2, bitcrush:6, width:0.6, reverb:0.5, reverbSize:0.85, reverbTone:0.4, duration:1.2,
+            _vary:{ freq:0.2, cutoff:0.2, drive:0.2 } },
+  // bandpass (filterMode 2) on noise = a narrow, breathy whisper band
+  "Whispering Void": { wave:0, freq:200, noise:0.85, filterMode:2, attack:0.2, decay:0.5, sustain:0.5, release:0.7, cutoff:1400, reso:0.6, filtEnv:0.2, drive:0.1, width:0.7, delay:0.28, delayTime:0.22, delayFb:0.4, reverb:0.7, reverbSize:0.92, reverbTone:0.45, duration:2.0,
+            _vary:{ cutoff:0.25, reso:0.2, delayTime:0.3 } },
+
+  // ---- Guns ----
+  "Pistol Shot": { wave:0, freq:130, noise:0.9, subOsc:0.45, sweep:-0.5, boom:0.55, boomFreq:80, boomDrop:0.7, boomDecay:0.16, attack:0, hold:0.003, decay:0.05, sustain:0, release:0.07, cutoff:7000, reso:0.15, filtEnv:-0.6, drive:0.6, driveOS:4, width:0.3, reverb:0.3, reverbSize:0.55, reverbTone:0.3, duration:0.6,
+            _vary:{ freq:0.14, decay:0.3, drive:0.2, boomFreq:0.15 } },
+  "Sniper Rifle": { wave:2, freq:160, noise:0.95, subOsc:0.4, sweep:-0.6, boom:0.6, boomFreq:70, boomDrop:0.7, boomDecay:0.25, attack:0, hold:0.002, decay:0.06, sustain:0, release:0.1, cutoff:9500, reso:0.18, filtEnv:-0.55, drive:0.6, driveOS:4, width:0.4, delay:0.3, delayTime:0.14, delayFb:0.4, reverb:0.5, reverbSize:0.92, reverbTone:0.3, duration:1.4,
+            _vary:{ freq:0.14, drive:0.2, delayTime:0.3, boomFreq:0.12 } },
+
+  // ---- Martial weaponry ----
+  "Spear Thrust": { wave:2, freq:600, noise:0.75, sweep:0.3, attack:0.015, hold:0, decay:0.1, sustain:0, release:0.08, cutoff:1400, reso:0.4, filtEnv:0.75, drive:0.25, width:0.5, reverb:0.18, reverbSize:0.5, reverbTone:0.5, duration:0.3,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2 } },
+  "Axe Chop": { wave:2, freq:150, noise:0.55, sweep:-0.5, boom:0.6, boomFreq:75, boomDrop:0.6, boomDecay:0.14, attack:0, hold:0.003, decay:0.09, sustain:0, release:0.09, cutoff:3200, reso:0.25, filtEnv:-0.5, drive:0.6, driveOS:2, bitcrush:8, width:0.35, reverb:0.22, reverbSize:0.55, reverbTone:0.3, duration:0.5,
+            _vary:{ freq:0.18, drive:0.2, cutoff:0.2 } },
+  "Whip Crack": { wave:2, freq:1200, noise:0.6, sweep:-0.7, attack:0, hold:0.001, decay:0.05, sustain:0, release:0.05, cutoff:8000, reso:0.4, filtEnv:-0.3, drive:0.5, driveOS:2, width:0.4, reverb:0.25, reverbSize:0.6, reverbTone:0.6, duration:0.3,
+            _vary:{ freq:0.18, sweep:0.15, cutoff:0.2 } },
+
+  // ---- Fire ----
+  "Fireball Whoosh": { wave:2, freq:180, noise:0.88, sweep:0.4, attack:0.03, hold:0, decay:0.3, sustain:0.35, release:0.4, cutoff:1200, reso:0.4, filtEnv:0.6, drive:0.4, downsample:3, width:0.6, reverb:0.3, reverbSize:0.65, reverbTone:0.4, duration:1.1,
+            _vary:{ cutoff:0.25, filtEnv:0.15, freq:0.2 } },
+
+  // ---- Retro / Arcade ----
+  "Pickup Item": { wave:1, freq:784, sweep:0.1, attack:0, hold:0.005, decay:0.06, sustain:0, release:0.03, cutoff:11000, bitcrush:6, repeat:3, rate:16, duration:0.4,
+            _vary:{ freq:0.2, rate:0.15 } },
+  "Extra Life": { wave:1, freq:660, sweep:0.5, attack:0, hold:0.004, decay:0.08, sustain:0.1, release:0.05, cutoff:10000, bitcrush:7, repeat:4, rate:10, duration:0.7,
+            _vary:{ freq:0.15, rate:0.12 } },
+
+  // ---- Sci-Fi & Hazard ----
+  // PWM + ring mod = a shimmering, unstable energy hum
+  "Force Field": { wave:4, freq:140, pulseWidth:0.5, pwmDepth:0.35, pwmRate:3, ringMod:0.3, ringFreq:70, attack:0.1, decay:0.4, sustain:0.7, release:0.5, cutoff:2400, reso:0.4, drive:0.25, width:0.5, reverb:0.35, reverbSize:0.7, reverbTone:0.4, duration:1.6,
+            _vary:{ freq:0.12, ringFreq:0.3, pwmRate:0.3 } },
+  "Warp Drive": { wave:2, freq:120, sweep:0.8, vibDepth:0.08, vibRate:10, unison:3, detune:18, width:0.7, attack:0.05, decay:0.6, sustain:0.4, release:0.6, cutoff:5000, reso:0.35, filtEnv:0.5, drive:0.3, delay:0.3, delayTime:0.16, delayFb:0.4, reverb:0.5, reverbSize:0.8, reverbTone:0.5, duration:1.7,
+            _vary:{ sweep:0.15, cutoff:0.2, detune:0.4 } },
+  "Laser Charge": { wave:2, freq:200, sweep:0.7, ringMod:0.35, ringFreq:130, vibDepth:0.05, vibRate:16, attack:0.05, decay:0.4, sustain:0.5, release:0.2, cutoff:6000, reso:0.5, filtEnv:0.4, drive:0.3, width:0.4, delay:0.2, delayTime:0.1, delayFb:0.35, reverb:0.35, reverbSize:0.65, reverbTone:0.6, duration:0.9,
+            _vary:{ freq:0.18, ringFreq:0.3, sweep:0.15 } },
+
+  // ---- Cartoon / Misc ----
+  "Boing Spring": { wave:0, freq:400, sweep:0.3, vibDepth:0.6, vibRate:16, attack:0, hold:0.002, decay:0.3, sustain:0.05, release:0.25, cutoff:6000, reso:0.5, filtEnv:0.2, drive:0.15, width:0.4, duration:0.6,
+            _vary:{ freq:0.2, vibRate:0.3 } },
+  "Squish Pop": { wave:0, freq:220, sweep:0.7, noise:0.2, attack:0, hold:0.002, decay:0.1, sustain:0, release:0.08, cutoff:3500, reso:0.6, filtEnv:0.5, drive:0.2, width:0.4, reverb:0.15, reverbSize:0.45, reverbTone:0.55, duration:0.3,
+            _vary:{ freq:0.22, sweep:0.2, reso:0.2 } },
+
+  // ============================================================================
+  // Batch 3 (2026-07-14): another 30 across categories.
+  // ============================================================================
+
+  // ---- Magic ----
+  "Enchant": { wave:3, freq:660, sweep:0.35, vibDepth:0.08, vibRate:9, unison:4, detune:18, width:0.8, attack:0.02, decay:0.45, sustain:0.3, release:0.6, cutoff:9500, reso:0.2, filtEnv:0.25, drive:0.1, delay:0.3, delayTime:0.13, delayFb:0.38, reverb:0.55, reverbSize:0.75, reverbTone:0.78, duration:1.5,
+            _vary:{ freq:0.14, detune:0.4, delayTime:0.3 } },
+  "Summon Portal": { wave:2, freq:180, sweep:0.2, vibDepth:0.15, vibRate:6, ringMod:0.4, ringFreq:95, unison:3, detune:20, width:0.75, attack:0.1, decay:0.6, sustain:0.5, release:0.7, cutoff:4000, reso:0.4, filtEnv:0.3, drive:0.25, delay:0.32, delayTime:0.2, delayFb:0.42, reverb:0.6, reverbSize:0.85, reverbTone:0.5, duration:1.9,
+            _vary:{ freq:0.16, ringFreq:0.3, cutoff:0.2 } },
+  "Hex Bolt": { wave:2, freq:700, sweep:-0.55, ringMod:0.5, ringFreq:150, noise:0.15, attack:0, hold:0.002, decay:0.2, sustain:0.05, release:0.2, cutoff:5000, reso:0.5, filtEnv:-0.3, drive:0.4, bitcrush:8, width:0.5, delay:0.22, delayTime:0.09, delayFb:0.35, reverb:0.4, reverbSize:0.65, reverbTone:0.4, duration:0.7,
+            _vary:{ freq:0.2, ringFreq:0.3, sweep:0.15 } },
+
+  // ---- UI ----
+  "Tab Switch": { wave:1, freq:900, sweep:0.1, attack:0, hold:0.001, decay:0.025, sustain:0, release:0.02, cutoff:9000, reso:0.12, duration:0.09,
+            _vary:{ freq:0.12 } },
+  // pluck arpeggio = a bright "unlocked!" flourish
+  "Unlock": { wave:8, freq:784, pluckDamp:0.3, attack:0, hold:0.001, decay:0.25, sustain:0, release:0.25, cutoff:10000, reso:0.1, reverb:0.3, reverbSize:0.55, reverbTone:0.72, repeat:3, rate:11, duration:0.6,
+            _vary:{ freq:0.1, pluckDamp:0.3 } },
+
+  // ---- Explosions ----
+  "Barrel Burst": { wave:0, freq:130, noise:0.88, subOsc:0.5, sweep:-0.4, boom:0.7, boomFreq:60, boomDrop:0.7, boomDecay:0.25, attack:0, hold:0.004, decay:0.25, sustain:0, release:0.3, cutoff:4000, reso:0.2, filtEnv:-0.55, drive:0.6, driveOS:4, bitcrush:9, width:0.45, reverb:0.4, reverbSize:0.7, reverbTone:0.3, duration:1.0,
+            _vary:{ freq:0.16, drive:0.2, boomFreq:0.15 } },
+  "Nuke Rumble": { wave:0, freq:55, noise:0.75, subOsc:0.95, sweep:-0.3, boom:0.95, boomFreq:38, boomDrop:1.1, boomDecay:0.9, attack:0.002, hold:0.01, decay:0.9, sustain:0.1, release:0.9, cutoff:2000, reso:0.15, filtEnv:-0.5, drive:0.65, driveOS:2, downsample:2, width:0.7, delay:0.28, delayTime:0.3, delayFb:0.4, reverb:0.7, reverbSize:0.97, reverbTone:0.12, duration:2.0,
+            _vary:{ freq:0.12, decay:0.2, boomFreq:0.12 } },
+
+  // ---- Machine ----
+  // PWM hum = a hovering drone motor
+  "Drone Hover": { wave:4, freq:160, pulseWidth:0.5, pwmDepth:0.3, pwmRate:5, attack:0.08, decay:0.3, sustain:0.7, release:0.3, cutoff:3000, reso:0.35, drive:0.2, bitcrush:9, width:0.4, reverb:0.2, reverbSize:0.55, reverbTone:0.45, duration:1.5,
+            _vary:{ freq:0.12, pwmRate:0.3, cutoff:0.2 } },
+  "Conveyor Belt": { wave:2, freq:110, noise:0.25, attack:0.01, decay:0.1, sustain:0.4, release:0.08, cutoff:1600, reso:0.4, drive:0.4, bitcrush:6, downsample:6, width:0.4, repeat:8, rate:9, duration:1.3,
+            _vary:{ rate:0.2, freq:0.15, cutoff:0.2 } },
+
+  // ---- Nature ----
+  "Thunderclap": { wave:0, freq:90, noise:0.9, subOsc:0.5, sweep:-0.4, boom:0.7, boomFreq:50, boomDrop:0.7, boomDecay:0.4, attack:0, hold:0.003, decay:0.3, sustain:0, release:0.5, cutoff:3000, reso:0.2, filtEnv:-0.5, drive:0.55, driveOS:2, width:0.6, delay:0.25, delayTime:0.18, delayFb:0.4, reverb:0.6, reverbSize:0.9, reverbTone:0.2, duration:1.6,
+            _vary:{ freq:0.15, cutoff:0.2, delayTime:0.3 } },
+  // bandpass on burbling noise = a watery brook
+  "Stream Babble": { wave:0, freq:400, noise:0.7, filterMode:2, vibDepth:0.1, vibRate:7, attack:0.1, decay:0.4, sustain:0.5, release:0.5, cutoff:2600, reso:0.5, filtEnv:0.1, drive:0.12, width:0.6, reverb:0.3, reverbSize:0.65, reverbTone:0.6, duration:1.6,
+            _vary:{ cutoff:0.25, vibRate:0.3, reso:0.2 } },
+
+  // ---- Animal / Monster ----
+  "Slime Gurgle": { wave:0, freq:160, sweep:0.2, vibDepth:0.5, vibRate:11, noise:0.35, attack:0.02, decay:0.35, sustain:0.3, release:0.3, cutoff:1800, reso:0.5, filtEnv:0.2, drive:0.3, bitcrush:7, downsample:4, width:0.45, reverb:0.2, reverbSize:0.55, reverbTone:0.4, duration:1.0,
+            _vary:{ freq:0.2, vibRate:0.3, cutoff:0.2 } },
+  "Bat Screech": { wave:2, freq:2800, sweep:-0.2, vibDepth:0.2, vibRate:24, ringMod:0.3, ringFreq:320, filterMode:2, attack:0, hold:0.002, decay:0.15, sustain:0.2, release:0.12, cutoff:8000, reso:0.4, drive:0.35, width:0.5, reverb:0.3, reverbSize:0.6, reverbTone:0.7, repeat:3, rate:14, duration:0.6,
+            _vary:{ freq:0.16, ringFreq:0.3, rate:0.2 } },
+  "Troll Grunt": { wave:0, freq:110, sweep:-0.25, vibDepth:0.12, vibRate:6, noise:0.3, ringMod:0.2, ringFreq:45, attack:0.02, decay:0.25, sustain:0.35, release:0.25, cutoff:1200, reso:0.45, filtEnv:0.15, drive:0.5, driveOS:2, width:0.4, reverb:0.25, reverbSize:0.6, reverbTone:0.28, duration:0.8,
+            _vary:{ freq:0.16, cutoff:0.2, ringFreq:0.3 } },
+
+  // ---- Horror ----
+  // ring mod on a whispering bandpass = a demonic murmur
+  "Demon Whisper": { wave:0, freq:180, noise:0.5, ringMod:0.45, ringFreq:70, vibDepth:0.15, vibRate:4, filterMode:2, attack:0.1, decay:0.5, sustain:0.5, release:0.7, cutoff:1500, reso:0.5, drive:0.2, width:0.65, delay:0.3, delayTime:0.26, delayFb:0.42, reverb:0.7, reverbSize:0.92, reverbTone:0.35, duration:2.0,
+            _vary:{ ringFreq:0.3, cutoff:0.2 } },
+  "Bone Crack": { wave:2, freq:400, noise:0.4, sweep:-0.6, attack:0, hold:0.001, decay:0.05, sustain:0, release:0.05, cutoff:4000, reso:0.55, filtEnv:-0.4, drive:0.6, driveOS:2, bitcrush:6, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.45, duration:0.25,
+            _vary:{ freq:0.2, cutoff:0.25, drive:0.2 } },
+  // ring mod detunes the bell into an unsettling, off-key music box
+  "Cursed Chime": { wave:3, freq:1400, ringMod:0.25, ringFreq:210, vibDepth:0.1, vibRate:5, attack:0.005, decay:0.6, sustain:0.1, release:0.7, cutoff:8000, reso:0.2, drive:0.1, delay:0.3, delayTime:0.19, delayFb:0.4, reverb:0.6, reverbSize:0.85, reverbTone:0.6, duration:1.7,
+            _vary:{ freq:0.12, ringFreq:0.3, delayTime:0.3 } },
+
+  // ---- Guns ----
+  "Machine Gun": { wave:2, freq:145, noise:0.95, subOsc:0.35, sweep:-0.6, boom:0.5, boomFreq:78, boomDrop:0.5, boomDecay:0.07, attack:0, hold:0.002, decay:0.035, sustain:0, release:0.04, cutoff:8000, reso:0.16, filtEnv:-0.5, drive:0.62, driveOS:2, width:0.35, reverb:0.28, reverbSize:0.72, reverbTone:0.3, repeat:12, rate:16, duration:1.1,
+            _vary:{ rate:0.15, freq:0.1, drive:0.2 } },
+  "Plasma Rifle": { wave:2, freq:500, sweep:-0.4, ringMod:0.4, ringFreq:160, noise:0.2, attack:0, hold:0.002, decay:0.12, sustain:0, release:0.15, cutoff:6000, reso:0.5, filtEnv:-0.3, drive:0.5, bitcrush:8, width:0.4, delay:0.25, delayTime:0.08, delayFb:0.35, reverb:0.35, reverbSize:0.65, reverbTone:0.55, duration:0.7,
+            _vary:{ freq:0.18, ringFreq:0.3, cutoff:0.2 } },
+
+  // ---- Martial weaponry ----
+  "Rapier Lunge": { wave:2, freq:800, noise:0.7, sweep:0.35, attack:0.01, hold:0, decay:0.08, sustain:0, release:0.06, cutoff:1600, reso:0.45, filtEnv:0.8, drive:0.2, width:0.5, reverb:0.15, reverbSize:0.5, reverbTone:0.6, duration:0.25,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2 } },
+  "Shield Bash": { wave:0, freq:220, sweep:-0.4, noise:0.35, boom:0.6, boomFreq:85, boomDrop:0.55, boomDecay:0.15, attack:0, hold:0.004, decay:0.15, sustain:0, release:0.14, cutoff:2400, reso:0.4, filtEnv:-0.35, drive:0.45, driveOS:2, bitcrush:9, width:0.4, reverb:0.25, reverbSize:0.55, reverbTone:0.35, duration:0.5,
+            _vary:{ freq:0.16, cutoff:0.2, drive:0.2 } },
+  "Flail Swing": { wave:2, freq:500, noise:0.8, sweep:0.1, attack:0.02, hold:0, decay:0.14, sustain:0, release:0.1, cutoff:1300, reso:0.4, filtEnv:0.65, drive:0.25, width:0.55, reverb:0.2, reverbSize:0.55, reverbTone:0.5, repeat:2, rate:7, duration:0.5,
+            _vary:{ cutoff:0.25, filtEnv:0.15, rate:0.2 } },
+
+  // ---- Fire ----
+  "Fire Burst": { wave:2, freq:200, noise:0.9, sweep:0.25, attack:0.005, hold:0, decay:0.15, sustain:0.2, release:0.2, cutoff:1400, reso:0.45, filtEnv:0.5, drive:0.45, downsample:3, width:0.55, reverb:0.25, reverbSize:0.6, reverbTone:0.4, duration:0.6,
+            _vary:{ cutoff:0.25, filtEnv:0.15, freq:0.2 } },
+
+  // ---- Retro / Arcade ----
+  "Retro Jump": { wave:1, freq:280, sweep:0.5, attack:0, hold:0.004, decay:0.1, sustain:0.1, release:0.06, cutoff:9000, bitcrush:6, duration:0.3,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  "Game Start": { wave:1, freq:523, sweep:0.15, attack:0, hold:0.005, decay:0.08, sustain:0.15, release:0.05, cutoff:10000, bitcrush:7, repeat:4, rate:9, duration:0.8,
+            _vary:{ freq:0.15, rate:0.12 } },
+
+  // ---- Sci-Fi & Hazard ----
+  "Teleporter Hum": { wave:4, freq:120, pulseWidth:0.5, pwmDepth:0.35, pwmRate:4, ringMod:0.35, ringFreq:80, attack:0.1, decay:0.5, sustain:0.7, release:0.6, cutoff:2800, reso:0.4, drive:0.25, width:0.5, delay:0.28, delayTime:0.15, delayFb:0.4, reverb:0.45, reverbSize:0.78, reverbTone:0.5, duration:1.8,
+            _vary:{ freq:0.12, ringFreq:0.3, pwmRate:0.3 } },
+  "Energy Drain": { wave:2, freq:700, sweep:-0.7, ringMod:0.3, ringFreq:110, vibDepth:0.1, vibRate:8, attack:0.02, decay:0.6, sustain:0.2, release:0.5, cutoff:4500, reso:0.4, filtEnv:-0.5, drive:0.3, width:0.5, delay:0.28, delayTime:0.14, delayFb:0.4, reverb:0.45, reverbSize:0.75, reverbTone:0.45, duration:1.4,
+            _vary:{ freq:0.18, ringFreq:0.3, sweep:0.15 } },
+  // pluck sequence = a digital "scan done" readout
+  "Scan Complete": { wave:8, freq:880, pluckDamp:0.4, attack:0, hold:0.001, decay:0.15, sustain:0, release:0.15, cutoff:9000, reso:0.15, bitcrush:9, reverb:0.28, reverbSize:0.55, reverbTone:0.6, repeat:4, rate:12, duration:0.7,
+            _vary:{ freq:0.12, rate:0.15 } },
+
+  // ---- Cartoon / Misc ----
+  "Rubber Stretch": { wave:0, freq:200, sweep:0.9, vibDepth:0.3, vibRate:10, attack:0.01, decay:0.4, sustain:0.1, release:0.2, cutoff:5000, reso:0.4, drive:0.15, width:0.4, duration:0.7,
+            _vary:{ freq:0.2, sweep:0.15, vibRate:0.3 } },
+  "Pop Cork": { wave:0, freq:180, sweep:0.8, attack:0, hold:0.001, decay:0.06, sustain:0, release:0.05, cutoff:4000, reso:0.6, filtEnv:0.6, drive:0.2, width:0.35, reverb:0.15, reverbSize:0.45, reverbTone:0.6, duration:0.2,
+            _vary:{ freq:0.22, sweep:0.2, reso:0.2 } },
+
+  // ============================================================================
+  // Batch 4 (2026-07-14): 30 alternate takes ("X 2") on popular presets — same
+  // role, different character (wave/pitch/grit) so each is a distinct option.
+  // ============================================================================
+
+  // ---- Magic ----
+  "Fireball Cast 2": { wave:2, freq:300, noise:0.5, sweep:0.3, attack:0.005, decay:0.3, sustain:0.2, release:0.35, cutoff:2400, reso:0.45, filtEnv:0.5, drive:0.4, downsample:2, width:0.6, reverb:0.35, reverbSize:0.7, reverbTone:0.4, duration:1.0,
+            _vary:{ cutoff:0.25, freq:0.2, filtEnv:0.15 } },
+  "Teleport 2": { wave:1, freq:600, sweep:0.9, vibDepth:0.15, vibRate:22, ringMod:0.35, ringFreq:140, attack:0.003, decay:0.25, sustain:0.05, release:0.3, cutoff:8000, reso:0.4, filtEnv:0.5, drive:0.2, bitcrush:7, delay:0.35, delayTime:0.08, delayFb:0.45, reverb:0.5, reverbSize:0.72, reverbTone:0.6, duration:0.8,
+            _vary:{ freq:0.2, ringFreq:0.3, delayTime:0.3 } },
+  "Magic Sparkle 2": { wave:0, freq:2400, sweep:0.3, vibDepth:0.15, vibRate:20, unison:4, detune:26, width:0.85, attack:0.002, decay:0.35, sustain:0.08, release:0.5, cutoff:12000, reso:0.15, delay:0.32, delayTime:0.07, delayFb:0.42, reverb:0.55, reverbSize:0.7, reverbTone:0.85, repeat:3, rate:14, duration:1.0,
+            _vary:{ freq:0.16, detune:0.4, rate:0.2 } },
+
+  // ---- UI ----
+  "UI Click 2": { wave:0, freq:1500, attack:0, hold:0.001, decay:0.025, sustain:0, release:0.02, cutoff:9000, reso:0.15, reverb:0.1, reverbSize:0.4, reverbTone:0.7, duration:0.07,
+            _vary:{ freq:0.1 } },
+  "Confirm 2": { wave:8, freq:880, pluckDamp:0.35, attack:0, hold:0.001, decay:0.18, sustain:0, release:0.18, cutoff:10000, reso:0.1, reverb:0.22, reverbSize:0.5, reverbTone:0.72, repeat:2, rate:12, duration:0.45,
+            _vary:{ freq:0.1 } },
+
+  // ---- Explosions ----
+  "Explosion 2": { wave:2, freq:100, noise:0.9, subOsc:0.55, sweep:-0.35, boom:0.75, boomFreq:52, boomDrop:0.75, boomDecay:0.28, attack:0, hold:0.003, decay:0.35, sustain:0, release:0.35, cutoff:3800, reso:0.22, filtEnv:-0.6, drive:0.7, driveOS:4, bitcrush:7, downsample:2, width:0.55, reverb:0.45, reverbSize:0.78, reverbTone:0.26, duration:1.2,
+            _vary:{ freq:0.16, drive:0.2, boomFreq:0.15 } },
+  "Cinematic Boom 2": { wave:0, freq:58, noise:0.7, subOsc:0.95, sweep:-0.3, boom:0.95, boomFreq:40, boomDrop:1.2, boomDecay:0.85, attack:0.002, hold:0.01, decay:0.85, sustain:0.05, release:0.8, cutoff:2200, reso:0.15, filtEnv:-0.55, drive:0.55, downsample:2, width:0.7, delay:0.25, delayTime:0.26, delayFb:0.38, reverb:0.7, reverbSize:0.96, reverbTone:0.14, duration:2.0,
+            _vary:{ freq:0.12, decay:0.2, boomFreq:0.12 } },
+
+  // ---- Machine ----
+  "Robot Beep 2": { wave:1, freq:520, sweep:-0.1, attack:0, hold:0.002, decay:0.05, sustain:0.25, release:0.04, cutoff:5000, reso:0.3, bitcrush:4, downsample:4, width:0.35, repeat:5, rate:12, duration:0.6,
+            _vary:{ freq:0.3, rate:0.2, bitcrush:0.3 } },
+  "Robot Talk 2": { wave:2, freq:300, sweep:0.05, ringMod:0.5, ringFreq:120, vibDepth:0.1, vibRate:12, attack:0.005, decay:0.08, sustain:0.4, release:0.06, cutoff:3000, reso:0.35, drive:0.3, bitcrush:6, width:0.4, repeat:7, rate:11, duration:1.0,
+            _vary:{ freq:0.25, ringFreq:0.3, rate:0.2 } },
+
+  // ---- Nature ----
+  "Thunder 2": { wave:0, freq:80, noise:0.88, subOsc:0.55, sweep:-0.4, boom:0.75, boomFreq:46, boomDrop:0.8, boomDecay:0.6, attack:0, hold:0.004, decay:0.5, sustain:0.15, release:0.8, cutoff:2200, reso:0.18, filtEnv:-0.45, drive:0.5, width:0.65, delay:0.3, delayTime:0.34, delayFb:0.48, reverb:0.68, reverbSize:0.95, reverbTone:0.16, duration:2.0,
+            _vary:{ freq:0.14, cutoff:0.2, delayTime:0.3 } },
+  "Wind Gust 2": { wave:0, freq:320, noise:0.92, filterMode:2, attack:0.3, hold:0.05, decay:0.4, sustain:0.35, release:0.6, cutoff:1400, reso:0.5, filtEnv:0.5, drive:0.12, width:0.75, reverb:0.4, reverbSize:0.85, reverbTone:0.55, duration:1.9,
+            _vary:{ cutoff:0.25, reso:0.2, decay:0.2 } },
+
+  // ---- Animal / Monster ----
+  "Monster Growl 2": { wave:2, freq:100, sweep:-0.15, vibDepth:0.2, vibRate:7, noise:0.3, ringMod:0.3, ringFreq:50, attack:0.03, decay:0.5, sustain:0.5, release:0.5, cutoff:1400, reso:0.5, filtEnv:0.15, drive:0.6, driveOS:2, width:0.5, reverb:0.35, reverbSize:0.72, reverbTone:0.25, duration:1.5,
+            _vary:{ freq:0.16, cutoff:0.2, ringFreq:0.3 } },
+  "Dog Bark 2": { wave:2, freq:340, sweep:-0.3, noise:0.4, attack:0, hold:0.003, decay:0.1, sustain:0, release:0.08, cutoff:3000, reso:0.5, filtEnv:-0.2, drive:0.4, width:0.4, reverb:0.18, reverbSize:0.5, reverbTone:0.45, repeat:2, rate:6, duration:0.5,
+            _vary:{ freq:0.2, cutoff:0.25, rate:0.2 } },
+  "Dragon Fire Breath 2": { wave:2, freq:150, noise:0.92, sweep:-0.1, ringMod:0.2, ringFreq:60, attack:0.04, decay:0.4, sustain:0.6, release:0.5, cutoff:1600, reso:0.4, filtEnv:0.3, drive:0.5, downsample:3, width:0.6, reverb:0.35, reverbSize:0.75, reverbTone:0.3, duration:1.6,
+            _vary:{ cutoff:0.25, freq:0.16, ringFreq:0.3 } },
+
+  // ---- Horror ----
+  "Jump Scare Stinger 2": { wave:2, freq:900, noise:0.6, sweep:-0.2, unison:3, detune:30, attack:0, hold:0.002, decay:0.3, sustain:0.15, release:0.6, cutoff:6500, reso:0.5, filtEnv:-0.3, drive:0.65, driveOS:2, width:0.7, reverb:0.55, reverbSize:0.88, reverbTone:0.42, duration:1.3,
+            _vary:{ freq:0.2, detune:0.4, cutoff:0.2 } },
+  "Ghostly Wail 2": { wave:0, freq:220, sweep:-0.05, vibDepth:0.4, vibRate:4, noise:0.1, attack:0.2, decay:0.7, sustain:0.5, release:0.9, cutoff:1400, reso:0.4, drive:0.15, width:0.65, delay:0.3, delayTime:0.32, delayFb:0.42, reverb:0.7, reverbSize:0.93, reverbTone:0.3, duration:2.0,
+            _vary:{ freq:0.16, vibRate:0.3, cutoff:0.2 } },
+  "Heartbeat 2": { wave:0, freq:60, subOsc:0.7, boom:0.7, boomFreq:48, boomDrop:0.5, boomDecay:0.14, attack:0.002, hold:0.004, decay:0.12, sustain:0, release:0.1, cutoff:900, reso:0.2, drive:0.3, width:0.4, reverb:0.3, reverbSize:0.7, reverbTone:0.25, repeat:6, rate:3.5, duration:1.8,
+            _vary:{ freq:0.12, rate:0.15, boomFreq:0.12 } },
+
+  // ---- Guns ----
+  "Gunshot 2": { wave:2, freq:135, noise:0.92, subOsc:0.5, sweep:-0.55, boom:0.62, boomFreq:78, boomDrop:0.7, boomDecay:0.2, attack:0, hold:0.003, decay:0.05, sustain:0, release:0.08, cutoff:7500, reso:0.16, filtEnv:-0.6, drive:0.68, driveOS:4, width:0.35, reverb:0.32, reverbSize:0.6, reverbTone:0.3, duration:0.65,
+            _vary:{ freq:0.14, drive:0.2, boomFreq:0.15 } },
+  "Shotgun 2": { wave:0, freq:78, noise:0.92, subOsc:0.75, sweep:-0.4, boom:0.78, boomFreq:52, boomDrop:0.85, boomDecay:0.4, attack:0, hold:0.006, decay:0.14, sustain:0, release:0.18, cutoff:4500, reso:0.15, filtEnv:-0.7, drive:0.78, driveOS:2, width:0.45, reverb:0.45, reverbSize:0.75, reverbTone:0.24, duration:1.1,
+            _vary:{ freq:0.14, drive:0.2, boomFreq:0.15 } },
+  "Rifle Crack 2": { wave:2, freq:170, noise:0.95, subOsc:0.35, sweep:-0.65, boom:0.5, boomFreq:88, boomDrop:0.6, boomDecay:0.16, attack:0, hold:0.002, decay:0.04, sustain:0, release:0.06, cutoff:10000, reso:0.18, filtEnv:-0.5, drive:0.58, driveOS:4, width:0.4, delay:0.28, delayTime:0.1, delayFb:0.4, reverb:0.45, reverbSize:0.9, reverbTone:0.32, duration:1.2,
+            _vary:{ freq:0.14, drive:0.2, delayTime:0.3 } },
+
+  // ---- Martial weaponry ----
+  "Sword Clash 2": { wave:1, freq:1100, noise:0.3, sweep:-0.1, attack:0, hold:0.001, decay:0.35, sustain:0, release:0.3, cutoff:7000, reso:0.9, filtEnv:0.05, drive:0.35, bitcrush:10, width:0.45, delay:0.22, delayTime:0.05, delayFb:0.32, reverb:0.38, reverbSize:0.62, reverbTone:0.78, duration:0.7,
+            _vary:{ freq:0.18, reso:0.1, delayTime:0.4 } },
+  "Hammer Smash 2": { wave:0, freq:110, noise:0.5, sweep:-0.5, boom:0.72, boomFreq:60, boomDrop:0.7, boomDecay:0.2, attack:0, hold:0.004, decay:0.14, sustain:0, release:0.14, cutoff:2600, reso:0.25, filtEnv:-0.5, drive:0.65, driveOS:2, bitcrush:8, width:0.4, reverb:0.3, reverbSize:0.6, reverbTone:0.28, duration:0.7,
+            _vary:{ freq:0.16, drive:0.2, cutoff:0.2 } },
+  "Katana Slice 2": { wave:2, freq:900, noise:0.8, sweep:0.25, attack:0.008, hold:0, decay:0.09, sustain:0, release:0.07, cutoff:1800, reso:0.5, filtEnv:0.85, drive:0.2, width:0.55, reverb:0.2, reverbSize:0.55, reverbTone:0.65, duration:0.28,
+            _vary:{ cutoff:0.25, filtEnv:0.15, sweep:0.2 } },
+
+  // ---- Fire ----
+  "Flamethrower 2": { wave:2, freq:180, noise:0.95, sweep:0, attack:0.05, decay:0.4, sustain:0.65, release:0.5, cutoff:1400, reso:0.42, filtEnv:0.15, drive:0.45, downsample:4, width:0.65, reverb:0.28, reverbSize:0.62, reverbTone:0.35, duration:1.7,
+            _vary:{ cutoff:0.25, reso:0.2, drive:0.2 } },
+  "Fire Whoosh 2": { wave:2, freq:240, noise:0.9, sweep:0.5, attack:0.02, hold:0, decay:0.2, sustain:0.15, release:0.25, cutoff:1300, reso:0.4, filtEnv:0.65, drive:0.35, downsample:3, width:0.6, reverb:0.3, reverbSize:0.65, reverbTone:0.42, duration:0.8,
+            _vary:{ cutoff:0.25, filtEnv:0.15, freq:0.2 } },
+
+  // ---- Retro / Arcade ----
+  "Coin 2": { wave:2, freq:1174, sweep:0.12, attack:0.002, hold:0.02, decay:0.14, sustain:0, release:0.07, cutoff:11000, drive:0.12, bitcrush:7, duration:0.3,
+            _vary:{ freq:0.16, decay:0.3, bitcrush:0.3 } },
+  "Powerup 2": { wave:1, freq:392, sweep:0.4, attack:0, hold:0.004, decay:0.08, sustain:0.15, release:0.05, cutoff:10000, bitcrush:6, repeat:5, rate:12, duration:0.7,
+            _vary:{ freq:0.15, rate:0.15 } },
+
+  // ---- Sci-Fi & Hazard ----
+  "Laser 2": { wave:1, freq:900, sweep:-0.6, vibDepth:0.05, vibRate:14, attack:0, decay:0.18, sustain:0, release:0.1, cutoff:5000, reso:0.5, filtEnv:-0.2, drive:0.35, bitcrush:7, width:0.35, delay:0.2, delayTime:0.07, delayFb:0.35, reverb:0.25, reverbSize:0.55, reverbTone:0.5, duration:0.4,
+            _vary:{ freq:0.18, sweep:0.2, cutoff:0.2 } },
+  "Warp Drive 2": { wave:2, freq:400, sweep:-0.6, vibDepth:0.1, vibRate:9, unison:3, detune:20, width:0.7, attack:0.04, decay:0.7, sustain:0.3, release:0.6, cutoff:4000, reso:0.4, filtEnv:-0.4, drive:0.3, delay:0.3, delayTime:0.18, delayFb:0.42, reverb:0.5, reverbSize:0.8, reverbTone:0.45, duration:1.7,
+            _vary:{ sweep:0.15, cutoff:0.2, detune:0.4 } },
+
+  // ---- Cartoon / Misc ----
+  "Fart 2": { wave:2, freq:110, sweep:-0.4, vibDepth:0.4, vibRate:16, noise:0.15, attack:0.005, decay:0.25, sustain:0.2, release:0.15, cutoff:1400, reso:0.6, filtEnv:-0.1, drive:0.35, bitcrush:7, downsample:4, width:0.35, duration:0.6,
+            _vary:{ freq:0.2, vibRate:0.3, sweep:0.15 } },
+};
+
+// Applied to any preset that doesn't declare its own _vary: gentle wobble on the
+// params that add variety without changing the sound's identity.
+const DEFAULT_VARY = { freq: 0.14, sweep: 0.12, decay: 0.2, release: 0.2, cutoff: 0.15, drive: 0.25 };
+const PARAM_BY_KEY = {};
+for (const p of PARAMS) PARAM_BY_KEY[p[0]] = p;
+
+// Nudge one param around `base` by fraction `amount`. Pitch snaps to semitones so
+// the variations sound musical rather than detuned; everything else clamps to range.
+function jitter(key, base, amount) {
+  const p = PARAM_BY_KEY[key];
+  if (!p) return base;
+  const [, , min, max, step] = p;
+  const r = (Math.random() * 2 - 1) * amount;
+  let v;
+  if (key === "freq") {
+    const semis = Math.round(r * 24);           // amount 0.16 -> ~+/-4 semitones
+    v = base * Math.pow(2, semis / 12);
+  } else if (min >= 0 && base > 0) {
+    v = base * (1 + r);                         // proportional (times, cutoff, drive...)
+  } else {
+    v = base + r * (max - min);                 // bipolar / zero-based (sweep, filter env)
+  }
+  v = Math.min(max, Math.max(min, v));
+  return Math.round(v / step) * step;
+}
+
+// Build a randomized instance of a preset: copy it, then jitter the _vary params.
+function varyPreset(preset) {
+  const out = {};
+  for (const [k, v] of Object.entries(preset)) if (k !== "_vary") out[k] = v;
+  const vary = preset._vary || DEFAULT_VARY;
+  for (const [k, amt] of Object.entries(vary)) {
+    const base = k in out ? out[k] : (PARAM_BY_KEY[k] ? PARAM_BY_KEY[k][5] : 0);
+    out[k] = jitter(k, base, amt);
+  }
+  return out;
+}
+
+function applyPreset(obj, label) {
+  // reset to defaults first, then overlay (ignore any _vary metadata)
+  const keepWave = state.wave;
+  for (const p of PARAMS) state[p[0]] = p[5];
+  for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
+  if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
+  syncUI();
+  play(label || "Preset");
+}
+
+// ---------- Preset categories (collapsible sections) ----------
+// Every preset is assigned to exactly one section; array order = display order.
+// To recategorize, move a name from one list to another. Any preset missing from
+// all lists lands in an "Uncategorized" section so nothing silently disappears.
+const PRESET_CATEGORIES = [
+  ["Magic", ["Teleport", "Magic Sparkle", "Cure", "Poison", "Fireball Cast", "Frost Bolt", "Lightning Strike", "Arcane Blast", "Holy Smite", "Dark Curse", "Mana Charge", "Magic Missile", "Wind Slash", "Magic Fizzle", "Ice", "Healing Aura", "Curse Whoosh", "Shield Cast", "Enchant", "Summon Portal", "Hex Bolt", "Fireball Cast 2", "Teleport 2", "Magic Sparkle 2"]],
+  ["UI", ["UI Click", "Confirm", "Cancel", "Error Buzz", "Alarm Siren", "Blip", "Notification", "Menu Open", "Tab Switch", "Unlock", "UI Click 2", "Confirm 2"]],
+  ["Explosions", ["Explosion", "Deep Impact", "Cinematic Boom", "Sub Drop Hit", "Meteor Impact", "Glass Shatter", "Grenade Blast", "Distant Boom", "Barrel Burst", "Nuke Rumble", "Explosion 2", "Cinematic Boom 2"]],
+  ["Machine", ["Robot Beep", "Metal Clank", "Electric Crackle", "Robot Servo", "Robot Power Up", "Robot Power Down", "Robot Talk", "Robot Stomp", "Mechanical Whir", "Hydraulic Hiss", "Robot Alarm", "Scanner Ping", "Data Glitch", "Gear Grind", "Servo Twitch", "Radio Static", "Servo Motor", "Power Down", "Drone Hover", "Conveyor Belt", "Robot Beep 2", "Robot Talk 2"]],
+  ["Nature", ["Wind Gust", "Boulder Rumble", "Footstep", "Water Ambient", "Water Drop", "Wave of Water", "Thunder", "Rain", "Rustling Leaves", "Waterfall", "Ocean Surf", "Earthquake Rumble", "Dripping Cave", "Campfire Crackle", "Bird Trill", "Thunderclap", "Stream Babble", "Thunder 2", "Wind Gust 2"]],
+  ["Animal / Monster", ["Monster Growl", "Dog Bark", "Cat Meow", "Bird Chirp", "Frog Croak", "Cricket Chirp", "Owl Hoot", "Snake Hiss", "Bee Buzz", "Wolf Howl", "Horse Neigh", "Cow Moo", "Rooster Crow", "Duck Quack", "Elephant Trumpet", "Dragon Fire Breath", "Goblin Chatter", "Beast Roar", "Insect Buzz", "Slime Gurgle", "Bat Screech", "Troll Grunt", "Monster Growl 2", "Dog Bark 2", "Dragon Fire Breath 2"]],
+  ["Horror", ["Jump Scare Stinger", "Horror Drone", "Ghostly Wail", "Demonic Roar", "Creepy Whisper", "Heartbeat", "Creaking Door", "Distant Scream", "Sinister Laugh", "Music Box", "Tension Riser", "Ghost Breath", "Nails on Chalkboard", "Ominous Bell", "Rattling Chains", "Possessed Screech", "Dread Pulse", "Skittering Swarm", "Ghost Moan", "Jumpscare Hit", "Whispering Void", "Demon Whisper", "Bone Crack", "Cursed Chime", "Jump Scare Stinger 2", "Ghostly Wail 2", "Heartbeat 2"]],
+  ["Guns", ["Gunshot", "Shotgun", "Rifle Crack", "Suppressed", "Full Auto", "3-Round Burst", "Pistol Shot", "Sniper Rifle", "Machine Gun", "Plasma Rifle", "Gunshot 2", "Shotgun 2", "Rifle Crack 2"]],
+  ["Martial weaponry", ["Hit", "Crunchy Hit", "Punch / Kick", "Sword Swing", "Sword Clash", "Shield Block", "Katana Slice", "Heavy Cleave", "Dagger Stab", "Blade Sheathe", "Critical Slash", "Hammer Smash", "War Hammer Crush", "Anvil Strike", "Mace Bash", "Ground Slam", "Crossbow Bolt", "Spear Thrust", "Axe Chop", "Whip Crack", "Rapier Lunge", "Shield Bash", "Flail Swing", "Sword Clash 2", "Hammer Smash 2", "Katana Slice 2"]],
+  ["Fire", ["Fire", "Flamethrower", "Fire Whoosh", "Torch Ignite", "Ember Crackle", "Match Strike", "Inferno Roar", "Fire Sparks", "Lava Bubble", "Fireball Whoosh", "Fire Burst", "Flamethrower 2", "Fire Whoosh 2"]],
+  ["Retro / Arcade", ["Coin", "Jump", "Powerup", "Lush Powerup", "Wide Pickup", "Level Up", "Game Over", "Bounce", "Pickup Item", "Extra Life", "Retro Jump", "Game Start", "Coin 2", "Powerup 2"]],
+  ["Sci-Fi & Hazard", ["Laser", "Meteor Descent", "Comet Whoosh", "Acid Sizzle", "Acid Splash", "Toxic Bubble", "Gas Leak", "Gas Puff", "Steam Vent", "Force Field", "Warp Drive", "Laser Charge", "Teleporter Hum", "Energy Drain", "Scan Complete", "Laser 2", "Warp Drive 2"]],
+  ["Cartoon / Misc", ["Cartoon Boing", "Slide Whistle Up", "Slide Whistle Down", "Fart", "Burp", "Slime Splat", "Squeaky Toy", "Bubble Blorp", "Mud Squelch", "Bubble Pop", "Boing Spring", "Squish Pop", "Rubber Stretch", "Pop Cork", "Fart 2"]],
+];
+
+const presetBar = document.getElementById("presets");
+// A preset button — same behaviour as before: click = fresh variation of that character.
+function makePresetButton(name) {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.title = "Click for a fresh " + name + "-like variation";
+  b.addEventListener("click", () => applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name));
+  return b;
+}
+// Safety net: surface any preset not placed in a category above.
+const categorized = new Set(PRESET_CATEGORIES.flatMap(([, names]) => names));
+const leftovers = Object.keys(PRESETS).filter((n) => !categorized.has(n));
+const sectionDefs = leftovers.length ? [...PRESET_CATEGORIES, ["Uncategorized", leftovers]] : PRESET_CATEGORIES;
+
+const sections = [];   // { details, buttons } per section — used by the search filter
+sectionDefs.forEach(([cat, names], idx) => {
+  const present = names.filter((n) => PRESETS[n]);   // skip stale names
+  if (!present.length) return;
+  const details = document.createElement("details");
+  details.className = "preset-section";
+  if (idx === 0) details.open = true;                // first section expanded, rest collapsed
+  const summary = document.createElement("summary");
+  summary.innerHTML = cat + ` <span class="sec-count">(${present.length})</span>`;
+  const wrap = document.createElement("div");
+  wrap.className = "sec-buttons";
+  const buttons = present.map((n) => { const b = makePresetButton(n); wrap.appendChild(b); return b; });
+  details.appendChild(summary);
+  details.appendChild(wrap);
+  presetBar.appendChild(details);
+  sections.push({ details, buttons });
+});
+
+// Live text filter across all sections: hide non-matching buttons, hide empty
+// sections, and auto-open any section with a match. Clearing restores the default
+// (first section open, rest closed).
+const presetSearch = document.getElementById("presetSearch");
+const presetCount = document.getElementById("presetCount");
+function filterPresets() {
+  const q = presetSearch.value.trim().toLowerCase();
+  let shown = 0;
+  sections.forEach(({ details, buttons }, idx) => {
+    let secShown = 0;
+    for (const b of buttons) {
+      const match = !q || b.textContent.toLowerCase().includes(q);
+      b.style.display = match ? "" : "none";
+      if (match) secShown++;
+    }
+    details.style.display = secShown ? "" : "none";
+    details.open = q ? secShown > 0 : idx === 0;     // reveal matches; else restore default
+    shown += secShown;
+  });
+  presetCount.textContent = q ? (shown + " match" + (shown === 1 ? "" : "es")) : "";
+}
+presetSearch.addEventListener("input", filterPresets);
+// Esc clears the filter while typing in the box
+presetSearch.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { presetSearch.value = ""; filterPresets(); }
+});
+
+// ---------- Save / load JSON ----------
+function savePreset() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "crunchyfx-preset.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const loadfile = document.getElementById("loadfile");
+document.getElementById("load").addEventListener("click", () => loadfile.click());
+loadfile.addEventListener("change", () => {
+  const file = loadfile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { applyPreset(JSON.parse(reader.result), "Loaded"); }
+    catch (e) { alert("Could not read preset: " + e.message); }
+  };
+  reader.readAsText(file);
+  loadfile.value = "";
+});
+
+// ---------- Wire buttons + keys ----------
+document.getElementById("play").addEventListener("click", () => play("Play"));
+document.getElementById("rand").addEventListener("click", randomize);
+document.getElementById("export").addEventListener("click", exportWav);
+document.getElementById("save").addEventListener("click", savePreset);
+
+// Normalize toggle: injected into the controls bar so quiet sounds get boosted to
+// an audible, consistent level. Off = raw levels (whatever the patch produces).
+const normBtn = document.createElement("button");
+normBtn.id = "normbtn";
+function updateNormBtn() {
+  normBtn.textContent = normalizeOut ? "🔊 Normalize" : "🔈 Normalize off";
+  normBtn.classList.toggle("off", !normalizeOut);
+  normBtn.title = "Boost quiet sounds to an audible, consistent level";
+}
+normBtn.addEventListener("click", () => { normalizeOut = !normalizeOut; updateNormBtn(); play("Edit"); });
+updateNormBtn();
+const controlsBar = document.querySelector(".controls");
+controlsBar.insertBefore(normBtn, controlsBar.querySelector(".spacer"));
+
+// ---------- Macros ----------
+// Each macro is one plain-language slider (0..1) that writes a handful of the real
+// params at once, so someone who doesn't know "cutoff" or "unison" can still shape
+// the sound. `to(v)` maps the slider to params; `from()` reads one representative
+// param back so the macro slider stays honest after presets / manual tweaks. The
+// individual sliders still work for fine-tuning.
+const clamp01 = (x) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
+const MACROS = [
+  { id: "m-crunch", name: "Crunchiness", left: "Smooth", right: "Crunchy",
+    to: (v) => ({ drive: +(v * 0.85).toFixed(2), downsample: Math.round(1 + v * 11), boom: +(v * 0.6).toFixed(2) }),
+    from: () => clamp01(state.drive / 0.85) },
+  { id: "m-bright", name: "Brightness", left: "Dark", right: "Bright",
+    to: (v) => ({ cutoff: Math.round(300 * Math.pow(40, v)), reverbTone: +v.toFixed(2), filterMode: 0 }),  // 300 Hz .. 12 kHz
+    from: () => clamp01(Math.log(state.cutoff / 300) / Math.log(40)) },
+  { id: "m-space", name: "Space", left: "Dry", right: "Huge",
+    to: (v) => ({ reverb: +(v * 0.85).toFixed(2), reverbSize: +(0.3 + v * 0.65).toFixed(2), delay: +(v * 0.35).toFixed(2) }),
+    from: () => clamp01(state.reverb / 0.85) },
+  { id: "m-punch", name: "Punch", left: "Soft", right: "Punchy",
+    to: (v) => ({ attack: +(0.08 * (1 - v) + 0.001).toFixed(3), decay: +(0.4 - v * 0.28).toFixed(3), sustain: +((1 - v) * 0.6).toFixed(2), hold: +((1 - v) * 0.05).toFixed(3) }),
+    from: () => clamp01(1 - state.sustain / 0.6) },
+  { id: "m-thick", name: "Thickness", left: "Thin", right: "Fat",
+    to: (v) => ({ unison: Math.round(1 + v * 6), detune: +(v * 40).toFixed(1), subOsc: +(v * 0.6).toFixed(2), width: +(v * 0.9).toFixed(2) }),
+    from: () => clamp01(state.subOsc / 0.6) },
+  { id: "m-metal", name: "Metallic", left: "Pure", right: "Clang",
+    to: (v) => ({ ringMod: +(v * 0.9).toFixed(2), ringFreq: Math.round(80 + v * 520) }),
+    from: () => clamp01(state.ringMod / 0.9) },
+];
+
+function applyMacro(m, v) {
+  const t = m.to(v);
+  for (const k in t) {
+    state[k] = t[k];
+    const el = document.querySelector(`[data-key="${k}"]`);
+    if (el) el.value = state[k];
+    const p = PARAM_BY_KEY[k];
+    if (p && outputs[k]) outputs[k].textContent = fmt(p, state[k]);
+  }
+}
+// Refresh every macro slider from the current params (called after any raw-slider
+// edit, preset, or randomize so the macros never drift out of sync).
+function updateMacros() {
+  for (const m of MACROS) {
+    const el = document.getElementById(m.id);
+    if (el) el.value = m.from().toFixed(2);
+  }
+}
+
+const macroBox = document.getElementById("macros");
+for (const m of MACROS) {
+  const row = document.createElement("div");
+  row.className = "macro-row";
+  row.innerHTML =
+    `<span class="macro-name">${m.name}</span>` +
+    `<span class="macro-end">${m.left}</span>` +
+    `<input type="range" id="${m.id}" min="0" max="1" step="0.01" value="0">` +
+    `<span class="macro-end macro-end-r">${m.right}</span>`;
+  macroBox.appendChild(row);
+  const input = row.querySelector("input");
+  input.addEventListener("input", () => applyMacro(m, +input.value)); // live: move the real sliders
+  input.addEventListener("change", () => play(m.name));               // render on release
+}
+updateMacros();
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT") {
+    e.preventDefault();
+    play();
+  }
+});
+
+// ---------- Shareable links ----------
+// Pack the current sound into the URL so it can be shared or bookmarked. Like a
+// preset, we store only the params that differ from their defaults, JSON'd and
+// base64url'd into the hash — so a simple sound makes a short link. Opening such a
+// link reproduces the exact sound. Version-tagged so the format can evolve.
+function encodePatch() {
+  const diff = {};
+  for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
+  const payload = { v: 1, s: diff };
+  if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
+  return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodePatch(str) {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  const obj = JSON.parse(atob(b64));
+  if (!obj || typeof obj.s !== "object") throw new Error("unrecognized link");
+  return obj;
+}
+// If the URL carries a shared sound (#s=…), load & play it. Returns true if it did.
+function loadFromHash() {
+  const m = location.hash.match(/[#&]s=([^&]+)/);
+  if (!m) return false;
+  try {
+    const obj = decodePatch(m[1]);
+    normalizeOut = obj.n !== 0;                 // absent -> default (on)
+    updateNormBtn();
+    applyPreset(obj.s, "Shared");               // reset-to-defaults + overlay + syncUI + play
+    return true;
+  } catch (e) {
+    console.warn("crunchyfx: could not read shared link —", e.message);
+    return false;
+  }
+}
+
+const shareBtn = document.getElementById("share");
+shareBtn.addEventListener("click", async () => {
+  const enc = encodePatch();
+  const url = location.href.split("#")[0] + "#s=" + enc;
+  try { history.replaceState(null, "", "#s=" + enc); } catch (e) { location.hash = "s=" + enc; }  // reflect in the address bar
+  const label = shareBtn.textContent;
+  try {
+    await navigator.clipboard.writeText(url);   // undefined on insecure/file:// -> caught
+    shareBtn.textContent = "✓ Link copied!";
+  } catch (e) {
+    shareBtn.textContent = "🔗 Link in address bar";
+  }
+  setTimeout(() => { shareBtn.textContent = label; }, 1600);
+});
+
+// initial draw — or load a shared sound from the URL, if one is present
+if (!loadFromHash()) { const { L, R } = render(); drawScope(L, R); }
+</script>
