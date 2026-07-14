@@ -154,6 +154,14 @@
     display: block;
   }
   .hint { color: var(--muted); font-size: 12px; }
+  footer.license {
+    max-width: 1200px; margin: 30px 24px 44px; padding: 16px 18px;
+    border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.65;
+  }
+  footer.license h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); margin: 0 0 8px; }
+  footer.license p { margin: 0 0 8px; max-width: 780px; }
+  footer.license a { color: var(--accent2); }
+  footer.license strong { color: var(--ink); }
   kbd {
     background: var(--panel2);
     border: 1px solid var(--line);
@@ -349,6 +357,12 @@
   </div>
   <div id="histlist"></div>
 </aside>
+
+<footer class="license">
+  <h2>License</h2>
+  <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with crunchyfx is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention crunchyfx.</p>
+  <p>All audio is synthesized from scratch, so there are no third-party samples to clear.</p>
+</footer>
 
 <script>
 "use strict";
