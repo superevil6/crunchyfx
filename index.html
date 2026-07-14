@@ -250,6 +250,42 @@
   .hist-item.silent { opacity: 0.6; border-color: #7a3b3b; }
   .hist-item.silent .hist-label { color: #ff8a8a; }
   #normbtn.off { opacity: 0.55; }
+
+  /* Sequence tray */
+  .seqbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 12px 24px 0; padding: 10px 12px; max-width: 1200px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .seq-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); font-weight: 600; }
+  .seq-list { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 160px; }
+  .seq-empty { font-size: 12px; color: var(--muted); }
+  .seq-chip { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 8px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; cursor: grab; }
+  .seq-chip.drag { opacity: 0.4; }
+  .seq-chip-name { color: var(--ink); }
+  .seq-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 3px; font-size: 12px; }
+  .seq-chip button:hover { color: var(--accent); }
+  .seqbar button[disabled] { opacity: 0.4; cursor: default; }
+
+  /* Breeding modal */
+  .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);
+    display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal[hidden] { display: none; }
+  .modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    width: min(940px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { margin: 0; font-size: 16px; color: var(--accent); white-space: nowrap; }
+  .modal-head .hint { flex: 1; }
+  .breed-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 16px; overflow-y: auto; }
+  .breed-cell { border: 2px solid var(--line); border-radius: 10px; background: var(--panel2);
+    padding: 8px; cursor: pointer; transition: border-color 0.1s, box-shadow 0.1s; }
+  .breed-cell:hover { border-color: var(--accent2); }
+  .breed-cell.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .breed-cell canvas { width: 100%; height: 62px; display: block; background: #17131f; border-radius: 6px; }
+  .breed-cell-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .breed-cell-bar .breed-play { padding: 2px 9px; font-size: 12px; }
+  .breed-tag { font-size: 11px; color: var(--muted); }
+  .breed-cell.sel .breed-tag { color: var(--accent); font-weight: 600; }
+  .modal-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
   @media (max-width: 920px) {
     body { padding-right: 0; }
     #history {
@@ -268,12 +304,23 @@
 <div class="controls">
   <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
   <button id="rand" class="accent2">🎲 Randomize</button>
+  <button id="breed" class="accent2">🧬 Breed</button>
   <button id="export">⬇ Export WAV</button>
   <span class="spacer"></span>
   <button id="save">Save preset</button>
   <button id="load">Load preset</button>
   <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
   <input type="file" id="loadfile" accept="application/json" hidden>
+</div>
+
+<div class="seqbar" id="seqbar">
+  <span class="seq-label">Sequence</span>
+  <div class="seq-list" id="seqlist"></div>
+  <button id="seqAdd" title="Append the current editor sound to the sequence">＋ Add current sound</button>
+  <span class="spacer"></span>
+  <button id="seqPlay" class="primary">▶ Play sequence</button>
+  <button id="seqExport">⬇ Export</button>
+  <button id="seqClear">Clear</button>
 </div>
 
 <div style="padding: 14px 24px 0; max-width: 1200px;">
@@ -367,6 +414,7 @@ const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
+let seqLabel = "Sound";   // label of the sound currently in the editor (for Sequence chips)
 
 const SR = 44100;
 
@@ -1756,6 +1804,7 @@ function applyPreset(obj, label) {
   for (const p of PARAMS) state[p[0]] = p[5];
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
+  seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
   syncUI();
   play(label || "Preset");
 }
@@ -2001,6 +2050,192 @@ shareBtn.addEventListener("click", async () => {
   }
   setTimeout(() => { shareBtn.textContent = label; }, 1600);
 });
+
+// ---------- Breeding (evolve sounds by picking favorites) ----------
+// A "genome" is a full param set. Open the grid on the current sound; it shows the
+// seed + mutated siblings. Select the ones you like and Breed: selected parents are
+// crossed (uniform crossover) and mutated into the next generation, with one parent
+// carried over unchanged (elitism) so a good sound is never lost. wave/duration/gain
+// are held fixed so a generation stays a recognizable *family* of the same sound.
+const BREED_SKIP = new Set(["wave", "duration", "gain"]);
+const BREED_AMT = 0.22;
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; return g; }
+function mutateGenome(src, amount) {
+  const g = {};
+  for (const p of PARAMS) {
+    const k = p[0];
+    g[k] = (!BREED_SKIP.has(k) && Math.random() < 0.6) ? jitter(k, src[k], amount) : src[k];
+  }
+  return g;
+}
+function crossGenome(a, b) { const g = {}; for (const p of PARAMS) { const k = p[0]; g[k] = Math.random() < 0.5 ? a[k] : b[k]; } return g; }
+// One audible child from the parent pool (retry a few times to dodge silent duds).
+function breedChild(parents, amount) {
+  for (let t = 0; t < 10; t++) {
+    const g = parents.length >= 2 ? mutateGenome(crossGenome(pick(parents), pick(parents)), amount)
+                                  : mutateGenome(parents[0], amount);
+    if (patchPeak(g) > AUDIBLE_FLOOR) return g;
+  }
+  return mutateGenome(parents[0], amount);
+}
+
+let breedGenomes = [];
+let breedGen = 1;
+
+const breedModal = document.createElement("div");
+breedModal.className = "modal";
+breedModal.hidden = true;
+breedModal.innerHTML =
+  '<div class="modal-box">' +
+    '<div class="modal-head">' +
+      '<h2>🧬 Breed sounds</h2>' +
+      '<span class="hint">Click the tiles you like → Breed. ▶ hears a tile · double-click loads it into the editor.</span>' +
+      '<button id="breedClose">✕ Close</button>' +
+    '</div>' +
+    '<div id="breedGrid" class="breed-grid"></div>' +
+    '<div class="modal-foot">' +
+      '<button id="breedNext" class="primary">🧬 Breed selected</button>' +
+      '<button id="breedReroll">🎲 New batch</button>' +
+      '<span id="breedGen" class="hint"></span>' +
+      '<span class="spacer"></span>' +
+      '<button id="breedAdopt">✓ Use selected</button>' +
+    '</div>' +
+  '</div>';
+document.body.appendChild(breedModal);
+const breedGrid = breedModal.querySelector("#breedGrid");
+const breedGenEl = breedModal.querySelector("#breedGen");
+
+function drawMini(canvas, L, R) {
+  const c = canvas.getContext("2d"), w = canvas.width, h = canvas.height;
+  c.clearRect(0, 0, w, h);
+  c.strokeStyle = "#2a2436"; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+  const step = L.length / w;
+  const trace = (data, color, alpha) => {
+    c.globalAlpha = alpha; c.strokeStyle = color; c.lineWidth = 1; c.beginPath();
+    for (let x = 0; x < w; x++) { const v = data[Math.floor(x * step)] || 0; const y = h / 2 - v * (h / 2 - 2); x ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.stroke(); c.globalAlpha = 1;
+  };
+  trace(R, "#45d0ff", 0.5); trace(L, "#ff7a45", 1);
+}
+
+function selectedGenomes() {
+  const sel = [];
+  breedGrid.querySelectorAll(".breed-cell.sel").forEach((c) => sel.push(breedGenomes[+c.dataset.idx]));
+  return sel;
+}
+function renderBreedGrid() {
+  breedGrid.innerHTML = "";
+  breedGenomes.forEach((g, i) => {
+    const { L, R } = withState(g, () => render());
+    const cell = document.createElement("div");
+    cell.className = "breed-cell";
+    cell.dataset.idx = i;
+    const cv = document.createElement("canvas");
+    cv.width = 280; cv.height = 62;
+    cell.appendChild(cv);
+    const bar = document.createElement("div");
+    bar.className = "breed-cell-bar";
+    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">gen ' + breedGen + ' · #' + (i + 1) + '</span>';
+    cell.appendChild(bar);
+    breedGrid.appendChild(cell);
+    drawMini(cv, L, R);
+    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = withState(g, () => render()); playBuffer(r.L, r.R); });
+    cell.addEventListener("click", () => cell.classList.toggle("sel"));
+    cell.addEventListener("dblclick", (e) => { e.preventDefault(); adoptGenome(g); });
+  });
+  breedGenEl.textContent = "Generation " + breedGen + " — 9 sounds";
+}
+function seedBreedGrid() {
+  const seed = genomeFromState();
+  breedGenomes = [seed];
+  for (let i = 1; i < 9; i++) breedGenomes.push(breedChild([seed], BREED_AMT));
+  breedGen = 1;
+  renderBreedGrid();
+}
+function breedNext() {
+  const sel = selectedGenomes();
+  const parents = sel.length ? sel : breedGenomes;
+  const next = [pick(parents)];                       // elitism: carry one parent unchanged
+  for (let i = 1; i < 9; i++) next.push(breedChild(parents, BREED_AMT));
+  breedGenomes = next; breedGen++;
+  renderBreedGrid();
+}
+function adoptGenome(g) { applyPreset(g, "Bred"); breedModal.hidden = true; }
+
+document.getElementById("breed").addEventListener("click", () => { seedBreedGrid(); breedModal.hidden = false; });
+breedModal.querySelector("#breedNext").addEventListener("click", breedNext);
+breedModal.querySelector("#breedReroll").addEventListener("click", seedBreedGrid);
+breedModal.querySelector("#breedAdopt").addEventListener("click", () => adoptGenome(selectedGenomes()[0] || breedGenomes[0]));
+breedModal.querySelector("#breedClose").addEventListener("click", () => { breedModal.hidden = true; });
+breedModal.addEventListener("click", (e) => { if (e.target === breedModal) breedModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !breedModal.hidden) breedModal.hidden = true; });
+
+// ---------- Sequence (chain sounds into one) ----------
+// The editor stays a single-sound workspace; the sequence is a separate layer that
+// snapshots the editor sound (a genome, like breeding) into an ordered list. Play/
+// Export render each step and concatenate the buffers gaplessly into one sound.
+let sequence = [];   // [{ genome, label }]
+
+const seqList = document.getElementById("seqlist");
+const seqAddBtn = document.getElementById("seqAdd");
+const seqPlayBtn = document.getElementById("seqPlay");
+const seqExportBtn = document.getElementById("seqExport");
+const seqClearBtn = document.getElementById("seqClear");
+
+function renderSeq() {
+  seqList.innerHTML = "";
+  if (!sequence.length) {
+    seqList.innerHTML = '<span class="seq-empty">Empty — shape a sound, then “Add current sound” to chain them.</span>';
+  } else {
+    sequence.forEach((s, i) => {
+      const chip = document.createElement("div");
+      chip.className = "seq-chip";
+      chip.draggable = true;
+      chip.dataset.idx = i;
+      chip.innerHTML =
+        '<button class="seq-chip-play" title="Hear this step">▶</button>' +
+        '<span class="seq-chip-name">' + (i + 1) + ' · ' + s.label + '</span>' +
+        '<button class="seq-chip-del" title="Remove">✕</button>';
+      seqList.appendChild(chip);
+      chip.querySelector(".seq-chip-play").addEventListener("click", (e) => { e.stopPropagation(); const r = withState(s.genome, () => render()); playBuffer(r.L, r.R); });
+      chip.querySelector(".seq-chip-del").addEventListener("click", (e) => { e.stopPropagation(); sequence.splice(i, 1); renderSeq(); });
+      // drag to reorder
+      chip.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", i); chip.classList.add("drag"); });
+      chip.addEventListener("dragend", () => chip.classList.remove("drag"));
+      chip.addEventListener("dragover", (e) => e.preventDefault());
+      chip.addEventListener("drop", (e) => { e.preventDefault(); moveSeq(+e.dataTransfer.getData("text/plain"), i); });
+    });
+  }
+  const empty = sequence.length === 0;
+  seqPlayBtn.disabled = empty;
+  seqExportBtn.disabled = empty;
+  seqClearBtn.disabled = empty;
+}
+function moveSeq(from, to) {
+  if (from === to || from < 0 || from >= sequence.length) return;
+  const [item] = sequence.splice(from, 1);
+  sequence.splice(to, 0, item);
+  renderSeq();
+}
+// Render every step and concatenate the buffers back-to-back into one sound.
+function renderSequenceBuffers() {
+  const parts = sequence.map((s) => withState(s.genome, () => render()));
+  const total = parts.reduce((n, r) => n + r.L.length, 0);
+  const L = new Float32Array(total), R = new Float32Array(total);
+  let off = 0;
+  for (const r of parts) { L.set(r.L, off); R.set(r.R, off); off += r.L.length; }
+  return { L, R };
+}
+function playSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); drawScope(L, R); playBuffer(L, R); }
+function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, "crunchyfx-sequence-" + sequence.length + "steps.wav"); }
+
+seqAddBtn.addEventListener("click", () => { sequence.push({ genome: genomeFromState(), label: seqLabel }); renderSeq(); });
+seqPlayBtn.addEventListener("click", playSequence);
+seqExportBtn.addEventListener("click", exportSequence);
+seqClearBtn.addEventListener("click", () => { sequence = []; renderSeq(); });
+renderSeq();
 
 // initial draw — or load a shared sound from the URL, if one is present
 if (!loadFromHash()) { const { L, R } = render(); drawScope(L, R); }
