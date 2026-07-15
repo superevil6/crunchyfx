@@ -7,8 +7,10 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "crunchyfx — sound effect generator",
         "width": 1600,
         "height": 950,

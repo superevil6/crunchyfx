@@ -3,6 +3,8 @@
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init()) // native Save dialog for WAV export
+        .plugin(tauri_plugin_fs::init())     // write the chosen file to disk
         .run(tauri::generate_context!())
         .expect("error while running crunchyfx");
 }

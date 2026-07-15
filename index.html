@@ -279,6 +279,20 @@
   .seq-gap input[type=range] { width: 90px; }
   .seq-gap span { min-width: 44px; }
 
+  /* My Presets library (desktop) */
+  .mypresets { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 12px; margin-bottom: 12px; }
+  .mypresets[hidden] { display: none; }
+  .mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .mp-head > span { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
+  .mp-head button { padding: 5px 9px; font-size: 12px; }
+  .mp-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .mp-empty { font-size: 12px; color: var(--muted); padding: 4px 2px; }
+  .up-item { display: flex; align-items: center; gap: 6px; }
+  .up-item .up-name { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); font: inherit; font-size: 13px; padding: 4px 8px; }
+  .up-item .up-name:focus { outline: none; border-color: var(--accent2); }
+  .up-item button { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; cursor: pointer; padding: 3px 7px; font-size: 12px; line-height: 1; }
+  .up-item button:hover { color: var(--accent); border-color: var(--accent); }
+
   /* Breeding modal */
   .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);
     display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -340,7 +354,10 @@
   <button id="save">Save preset</button>
   <button id="load">Load preset</button>
   <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
+  <button id="importwav" title="Import a WAV/audio file to mangle with the tools">📂 Import WAV</button>
+  <span id="samplename" class="hint"></span>
   <input type="file" id="loadfile" accept="application/json" hidden>
+  <input type="file" id="wavfile" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden>
 </div>
 
 <div class="seqbar" id="seqbar">
@@ -360,6 +377,13 @@
 
 <div class="workspace">
   <section class="ws-browser">
+    <div class="mypresets" id="mypresets" hidden>
+      <div class="mp-head">
+        <span>★ My Presets</span>
+        <button id="mpSave" title="Save the current sound to your library">＋ Save current</button>
+      </div>
+      <div class="mp-list" id="mpList"></div>
+    </div>
     <div class="presetsearch">
       <input type="text" id="presetSearch" placeholder="Search presets… (e.g. fire)" autocomplete="off" spellcheck="false">
       <span id="presetCount" class="hint"></span>
@@ -385,7 +409,7 @@
 <footer class="license">
   <h2>License</h2>
   <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with crunchyfx is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention crunchyfx.</p>
-  <p>All audio is synthesized from scratch, so there are no third-party samples to clear.</p>
+  <p>The built-in engine synthesizes everything from scratch — no third-party samples. If you <strong>import your own audio</strong>, the CC0 dedication above doesn't extend to that clip: its licensing is your responsibility.</p>
   <p class="tool-notice">crunchyfx (the app) &copy; 2026 Alex Cassells — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
 </footer>
 
@@ -394,7 +418,7 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -457,6 +481,8 @@ const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
+let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
+let sampleName = "";      // filename of the loaded sample (for the UI)
 let seqLabel = "Sound";   // label of the sound currently in the editor (for Sequence chips)
 
 const SR = 44100;
@@ -625,6 +651,10 @@ function render() {
   const ksBuf = isPluck ? new Float32Array(2206) : null;   // max length at 20 Hz
   let ksN = 0, ksIdx = 0, ksPrevShot = -1;
   const ksRho = 0.999 - 0.02 * state.pluckDamp;            // string decay (higher damp -> shorter)
+  // Imported WAV as the source (wave "sample"): read position advances at a varispeed
+  // rate set by the pitch controls. Plays once from the start, then silence.
+  const isSample = waveType === 9;
+  let samplePos = 0, samplePrevShot = -1;
 
   // Body layer: a clean low sine with its OWN exponential decay and a downward
   // pitch drop, independent of the crack envelope. Because it rings longer than the
@@ -657,7 +687,19 @@ function render() {
     }
 
     let oscL = 0, oscR = 0;
-    if (isPluck) {
+    if (isSample) {
+      // read the imported sample with linear interpolation at varispeed (f/440 =
+      // playback rate, so 440 Hz plays native; freq/sweep/vibrato = tape-style speed).
+      if (sampleBuf && sampleBuf.length) {
+        if (shotIdx !== samplePrevShot) { samplePrevShot = shotIdx; samplePos = 0; }
+        const ip = Math.floor(samplePos);
+        let y = 0;
+        if (ip < sampleBuf.length - 1) { const fr = samplePos - ip; y = sampleBuf[ip] * (1 - fr) + sampleBuf[ip + 1] * fr; }
+        else if (ip < sampleBuf.length) y = sampleBuf[ip];
+        samplePos += Math.max(0, f / 440);
+        oscL = y; oscR = y;
+      }
+    } else if (isPluck) {
       // (re-)excite the delay line at each shot, then pluck one sample out of it
       if (shotIdx !== ksPrevShot) {
         ksPrevShot = shotIdx;
@@ -901,13 +943,24 @@ function encodeWav(L, R) {
     view.setInt16(off, enc(L[i]), true); off += 2;
     view.setInt16(off, enc(R[i]), true); off += 2;
   }
-  return new Blob([view], { type: "audio/wav" });
+  return buffer;   // ArrayBuffer of the .wav file
 }
 
-function downloadWav(L, R, name) {
-  const blob = encodeWav(L, R);
+// Save a WAV. The web build triggers a browser download; the desktop (Tauri) build
+// has no download manager, so there we pop a NATIVE Save dialog and write the file
+// ourselves. Feature-detected — if the native path isn't available it falls back.
+async function downloadWav(L, R, name) {
+  const buffer = encodeWav(L, R);
+  const T = window.__TAURI__;
+  if (T && T.dialog && T.fs) {
+    try {
+      const path = await T.dialog.save({ defaultPath: name, filters: [{ name: "WAV audio", extensions: ["wav"] }] });
+      if (path) await T.fs.writeFile(path, new Uint8Array(buffer));   // user cancelled -> path is null
+      return;
+    } catch (e) { console.warn("crunchyfx: native save failed, falling back to browser download —", e); }
+  }
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -1175,6 +1228,7 @@ function randomPatch() {
     let v = min + Math.random() * (max - min);
     v = Math.round(v / step) * step;
     patch[key] = (kind === "wave" || kind === "enum") ? Math.round(v) : v;
+    if (key === "wave" && patch[key] === 9) patch[key] = Math.floor(Math.random() * 9);  // never randomize to "sample"
   }
   if (waveLocked) patch.wave = state.wave;   // respect the waveform lock
   return patch;
@@ -2095,6 +2149,134 @@ const PRESETS = {
   "Bouncy Sproing": { attack:0.035, release:0.207, wave:0, vibDepth:0.525, hold:0.003, drive:0.443, downsample:4, reverbSize:0.329, noise:0.099, sweep:0.956, freq:168.369, cutoff:3736.055, reverb:0.151, sustain:0.144, bitcrush:5, reso:0.453, width:0.404, duration:0.638, decay:0.364, vibRate:14.531, reverbTone:0.577, _vary:{ decay:0.22, drive:0.24, freq:0.23, sweep:0.24 } },
   "Silly Boing": { wave:7, freq:317.839, sweep:0.255, noise:0.042, attack:0.008, hold:0.002, decay:0.134, sustain:0, release:0.101, cutoff:2494.246, reso:0.614, width:0.313, reverb:0.278, reverbSize:0.535, reverbTone:0.483, duration:0.349, _vary:{ cutoff:0.17, reso:0.17, decay:0.2, freq:0.22 } },
   "Loony Squeak": { wave:0, freq:566.325, sweep:0.44, attack:0.067, hold:0.001, decay:0.044, sustain:0, release:0.04, cutoff:4275.129, reso:0.538, width:0.262, reverb:0.113, reverbSize:0.456, reverbTone:0.576, duration:0.14, _vary:{ freq:0.19, cutoff:0.2, reso:0.29, decay:0.22 } },
+
+  // ============================================================================
+  // Console flavors (taste batch): each chip's signature as a recipe. Names use
+  // copyright-safe prefixes: 8-Bit=NES, Pocket=Game Boy, Super=SNES, Mega=Genesis,
+  // Turbo=PC Engine, Woodgrain=Atari 2600, SID=Commodore 64. NOT chip emulation —
+  // evocative approximations built from the existing engine.
+  // ============================================================================
+
+  // ---- 8-Bit (NES): clean pulse waves w/ duty, snappy, no reverb ----
+  "8-Bit Coin": { wave:4, freq:1050, pulseWidth:0.5, sweep:0.15, attack:0, hold:0.015, decay:0.14, sustain:0, release:0.05, cutoff:12000, drive:0, bitcrush:8, duration:0.28,
+            _vary:{ freq:0.16, decay:0.3 } },
+  "8-Bit Jump": { wave:4, freq:280, pulseWidth:0.5, sweep:0.45, attack:0.003, decay:0.12, sustain:0.15, release:0.08, cutoff:11000, drive:0, bitcrush:9, duration:0.3,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  "8-Bit Blip": { wave:4, freq:720, pulseWidth:0.25, attack:0, hold:0.005, decay:0.04, sustain:0, release:0.02, cutoff:12000, drive:0, bitcrush:8, duration:0.1,
+            _vary:{ freq:0.25 } },
+
+  // ---- Pocket (Game Boy): pulse but 4-bit lo-fi ----
+  "Pocket Zap": { wave:4, freq:900, pulseWidth:0.25, sweep:-0.5, attack:0, decay:0.15, sustain:0, release:0.08, cutoff:9000, drive:0, bitcrush:4, downsample:2, duration:0.3,
+            _vary:{ freq:0.18, sweep:0.2 } },
+  "Pocket Coin": { wave:4, freq:1046, pulseWidth:0.5, sweep:0.1, attack:0, hold:0.015, decay:0.12, sustain:0, release:0.05, cutoff:9000, drive:0, bitcrush:4, downsample:2, duration:0.28,
+            _vary:{ freq:0.16, decay:0.3 } },
+  "Pocket Powerup": { wave:4, freq:400, pulseWidth:0.5, sweep:0.5, attack:0, hold:0.005, decay:0.1, sustain:0.1, release:0.06, cutoff:9000, drive:0, bitcrush:4, downsample:2, repeat:4, rate:12, duration:0.6,
+            _vary:{ freq:0.15, rate:0.15 } },
+
+  // ---- Super (SNES): sample-chip warmth — soft, lush reverb, gentle bitcrush ----
+  "Super Chime": { wave:3, freq:1200, vibDepth:0.05, vibRate:5, unison:3, detune:10, width:0.7, attack:0.005, decay:0.5, sustain:0.15, release:0.7, cutoff:8000, reso:0.15, drive:0.05, bitcrush:12, delay:0.25, delayTime:0.16, delayFb:0.35, reverb:0.55, reverbSize:0.8, reverbTone:0.7, duration:1.5,
+            _vary:{ freq:0.14, detune:0.4, delayTime:0.3 } },
+  "Super Coin": { wave:3, freq:1046, sweep:0.12, attack:0.002, hold:0.02, decay:0.2, sustain:0, release:0.3, cutoff:9000, reso:0.1, drive:0.05, bitcrush:12, reverb:0.4, reverbSize:0.65, reverbTone:0.7, duration:0.7,
+            _vary:{ freq:0.16, decay:0.3 } },
+  "Super Hit": { wave:0, freq:200, noise:0.3, sweep:-0.3, boom:0.4, boomFreq:80, boomDrop:0.5, boomDecay:0.2, attack:0, hold:0.004, decay:0.15, sustain:0, release:0.25, cutoff:5000, reso:0.2, drive:0.15, bitcrush:11, reverb:0.45, reverbSize:0.72, reverbTone:0.4, duration:0.8,
+            _vary:{ freq:0.16, decay:0.3 } },
+
+  // ---- Mega (Genesis): gritty FM + drive + ring mod ----
+  "Mega Shot": { wave:5, freq:220, noise:0.4, sweep:-0.5, attack:0, hold:0.003, decay:0.12, sustain:0, release:0.1, cutoff:6000, reso:0.3, filtEnv:-0.4, drive:0.6, driveOS:2, ringMod:0.2, ringFreq:120, width:0.4, reverb:0.2, reverbSize:0.5, reverbTone:0.35, duration:0.5,
+            _vary:{ freq:0.16, drive:0.2 } },
+  "Mega Bass": { wave:5, freq:110, sweep:-0.1, subOsc:0.4, boom:0.5, boomFreq:60, boomDrop:0.4, boomDecay:0.2, attack:0.002, decay:0.2, sustain:0.5, release:0.15, cutoff:2500, reso:0.35, drive:0.5, driveOS:2, width:0.3, duration:0.6,
+            _vary:{ freq:0.12, cutoff:0.2 } },
+  "Mega Zap": { wave:5, freq:700, sweep:-0.55, ringMod:0.4, ringFreq:150, attack:0, decay:0.18, sustain:0, release:0.12, cutoff:6000, reso:0.5, filtEnv:-0.3, drive:0.45, bitcrush:9, width:0.4, delay:0.2, delayTime:0.08, delayFb:0.3, reverb:0.25, reverbSize:0.55, reverbTone:0.5, duration:0.6,
+            _vary:{ freq:0.18, ringFreq:0.3 } },
+
+  // ---- Turbo (PC Engine): brighter wavetable, gentle bitcrush, LFO vibrato ----
+  "Turbo Laser": { wave:6, freq:1000, sweep:-0.5, vibDepth:0.05, vibRate:10, attack:0, decay:0.2, sustain:0, release:0.1, cutoff:10000, reso:0.35, drive:0.1, bitcrush:5, width:0.4, reverb:0.2, reverbSize:0.55, reverbTone:0.6, duration:0.35,
+            _vary:{ freq:0.18, sweep:0.2 } },
+  "Turbo Powerup": { wave:6, freq:440, sweep:0.5, vibDepth:0.08, vibRate:12, attack:0.005, decay:0.3, sustain:0.2, release:0.2, cutoff:10000, reso:0.2, drive:0.08, bitcrush:5, delay:0.2, delayTime:0.12, delayFb:0.3, reverb:0.3, reverbSize:0.6, reverbTone:0.65, duration:0.9,
+            _vary:{ freq:0.14, vibRate:0.3 } },
+  "Turbo Blip": { wave:6, freq:840, attack:0, hold:0.005, decay:0.05, sustain:0, release:0.03, cutoff:11000, drive:0.05, bitcrush:5, duration:0.12,
+            _vary:{ freq:0.25 } },
+
+  // ---- Woodgrain (Atari 2600): super lo-fi — heavy bitcrush + downsample, buzzy ----
+  "Woodgrain Buzz": { wave:1, freq:180, attack:0.005, decay:0.2, sustain:0.6, release:0.1, cutoff:4000, reso:0.3, drive:0.4, bitcrush:3, downsample:8, width:0.3, duration:0.6,
+            _vary:{ freq:0.2, downsample:0.3 } },
+  "Woodgrain Zap": { wave:1, freq:600, noise:0.3, sweep:-0.6, attack:0, decay:0.15, sustain:0, release:0.06, cutoff:5000, reso:0.4, drive:0.5, bitcrush:3, downsample:10, width:0.3, duration:0.3,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  "Woodgrain Boom": { wave:0, freq:90, noise:0.8, sweep:-0.3, boom:0.5, boomFreq:60, boomDrop:0.5, boomDecay:0.2, attack:0, decay:0.3, sustain:0, release:0.3, cutoff:3000, reso:0.2, drive:0.55, bitcrush:4, downsample:12, width:0.35, duration:0.7,
+            _vary:{ freq:0.16, downsample:0.3 } },
+
+  // ---- SID (Commodore 64): saw/pulse + PWM + resonant filter sweeps + ring mod ----
+  "SID Bass": { wave:2, freq:110, pulseWidth:0.3, pwmDepth:0.2, pwmRate:4, attack:0.005, decay:0.25, sustain:0.5, release:0.15, cutoff:1200, reso:0.7, filtEnv:0.5, drive:0.2, width:0.35, duration:0.7,
+            _vary:{ freq:0.12, cutoff:0.25, filtEnv:0.15 } },
+  "SID Zap": { wave:4, freq:800, pulseWidth:0.25, sweep:-0.5, ringMod:0.3, ringFreq:140, attack:0, decay:0.18, sustain:0, release:0.1, cutoff:5000, reso:0.6, filtEnv:-0.3, drive:0.15, width:0.4, delay:0.18, delayTime:0.07, delayFb:0.3, reverb:0.2, reverbSize:0.5, reverbTone:0.55, duration:0.5,
+            _vary:{ freq:0.18, ringFreq:0.3 } },
+  "SID Lead": { wave:4, freq:520, pulseWidth:0.4, pwmDepth:0.3, pwmRate:6, vibDepth:0.06, vibRate:7, attack:0.005, decay:0.2, sustain:0.4, release:0.2, cutoff:3500, reso:0.55, filtEnv:0.3, drive:0.12, width:0.4, delay:0.2, delayTime:0.14, delayFb:0.35, reverb:0.25, reverbSize:0.6, reverbTone:0.6, duration:0.9,
+            _vary:{ freq:0.14, cutoff:0.2, pwmRate:0.3 } },
+
+  // ---- Consoles: +4 each (fills the taste batch out to 7 per console) ----
+  // 8-Bit (NES)
+  "8-Bit Laser": { wave:4, freq:1200, pulseWidth:0.25, sweep:-0.5, attack:0, decay:0.15, sustain:0, release:0.06, cutoff:12000, drive:0, bitcrush:8, duration:0.3,
+            _vary:{ freq:0.18, sweep:0.2 } },
+  "8-Bit Powerup": { wave:4, freq:400, pulseWidth:0.5, sweep:0.5, attack:0, hold:0.005, decay:0.08, sustain:0.1, release:0.05, cutoff:12000, drive:0, bitcrush:8, repeat:4, rate:14, duration:0.6,
+            _vary:{ freq:0.15, rate:0.15 } },
+  "8-Bit Hit": { wave:4, freq:200, noise:0.5, pulseWidth:0.5, sweep:-0.3, attack:0, hold:0.003, decay:0.08, sustain:0, release:0.05, cutoff:9000, drive:0.1, bitcrush:7, duration:0.2,
+            _vary:{ freq:0.2, decay:0.3 } },
+  "8-Bit 1UP": { wave:4, freq:660, pulseWidth:0.5, sweep:0.3, attack:0, hold:0.004, decay:0.1, sustain:0.15, release:0.06, cutoff:12000, drive:0, bitcrush:8, repeat:3, rate:9, duration:0.7,
+            _vary:{ freq:0.14, rate:0.12 } },
+  // Pocket (Game Boy)
+  "Pocket Jump": { wave:4, freq:300, pulseWidth:0.5, sweep:0.45, attack:0.003, decay:0.12, sustain:0.15, release:0.08, cutoff:9000, drive:0, bitcrush:4, downsample:2, duration:0.3,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  "Pocket Blip": { wave:4, freq:700, pulseWidth:0.25, attack:0, hold:0.004, decay:0.04, sustain:0, release:0.02, cutoff:9000, drive:0, bitcrush:4, downsample:2, duration:0.1,
+            _vary:{ freq:0.25 } },
+  "Pocket Hit": { wave:1, freq:180, noise:0.5, sweep:-0.3, attack:0, hold:0.003, decay:0.1, sustain:0, release:0.06, cutoff:6000, drive:0.15, bitcrush:4, downsample:3, duration:0.2,
+            _vary:{ freq:0.2, decay:0.3 } },
+  "Pocket Select": { wave:4, freq:880, pulseWidth:0.5, attack:0, hold:0.005, decay:0.05, sustain:0, release:0.03, cutoff:9000, drive:0, bitcrush:4, downsample:2, duration:0.12,
+            _vary:{ freq:0.15 } },
+  // Super (SNES)
+  "Super Powerup": { wave:3, freq:440, sweep:0.5, unison:3, detune:12, width:0.7, attack:0.005, decay:0.35, sustain:0.3, release:0.4, cutoff:9000, reso:0.15, drive:0.05, bitcrush:12, delay:0.25, delayTime:0.14, delayFb:0.35, reverb:0.5, reverbSize:0.72, reverbTone:0.7, duration:1.2,
+            _vary:{ freq:0.14, detune:0.4 } },
+  "Super Zap": { wave:0, freq:900, sweep:-0.4, vibDepth:0.05, vibRate:12, attack:0, decay:0.2, sustain:0, release:0.2, cutoff:8000, reso:0.3, drive:0.08, bitcrush:11, delay:0.2, delayTime:0.1, delayFb:0.3, reverb:0.4, reverbSize:0.65, reverbTone:0.6, duration:0.6,
+            _vary:{ freq:0.18, sweep:0.2 } },
+  "Super Sparkle": { wave:3, freq:1800, sweep:0.2, vibDepth:0.1, vibRate:14, unison:3, detune:18, width:0.8, attack:0.003, decay:0.4, sustain:0.1, release:0.5, cutoff:10000, reso:0.15, drive:0.05, bitcrush:12, delay:0.3, delayTime:0.09, delayFb:0.4, reverb:0.55, reverbSize:0.72, reverbTone:0.8, duration:1.3,
+            _vary:{ freq:0.16, detune:0.4 } },
+  "Super Fanfare": { wave:6, freq:520, sweep:0.15, unison:3, detune:14, width:0.7, attack:0.005, decay:0.4, sustain:0.35, release:0.5, cutoff:8500, reso:0.15, drive:0.06, bitcrush:11, delay:0.25, delayTime:0.16, delayFb:0.35, reverb:0.5, reverbSize:0.78, reverbTone:0.65, repeat:3, rate:6, duration:1.5,
+            _vary:{ freq:0.12, rate:0.12 } },
+  // Mega (Genesis)
+  "Mega Punch": { wave:5, freq:160, sweep:-0.5, boom:0.5, boomFreq:70, boomDrop:0.6, boomDecay:0.14, attack:0, hold:0.003, decay:0.1, sustain:0, release:0.08, cutoff:4000, reso:0.3, filtEnv:-0.4, drive:0.6, driveOS:2, width:0.4, duration:0.4,
+            _vary:{ freq:0.16, drive:0.2 } },
+  "Mega Explosion": { wave:5, freq:120, noise:0.7, sweep:-0.4, boom:0.7, boomFreq:50, boomDrop:0.8, boomDecay:0.3, attack:0, hold:0.004, decay:0.35, sustain:0, release:0.4, cutoff:4000, reso:0.2, filtEnv:-0.5, drive:0.65, driveOS:2, width:0.5, reverb:0.25, reverbSize:0.6, reverbTone:0.3, duration:1.0,
+            _vary:{ freq:0.16, drive:0.2 } },
+  "Mega Lead": { wave:5, freq:520, vibDepth:0.06, vibRate:7, attack:0.005, decay:0.2, sustain:0.5, release:0.2, cutoff:7000, reso:0.3, drive:0.35, ringMod:0.15, ringFreq:200, width:0.4, delay:0.2, delayTime:0.13, delayFb:0.3, reverb:0.2, reverbSize:0.55, reverbTone:0.5, duration:0.8,
+            _vary:{ freq:0.14, cutoff:0.2 } },
+  "Mega Hit": { wave:5, freq:300, sweep:-0.4, ringMod:0.3, ringFreq:130, attack:0, hold:0.003, decay:0.12, sustain:0, release:0.1, cutoff:6000, reso:0.4, filtEnv:-0.3, drive:0.5, bitcrush:9, width:0.4, duration:0.3,
+            _vary:{ freq:0.18, ringFreq:0.3 } },
+  // Turbo (PC Engine)
+  "Turbo Coin": { wave:6, freq:1046, sweep:0.12, attack:0, hold:0.015, decay:0.14, sustain:0, release:0.05, cutoff:11000, reso:0.2, drive:0.08, bitcrush:5, duration:0.28,
+            _vary:{ freq:0.16, decay:0.3 } },
+  "Turbo Zap": { wave:6, freq:850, sweep:-0.55, vibDepth:0.06, vibRate:12, attack:0, decay:0.16, sustain:0, release:0.08, cutoff:10000, reso:0.4, drive:0.1, bitcrush:5, width:0.4, delay:0.18, delayTime:0.08, delayFb:0.3, reverb:0.2, reverbSize:0.5, reverbTone:0.6, duration:0.35,
+            _vary:{ freq:0.18, sweep:0.2 } },
+  "Turbo Hit": { wave:6, freq:280, noise:0.3, sweep:-0.3, attack:0, hold:0.003, decay:0.1, sustain:0, release:0.06, cutoff:8000, reso:0.35, drive:0.15, bitcrush:5, width:0.4, duration:0.25,
+            _vary:{ freq:0.2, decay:0.3 } },
+  "Turbo Chime": { wave:6, freq:1200, vibDepth:0.05, vibRate:8, attack:0.003, decay:0.4, sustain:0.1, release:0.4, cutoff:11000, reso:0.2, drive:0.06, bitcrush:5, delay:0.22, delayTime:0.12, delayFb:0.35, reverb:0.35, reverbSize:0.65, reverbTone:0.7, duration:1.0,
+            _vary:{ freq:0.14, delayTime:0.3 } },
+  // Woodgrain (Atari 2600)
+  "Woodgrain Blip": { wave:1, freq:500, attack:0, hold:0.004, decay:0.05, sustain:0, release:0.03, cutoff:6000, reso:0.3, drive:0.3, bitcrush:3, downsample:8, duration:0.12,
+            _vary:{ freq:0.25, downsample:0.3 } },
+  "Woodgrain Hit": { wave:1, freq:150, noise:0.6, sweep:-0.3, attack:0, hold:0.003, decay:0.1, sustain:0, release:0.06, cutoff:4000, reso:0.3, drive:0.5, bitcrush:3, downsample:10, width:0.3, duration:0.2,
+            _vary:{ freq:0.2, decay:0.3 } },
+  "Woodgrain Jump": { wave:1, freq:250, sweep:0.4, attack:0.003, decay:0.12, sustain:0.15, release:0.08, cutoff:4500, reso:0.3, drive:0.35, bitcrush:4, downsample:8, duration:0.3,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  "Woodgrain Shot": { wave:1, freq:400, noise:0.7, sweep:-0.5, attack:0, hold:0.002, decay:0.08, sustain:0, release:0.05, cutoff:5000, reso:0.4, drive:0.5, bitcrush:3, downsample:10, width:0.3, duration:0.25,
+            _vary:{ freq:0.2, sweep:0.15 } },
+  // SID (Commodore 64)
+  "SID Coin": { wave:4, freq:1046, pulseWidth:0.5, sweep:0.12, attack:0, hold:0.012, decay:0.13, sustain:0, release:0.05, cutoff:6000, reso:0.5, filtEnv:0.2, drive:0.12, duration:0.28,
+            _vary:{ freq:0.16, cutoff:0.2 } },
+  "SID Blip": { wave:4, freq:760, pulseWidth:0.3, attack:0, hold:0.004, decay:0.05, sustain:0, release:0.03, cutoff:5000, reso:0.6, filtEnv:0.1, drive:0.1, duration:0.12,
+            _vary:{ freq:0.22, reso:0.15 } },
+  "SID Pluck": { wave:2, freq:330, pulseWidth:0.3, attack:0, decay:0.2, sustain:0.1, release:0.15, cutoff:2500, reso:0.65, filtEnv:0.5, drive:0.12, width:0.35, duration:0.5,
+            _vary:{ freq:0.16, cutoff:0.25, filtEnv:0.15 } },
+  "SID Sweep": { wave:2, freq:220, pulseWidth:0.4, pwmDepth:0.25, pwmRate:5, attack:0.05, decay:0.5, sustain:0.4, release:0.4, cutoff:800, reso:0.75, filtEnv:0.8, drive:0.15, width:0.4, duration:1.0,
+            _vary:{ cutoff:0.25, filtEnv:0.15, pwmRate:0.3 } },
 };
 
 // Applied to any preset that doesn't declare its own _vary: gentle wobble on the
@@ -2162,6 +2344,7 @@ const PRESET_CATEGORIES = [
   ["Martial weaponry", ["Hit", "Crunchy Hit", "Punch / Kick", "Sword Swing", "Sword Clash", "Shield Block", "Katana Slice", "Heavy Cleave", "Dagger Stab", "Blade Sheathe", "Critical Slash", "Hammer Smash", "War Hammer Crush", "Anvil Strike", "Mace Bash", "Ground Slam", "Crossbow Bolt", "Spear Thrust", "Axe Chop", "Whip Crack", "Rapier Lunge", "Shield Bash", "Flail Swing", "Sword Clash 2", "Hammer Smash 2", "Katana Slice 2", "Reckless Chop", "Heavy Thrust", "Whirling Riposte", "Iron Slice", "Heavy Chop", "Swift Bash", "Reckless Slice", "Grim Cleave", "Swift Cleave", "Keen Cleave", "Swift Thrust", "Reckless Thrust", "Brutal Bash", "Iron Strike", "Grim Chop", "Razor Bash", "Reckless Clash", "Whirling Bash", "Keen Swing", "Whirling Swing", "Swift Riposte", "Iron Clash", "Razor Cleave", "Iron Cleave", "Heavy Slice", "Swift Chop", "Whirling Chop", "Reckless Parry"]],
   ["Fire", ["Fire", "Flamethrower", "Fire Whoosh", "Torch Ignite", "Ember Crackle", "Match Strike", "Inferno Roar", "Fire Sparks", "Lava Bubble", "Fireball Whoosh", "Fire Burst", "Flamethrower 2", "Fire Whoosh 2", "Searing Blaze", "Searing Torch", "Kindled Ignite", "Kindled Flare", "Smoldering Ignite", "Searing Flare", "Blazing Torch", "Searing Ignite", "Kindled Flame", "Molten Scorch", "Infernal Flare", "Kindled Torch", "Molten Flame", "Ashen Whoosh"]],
   ["Retro / Arcade", ["Coin", "Jump", "Powerup", "Lush Powerup", "Wide Pickup", "Level Up", "Game Over", "Bounce", "Pickup Item", "Extra Life", "Retro Jump", "Game Start", "Coin 2", "Powerup 2", "8-Bit Ding", "Pixel Fanfare", "Retro Ding", "Retro Pickup", "Retro Jingle", "Turbo Bounce", "Pixel Pickup", "Pixel Score", "Arcade Jump", "High Jingle", "8-Bit Fanfare", "Chiptune Bounce", "Arcade Jingle", "Chiptune Ding", "Bonus Bounce"]],
+  ["Consoles / Chiptune", ["8-Bit Coin", "8-Bit Jump", "8-Bit Blip", "8-Bit Laser", "8-Bit Powerup", "8-Bit Hit", "8-Bit 1UP", "Pocket Zap", "Pocket Coin", "Pocket Powerup", "Pocket Jump", "Pocket Blip", "Pocket Hit", "Pocket Select", "Super Chime", "Super Coin", "Super Hit", "Super Powerup", "Super Zap", "Super Sparkle", "Super Fanfare", "Mega Shot", "Mega Bass", "Mega Zap", "Mega Punch", "Mega Explosion", "Mega Lead", "Mega Hit", "Turbo Laser", "Turbo Powerup", "Turbo Blip", "Turbo Coin", "Turbo Zap", "Turbo Hit", "Turbo Chime", "Woodgrain Buzz", "Woodgrain Zap", "Woodgrain Boom", "Woodgrain Blip", "Woodgrain Hit", "Woodgrain Jump", "Woodgrain Shot", "SID Bass", "SID Zap", "SID Lead", "SID Coin", "SID Blip", "SID Pluck", "SID Sweep"]],
   ["Sci-Fi & Hazard", ["Laser", "Meteor Descent", "Comet Whoosh", "Acid Sizzle", "Acid Splash", "Toxic Bubble", "Gas Leak", "Gas Puff", "Steam Vent", "Force Field", "Warp Drive", "Laser Charge", "Teleporter Hum", "Energy Drain", "Scan Complete", "Laser 2", "Warp Drive 2", "Ionized Leak", "Alien Surge", "Warp Field", "Radioactive Scan", "Reactor Surge", "Toxic Surge", "Warp Scan", "Toxic Hum", "Ionized Charge", "Quantum Pulse", "Alien Field", "Ionized Alarm", "Photon Whoosh", "Photon Charge", "Photon Drip", "Ionized Beam", "Photon Surge", "Reactor Beam", "Reactor Charge"]],
   ["Cartoon / Misc", ["Cartoon Boing", "Slide Whistle Up", "Slide Whistle Down", "Fart", "Burp", "Slime Splat", "Squeaky Toy", "Bubble Blorp", "Mud Squelch", "Bubble Pop", "Boing Spring", "Squish Pop", "Rubber Stretch", "Pop Cork", "Fart 2", "Squishy Plop", "Goofy Plop", "Silly Blorp", "Goofy Splat", "Zany Squish", "Silly Wobble", "Zany Wobble", "Bouncy Pop", "Squishy Boing", "Zany Splat", "Loony Wobble", "Slippery Sproing", "Wobbly Plop", "Bouncy Sproing", "Silly Boing", "Loony Squeak"]],
 ];
@@ -2246,6 +2429,44 @@ loadfile.addEventListener("change", () => {
   };
   reader.readAsText(file);
   loadfile.value = "";
+});
+
+// ---------- Import a WAV (or other audio) as the "sample" source ----------
+// Decode via an OfflineAudioContext at SR (which resamples for us), downmix to mono,
+// stash it in sampleBuf, and switch the waveform to "sample" so the whole engine
+// (envelope, filter, drive, crush, ring mod, delay, reverb) manipulates it.
+const wavFileInput = document.getElementById("wavfile");
+const sampleNameEl = document.getElementById("samplename");
+function updateSampleUI() {
+  sampleNameEl.textContent = sampleBuf ? "♪ " + sampleName + "  (✕ clear)" : "";
+  sampleNameEl.style.cursor = sampleBuf ? "pointer" : "";
+}
+sampleNameEl.addEventListener("click", () => {
+  if (!sampleBuf) return;
+  sampleBuf = null; sampleName = "";
+  if (Math.round(state.wave) === 9) { state.wave = 2; syncUI(); }   // fall back to saw
+  updateSampleUI();
+});
+document.getElementById("importwav").addEventListener("click", () => wavFileInput.click());
+wavFileInput.addEventListener("change", () => {
+  const file = wavFileInput.files[0];
+  wavFileInput.value = "";
+  if (!file) return;
+  file.arrayBuffer()
+    .then((buf) => new OfflineAudioContext(1, 1, SR).decodeAudioData(buf))
+    .then((audio) => {
+      const n = audio.length, chs = audio.numberOfChannels;
+      const mono = new Float32Array(n);
+      for (let c = 0; c < chs; c++) { const d = audio.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / chs; }
+      sampleBuf = mono;
+      sampleName = file.name;
+      state.wave = 9;             // "sample"
+      waveLocked = false;
+      syncUI();
+      updateSampleUI();
+      play("Sample");
+    })
+    .catch((e) => alert("Could not read that audio file: " + e.message));
 });
 
 // ---------- Wire buttons + keys ----------
@@ -2606,6 +2827,67 @@ seqPlayBtn.addEventListener("click", playSequence);
 seqExportBtn.addEventListener("click", exportSequence);
 seqClearBtn.addEventListener("click", () => { sequence = []; renderSeq(); });
 renderSeq();
+
+// ---------- My Presets (desktop premium: a saved-sound library you can rename) ----------
+// Only shown in the desktop (Tauri) build. Persists to localStorage (which lives on the
+// user's disk in the desktop app). Snapshot the current sound in, load/rename/delete inline.
+const UP_KEY = "crunchyfx.userpresets.v1";
+const isDesktop = !!window.__TAURI__;
+let userPresets = [];   // [{ id, name, state }]
+let upSeq = 0;
+const mpPanel = document.getElementById("mypresets");
+const mpList = document.getElementById("mpList");
+
+function saveUserPresets() {
+  try { localStorage.setItem(UP_KEY, JSON.stringify({ seq: upSeq, items: userPresets })); } catch (e) { /* best-effort */ }
+}
+function loadUserPresets() {
+  try {
+    const d = JSON.parse(localStorage.getItem(UP_KEY) || "null");
+    if (d && Array.isArray(d.items)) {
+      userPresets = d.items.filter((p) => p && typeof p.state === "object");
+      upSeq = d.seq || userPresets.reduce((m, p) => Math.max(m, p.id || 0), 0);
+    }
+  } catch (e) { /* ignore corrupt store */ }
+}
+function renderMyPresets() {
+  mpList.innerHTML = "";
+  if (!userPresets.length) {
+    mpList.innerHTML = '<div class="mp-empty">No saved presets yet — shape a sound and hit “Save current”.</div>';
+    return;
+  }
+  for (const p of userPresets) {
+    const el = document.createElement("div");
+    el.className = "up-item";
+    el.innerHTML =
+      '<button class="up-play" title="Hear">▶</button>' +
+      '<input class="up-name" spellcheck="false">' +
+      '<button class="up-use" title="Load into editor">✎</button>' +
+      '<button class="up-del" title="Delete">✕</button>';
+    const nameInput = el.querySelector(".up-name");
+    nameInput.value = p.name;
+    el.querySelector(".up-play").addEventListener("click", () => { const r = withState(p.state, () => render()); playBuffer(r.L, r.R); });
+    el.querySelector(".up-use").addEventListener("click", () => applyPreset(p.state, p.name));
+    el.querySelector(".up-del").addEventListener("click", () => { userPresets = userPresets.filter((x) => x.id !== p.id); saveUserPresets(); renderMyPresets(); });
+    nameInput.addEventListener("change", () => { p.name = nameInput.value.trim() || p.name; nameInput.value = p.name; saveUserPresets(); });
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+    mpList.appendChild(el);
+  }
+}
+function saveCurrentUserPreset() {
+  const name = seqLabel && seqLabel !== "Sound" ? seqLabel : "My Sound";
+  userPresets.unshift({ id: ++upSeq, name, state: snapshotState() });
+  saveUserPresets();
+  renderMyPresets();
+  const first = mpList.querySelector(".up-name");   // focus for immediate rename
+  if (first) { first.focus(); first.select(); }
+}
+if (isDesktop) {
+  mpPanel.hidden = false;
+  document.getElementById("mpSave").addEventListener("click", saveCurrentUserPreset);
+  loadUserPresets();
+  renderMyPresets();
+}
 
 // initial draw — or load a shared sound from the URL, if one is present
 if (!loadFromHash()) { const { L, R } = render(); drawScope(L, R); }
