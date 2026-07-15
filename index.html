@@ -924,6 +924,7 @@ const histList = document.getElementById("histlist");
 const histItems = [];
 let histSeq = 0;
 const HIST_MAX = 50;
+const HIST_KEY = "crunchyfx.history.v1";   // storage key — history persists across sessions
 
 function snapshotState() {
   const s = {};
@@ -948,6 +949,7 @@ function addHistory(label, L, audible = true) {
   });
   if (histItems.length > HIST_MAX) histItems.pop();
   renderHistory();
+  saveHistory();
 }
 function drawThumb(canvas, peaks) {
   const c = canvas.getContext("2d");
@@ -1005,7 +1007,33 @@ function renderHistory() {
     histList.appendChild(el);
   }
 }
-document.getElementById("clearhist").addEventListener("click", () => { histItems.length = 0; renderHistory(); });
+// Persist history so it survives closing the app. In the desktop (Tauri) build this
+// store lives on the user's disk in the app's data folder, so history carries over
+// between launches; on the web it persists per-browser. Best-effort — never throws.
+function saveHistory() {
+  try {
+    const data = histItems.map((it) => ({
+      id: it.id, label: it.label, state: it.state, silent: it.silent, time: it.time,
+      peaks: Array.from(it.peaks, (v) => +(+v).toFixed(3)),   // shrink thumbnails
+    }));
+    localStorage.setItem(HIST_KEY, JSON.stringify(data));
+  } catch (e) { /* storage full or unavailable — persistence is best-effort */ }
+}
+function loadHistory() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); } catch (e) { return; }
+  if (!Array.isArray(data)) return;
+  histItems.length = 0;
+  for (const it of data) {
+    if (!it || typeof it.state !== "object" || !it.state) continue;
+    histItems.push({ id: it.id || 0, label: it.label || "Sound", state: it.state,
+      peaks: it.peaks || [], silent: !!it.silent, time: it.time || "" });
+  }
+  histSeq = histItems.reduce((m, it) => Math.max(m, it.id || 0), 0);   // avoid id collisions
+}
+
+document.getElementById("clearhist").addEventListener("click", () => { histItems.length = 0; renderHistory(); saveHistory(); });
+loadHistory();
 renderHistory();
 
 // ---------- Scope drawing ----------

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "crunchyfx",
+  "version": "1.0.0",
+  "identifier": "com.crunchyfx.app",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "crunchyfx — sound effect generator",
+        "width": 1600,
+        "height": 950,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "deb", "appimage"],
+    "category": "Music",
+    "shortDescription": "A from-scratch sound effect generator.",
+    "longDescription": "Design, breed, sequence, and export game sound effects — 100% synthesized, no samples. Sounds you make are CC0 (public domain).",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
+  }
+}
