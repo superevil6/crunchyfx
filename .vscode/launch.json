@@ -1,0 +1,32 @@
+{
+  // Press F5 (Run and Debug) to launch crunchyfx.
+  //
+  //  • "Desktop app (Tauri)" builds and runs the native app under a debugger.
+  //    Needs: rust-analyzer + CodeLLDB extensions and a working Rust toolchain.
+  //    (No Tauri CLI required — it builds via cargo directly.)
+  //    On WINDOWS: change "type" to "cppvsdbg" (from the C/C++ extension).
+  //
+  //  • "Web app (browser)" serves index.html and opens it in Chrome/Chromium/Edge.
+  //    Firefox users: run the "Web: serve" task instead and open the printed
+  //    http://localhost:5173/index.html in Firefox.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Desktop app (Tauri)",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--manifest-path=${workspaceFolder}/src-tauri/Cargo.toml"]
+      },
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Web app (browser)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/index.html",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "Web: serve"
+    }
+  ]
+}

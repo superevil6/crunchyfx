@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Static file server for the web version. Used as the preLaunchTask for the
+      // "Web app (browser)" launch config; the background matcher below lets VS Code
+      // know the server is ready (when python prints "Serving HTTP ...").
+      "label": "Web: serve",
+      "type": "shell",
+      "command": "python3 -u -m http.server 5173",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Serving HTTP",
+          "endsPattern": "Serving HTTP"
+        }
+      },
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    },
+    {
+      // Hot-reloading desktop dev. Needs the Tauri CLI:
+      //   cargo install tauri-cli --version "^2"
+      "label": "Desktop: tauri dev",
+      "type": "shell",
+      "command": "cargo tauri dev",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}

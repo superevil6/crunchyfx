@@ -2,7 +2,7 @@
 CLAUDE.md
 .claude/
 
-# Desktop (Tauri) build artifacts
-dist/                 # generated copy of index.html for the desktop build
-src-tauri/target/     # Rust build output
-src-tauri/gen/        # Tauri-generated schemas
+# Desktop (Tauri) build artifacts — generated frontend copy, Rust output, Tauri schemas.
+dist/
+src-tauri/target/
+src-tauri/gen/
