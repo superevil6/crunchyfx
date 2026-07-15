@@ -292,6 +292,7 @@
   .up-item .up-name:focus { outline: none; border-color: var(--accent2); }
   .up-item button { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; cursor: pointer; padding: 3px 7px; font-size: 12px; line-height: 1; }
   .up-item button:hover { color: var(--accent); border-color: var(--accent); }
+  .up-badge { color: var(--accent2); font-size: 12px; flex: none; }
 
   /* Breeding modal */
   .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);
@@ -2400,6 +2401,7 @@ function filterPresets() {
     details.open = q ? secShown > 0 : idx === 0;     // reveal matches; else restore default
     shown += secShown;
   });
+  shown += filterMyPresets(q);                       // also filter the saved-preset library
   presetCount.textContent = q ? (shown + " match" + (shown === 1 ? "" : "es")) : "";
 }
 presetSearch.addEventListener("input", filterPresets);
@@ -2465,6 +2467,12 @@ wavFileInput.addEventListener("change", () => {
       syncUI();
       updateSampleUI();
       play("Sample");
+      // Desktop: drop the imported sample straight into the My Presets library (with its audio)
+      if (window.__TAURI__) {
+        userPresets.unshift({ id: ++upSeq, name: file.name.replace(/\.[^.]+$/, ""), state: snapshotState(), sample: sampleToB64(mono) });
+        saveUserPresets();
+        renderMyPresets();
+      }
     })
     .catch((e) => alert("Could not read that audio file: " + e.message));
 });
@@ -2850,6 +2858,26 @@ function loadUserPresets() {
     }
   } catch (e) { /* ignore corrupt store */ }
 }
+// Imported samples are stored WITH their preset (mono Int16 -> base64) so the entry still
+// plays after a restart. Decoded back to Float32 on load/play. Note: localStorage is ~5 MB,
+// so many/long samples may not persist across launches (best-effort; existing data is safe).
+function sampleToB64(buf) {
+  const i16 = new Int16Array(buf.length);
+  for (let i = 0; i < buf.length; i++) { const s = Math.max(-1, Math.min(1, buf[i])); i16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+  const bytes = new Uint8Array(i16.buffer);
+  let bin = ""; const CHUNK = 8192;   // chunked to avoid fromCharCode arg limits
+  for (let i = 0; i < bytes.length; i += CHUNK) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  return btoa(bin);
+}
+function b64ToSample(b64) {
+  try {
+    const bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const i16 = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2)), f = new Float32Array(i16.length);
+    for (let i = 0; i < i16.length; i++) f[i] = i16[i] / 0x8000;
+    return f;
+  } catch (e) { return new Float32Array(0); }
+}
 function renderMyPresets() {
   mpList.innerHTML = "";
   if (!userPresets.length) {
@@ -2861,18 +2889,40 @@ function renderMyPresets() {
     el.className = "up-item";
     el.innerHTML =
       '<button class="up-play" title="Hear">▶</button>' +
+      (p.sample ? '<span class="up-badge" title="imported audio">♪</span>' : '') +
       '<input class="up-name" spellcheck="false">' +
       '<button class="up-use" title="Load into editor">✎</button>' +
       '<button class="up-del" title="Delete">✕</button>';
     const nameInput = el.querySelector(".up-name");
     nameInput.value = p.name;
-    el.querySelector(".up-play").addEventListener("click", () => { const r = withState(p.state, () => render()); playBuffer(r.L, r.R); });
-    el.querySelector(".up-use").addEventListener("click", () => applyPreset(p.state, p.name));
+    el.querySelector(".up-play").addEventListener("click", () => {
+      const prev = sampleBuf;
+      if (p.sample) sampleBuf = b64ToSample(p.sample);   // this entry's audio, for playback only
+      const r = withState(p.state, () => render());
+      playBuffer(r.L, r.R);
+      sampleBuf = prev;
+    });
+    el.querySelector(".up-use").addEventListener("click", () => {
+      if (p.sample) { sampleBuf = b64ToSample(p.sample); sampleName = p.name; updateSampleUI(); }   // restore its audio too
+      applyPreset(p.state, p.name);
+    });
     el.querySelector(".up-del").addEventListener("click", () => { userPresets = userPresets.filter((x) => x.id !== p.id); saveUserPresets(); renderMyPresets(); });
-    nameInput.addEventListener("change", () => { p.name = nameInput.value.trim() || p.name; nameInput.value = p.name; saveUserPresets(); });
+    nameInput.addEventListener("change", () => { p.name = nameInput.value.trim() || p.name; nameInput.value = p.name; saveUserPresets(); filterMyPresets((presetSearch.value || "").trim().toLowerCase()); });
     nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
     mpList.appendChild(el);
   }
+  filterMyPresets((presetSearch.value || "").trim().toLowerCase());   // reapply any active search
+}
+// Filter the saved-preset library by the shared search query; returns how many matched.
+function filterMyPresets(q) {
+  if (!mpList) return 0;
+  let n = 0;
+  for (const item of mpList.querySelectorAll(".up-item")) {
+    const match = !q || item.querySelector(".up-name").value.toLowerCase().includes(q);
+    item.style.display = match ? "" : "none";
+    if (match) n++;
+  }
+  return n;
 }
 function saveCurrentUserPreset() {
   const name = seqLabel && seqLabel !== "Sound" ? seqLabel : "My Sound";
