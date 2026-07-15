@@ -306,6 +306,23 @@
     }
     #histlist { max-height: 320px; }
   }
+
+  /* Scope row + two-column workspace (fills wide/ultrawide screens) */
+  .scoperow { padding: 14px 24px 0; max-width: 1200px; }
+  .scoperow canvas { width: 100%; height: 90px; display: block; }
+  .workspace { max-width: 1200px; margin: 0 24px; }
+  .workspace .macro { margin: 16px 0 0; max-width: none; }   /* workspace provides the side inset */
+  .workspace main { padding: 14px 0 32px; max-width: none; }
+  @media (min-width: 1500px) {
+    .scoperow, .seqbar, .workspace, footer.license { max-width: 1900px; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);   /* browser | editor */
+      gap: 24px;
+      align-items: start;
+    }
+    .ws-browser .presetsearch, .ws-editor .macro { margin-top: 12px; }   /* align column tops */
+  }
 </style>
 
 <header>
@@ -336,20 +353,25 @@
   <button id="seqClear">Clear</button>
 </div>
 
-<div style="padding: 14px 24px 0; max-width: 1200px;">
-  <canvas id="scope" width="1160" height="90"></canvas>
-  <div class="presetsearch">
-    <input type="text" id="presetSearch" placeholder="Search presets… (e.g. fire)" autocomplete="off" spellcheck="false">
-    <span id="presetCount" class="hint"></span>
-  </div>
-  <div class="presetbar" id="presets" style="margin-top:10px"></div>
+<div class="scoperow">
+  <canvas id="scope" width="2320" height="90"></canvas>
 </div>
 
-<div class="macro" id="macros">
-  <div class="macro-title">Quick shape — one slider each moves several controls at once</div>
+<div class="workspace">
+  <section class="ws-browser">
+    <div class="presetsearch">
+      <input type="text" id="presetSearch" placeholder="Search presets… (e.g. fire)" autocomplete="off" spellcheck="false">
+      <span id="presetCount" class="hint"></span>
+    </div>
+    <div class="presetbar" id="presets" style="margin-top:10px"></div>
+  </section>
+  <section class="ws-editor">
+    <div class="macro" id="macros">
+      <div class="macro-title">Quick shape — one slider each moves several controls at once</div>
+    </div>
+    <main id="panels"></main>
+  </section>
 </div>
-
-<main id="panels"></main>
 
 <aside id="history">
   <div class="hist-head">
