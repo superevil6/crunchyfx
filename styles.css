@@ -330,7 +330,18 @@
   .breed-cell.sel .breed-tag { color: var(--accent); font-weight: 600; }
   .modal-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
   /* Foundry modal (curate original presets from procedural candidates) */
-  .foundry-gen { display: flex; align-items: center; gap: 10px; padding: 12px 18px 0; }
+  .foundry-gen { display: flex; align-items: center; gap: 10px; padding: 12px 18px 0; flex-wrap: wrap; }
+  .fnd-typel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .fnd-typel select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; border-radius: 8px; }
+  .fnd-styles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 18px 0; }
+  .fnd-slabel { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .fnd-style { cursor: pointer; }
+  .fnd-style input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .fnd-style span { display: inline-block; padding: 4px 11px; font-size: 12px; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--muted); background: var(--panel2); transition: border-color 0.1s, color 0.1s; }
+  .fnd-style:hover span { border-color: var(--accent2); color: var(--ink); }
+  .fnd-style input:checked + span { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .fnd-style input:focus-visible + span { outline: 2px solid var(--accent2); outline-offset: 1px; }
   .breed-cell-bar .fnd-keepbtn { padding: 2px 9px; font-size: 12px; }
   .foundry-keep { padding: 4px 18px 0; border-top: 1px solid var(--line); margin-top: 4px; }
   .foundry-keep-head { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 8px; }

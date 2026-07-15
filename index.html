@@ -95,6 +95,7 @@
 </footer>
 
 <script src="presets.js"></script>
+<script src="new_presets.js"></script>
 <script>
 "use strict";
 
@@ -1732,14 +1733,85 @@ let foundryCands = [];           // current batch: full genomes
 let foundryKeep = [];            // kept sounds: [{ id, name, genome }]
 let foundryKeepSeq = 0;
 
-// Fresh batch. mode "random" = pure procedural randomize; "mutate" = mutate the editor sound.
-function foundryGenerate(mode) {
+// Sound archetypes — hand-authored structural recipes (base params that define a *kind* of
+// sfx + a _vary map of how much to wiggle each). NOT derived from presets.js; these are the
+// tool's own DSP knowledge written as templates (workflow code, like any other app logic).
+// Generating a varyPreset() instance of one gives a candidate that already "sounds like
+// something" instead of full-range mush — the fix for the low hit rate. Every instance is
+// still procedural (jitter) + human-curated, so provenance stays clean.
+const ARCHETYPES = [
+  { name: "Coin / pickup",   patch: { wave:4, freq:900, sweep:0.12, pulseWidth:0.3, attack:0.002, hold:0.02, decay:0.14, sustain:0, release:0.08, cutoff:9000, drive:0.1, duration:0.32,
+      _vary:{ freq:0.22, sweep:0.3, decay:0.4, cutoff:0.2, pulseWidth:0.4, drive:0.4 } } },
+  { name: "Laser / zap",     patch: { wave:2, freq:1200, sweep:-0.5, decay:0.2, sustain:0, release:0.1, cutoff:7000, reso:0.4, drive:0.2, duration:0.3,
+      _vary:{ freq:0.25, sweep:0.3, decay:0.35, reso:0.3, cutoff:0.25, drive:0.3 } } },
+  { name: "Explosion / boom", patch: { wave:0, freq:120, noise:0.85, subOsc:0.5, sweep:-0.3, boom:0.5, boomFreq:70, boomDecay:0.3, attack:0.001, decay:0.5, sustain:0, release:0.4, cutoff:3500, reso:0.2, drive:0.5, duration:1.0,
+      _vary:{ freq:0.2, decay:0.3, release:0.3, cutoff:0.25, drive:0.3, noise:0.12, boomFreq:0.2 } } },
+  { name: "Hit / impact",    patch: { wave:2, freq:180, noise:0.5, sweep:-0.4, attack:0, decay:0.12, sustain:0, release:0.06, cutoff:5000, drive:0.4, bitcrush:8, duration:0.24,
+      _vary:{ freq:0.25, sweep:0.2, decay:0.35, cutoff:0.25, drive:0.3, bitcrush:0.4 } } },
+  { name: "Powerup / fanfare", patch: { wave:3, freq:500, sweep:0.5, vibDepth:0.1, vibRate:12, attack:0.005, decay:0.3, sustain:0.3, release:0.2, cutoff:9000, duration:0.6,
+      _vary:{ freq:0.2, sweep:0.25, decay:0.3, vibRate:0.4, vibDepth:0.5, cutoff:0.2 } } },
+  { name: "Jump / hop",      patch: { wave:4, freq:300, sweep:0.35, pulseWidth:0.35, attack:0.005, decay:0.1, sustain:0.2, release:0.12, cutoff:8000, duration:0.3,
+      _vary:{ freq:0.25, sweep:0.3, decay:0.3, pulseWidth:0.4, cutoff:0.2 } } },
+  { name: "Pluck / string",  patch: { wave:8, freq:330, pluckDamp:0.5, attack:0, decay:0.4, sustain:0, release:0.3, cutoff:9000, duration:0.7,
+      _vary:{ freq:0.3, pluckDamp:0.5, decay:0.3, cutoff:0.2 } } },
+  { name: "UI blip / beep",  patch: { wave:1, freq:660, attack:0, decay:0.05, sustain:0, release:0.03, cutoff:11000, duration:0.12,
+      _vary:{ freq:0.3, decay:0.3, cutoff:0.2, bitcrush:0.3 } } },
+  { name: "Robot / ring",    patch: { wave:1, freq:300, ringMod:0.5, ringFreq:220, decay:0.2, sustain:0.1, release:0.15, cutoff:7000, duration:0.4,
+      _vary:{ freq:0.25, ringFreq:0.45, ringMod:0.35, decay:0.3, cutoff:0.2 } } },
+  { name: "Sweep / riser",   patch: { wave:2, freq:200, sweep:0.2, cutoff:1500, reso:0.5, filtEnv:0.8, attack:0.01, decay:0.5, sustain:0.4, release:0.3, duration:0.9,
+      _vary:{ cutoff:0.35, reso:0.25, filtEnv:0.2, freq:0.2, decay:0.3 } } },
+  { name: "Thud / low knock", patch: { wave:0, freq:90, subOsc:0.6, boom:0.4, boomFreq:60, attack:0, decay:0.2, sustain:0, release:0.15, cutoff:2500, drive:0.2, duration:0.4,
+      _vary:{ freq:0.2, decay:0.3, boomFreq:0.2, drive:0.35, cutoff:0.2 } } },
+];
+const archByName = (name) => ARCHETYPES.find((a) => a.name === name);
+
+// Console styles — overlay a chip's character onto any generated patch. Same recipes as the
+// Consoles/Chiptune preset section, but applied live as a filter over Foundry candidates, so
+// they compose with any Kind (an 8-Bit coin, a Genesis laser, …). Copyright-safe nicknames:
+// 8-Bit=NES, Pocket=Game Boy, Super=SNES, Mega=Genesis, Turbo=PC Engine, Woodgrain=Atari 2600,
+// SID=C64. These are hand-authored recipes (workflow code); output stays procedural + curated.
+// "Generic" = no styling (full modern engine). Uses Math.random (fine — this is generation,
+// not the deterministic render() path).
+const NES_PW = [0.125, 0.25, 0.5, 0.75];    // the NES pulse channel's four duty cycles
+const tonal = (g) => (g.noise || 0) < 0.6;   // leave a noise-based sound (explosion/hit) on its noise
+function retro(g) { g.reverb = 0; g.delay = 0; g.unison = 1; g.driveOS = 1; return g; }  // strip effects no chip had
+const STYLES = [
+  { name: "Generic", fn: null },   // full modern engine, no console flavor
+  { name: "8-Bit",   fn: (g) => { retro(g); if (tonal(g)) { g.wave = 4; g.pulseWidth = pick(NES_PW); } g.drive = Math.min(g.drive, 0.15); return g; } },
+  { name: "Pocket",  fn: (g) => { retro(g); if (tonal(g)) { g.wave = 4; g.pulseWidth = pick(NES_PW); } g.bitcrush = 4; g.downsample = Math.max(g.downsample, 3); g.drive = Math.min(g.drive, 0.1); return g; } },
+  { name: "Super",   fn: (g) => { g.delay = 0; g.unison = 1; g.driveOS = 1; if (tonal(g)) g.wave = 3; g.reverb = Math.max(g.reverb, 0.35); g.reverbSize = 0.7; g.reverbTone = 0.4; g.bitcrush = Math.min(g.bitcrush, 10); return g; } },
+  { name: "Mega",    fn: (g) => { retro(g); if (tonal(g)) g.wave = 5; g.drive = Math.max(g.drive, 0.4); g.ringMod = Math.max(g.ringMod, 0.25); return g; } },
+  { name: "Turbo",   fn: (g) => { retro(g); if (tonal(g)) g.wave = 6; g.bitcrush = 5; g.vibDepth = Math.max(g.vibDepth, 0.08); g.vibRate = 10; return g; } },
+  { name: "Woodgrain", fn: (g) => { retro(g); if (tonal(g)) g.wave = 1; g.bitcrush = pick([3, 4]); g.downsample = 8 + Math.floor(Math.random() * 5); g.drive = Math.max(g.drive, 0.4); return g; } },
+  { name: "SID",     fn: (g) => { retro(g); if (tonal(g)) g.wave = pick([2, 4]); if (g.wave === 4) { g.pwmDepth = 0.2; g.pwmRate = 4; } g.reso = Math.max(g.reso, 0.4); if (Math.abs(g.filtEnv) < 0.3) g.filtEnv = 0.5; g.ringMod = Math.max(g.ringMod, 0.2); return g; } },
+];
+const styleByName = (n) => STYLES.find((s) => s.name === n);
+
+// Fresh batch. type: "mutate" = mutate the editor sound; "random" = full-range chaos (old
+// behaviour, mostly duds); "any" = a random archetype per tile; otherwise an archetype name.
+// styleName overlays a console flavor (see STYLES); "Generic" leaves the sound unstyled.
+// Expand a (possibly sparse) patch to a full genome — every param present, defaults filled in.
+// Styling MUST run on this: a style does Math.max(g.reverb, …) etc., and an archetype patch
+// omits most params, so an unexpanded g.key would be undefined -> NaN -> a dead sound.
+function fullGenome(patch) {
+  const g = {};
+  for (const p of PARAMS) g[p[0]] = (p[0] in patch) ? patch[p[0]] : p[5];
+  return g;
+}
+function foundryGenerate(type, styleName) {
+  const style = styleByName(styleName) || STYLES[0];
+  const shape = style.fn ? (g) => style.fn(fullGenome(g)) : (g) => g;   // console character (on a full genome), or identity
   const out = [];
-  if (mode === "mutate") {
+  if (type === "mutate") {
     const seed = genomeFromState();
-    for (let i = 0; i < FOUNDRY_N; i++) out.push(breedChild([seed], FOUNDRY_MUTATE_AMT));
+    for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(() => shape(breedChild([seed], FOUNDRY_MUTATE_AMT))));
+  } else if (type === "random") {
+    for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(() => shape(randomPatch())));
   } else {
-    for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(randomPatch));
+    for (let i = 0; i < FOUNDRY_N; i++) {
+      const arch = type === "any" ? pick(ARCHETYPES) : (archByName(type) || pick(ARCHETYPES));
+      out.push(audiblePatch(() => shape(varyPreset(arch.patch))));
+    }
   }
   return out;
 }
@@ -1758,12 +1830,9 @@ function presetEntry(name, genome) {
 // The copy/paste deliverable: PRESETS entries + a PRESET_CATEGORIES line for presets.js.
 function buildPresetBlock(keepers) {
   const entries = keepers.map((k) => "  " + presetEntry(k.name, k.genome)).join("\n");
-  const names = keepers.map((k) => JSON.stringify(k.name)).join(", ");
-  return "// crunchyfx Foundry — procedurally generated + hand-curated (no AI). Paste into presets.js:\n" +
-         "// 1) add these to window.PRESETS —\n" +
-         entries + "\n" +
-         "// 2) list the names under a section in window.PRESET_CATEGORIES —\n" +
-         "//    [\"My Sounds\", [" + names + "]]\n";
+  return "// crunchyfx Foundry — procedural + hand-curated (no AI). Paste inside the NEW = { … }\n" +
+         "// object in new_presets.js; it auto-files these under the \"My Sounds\" section.\n" +
+         entries + "\n";
 }
 
 const foundryModal = document.createElement("div");
@@ -1777,9 +1846,20 @@ foundryModal.innerHTML =
       '<button id="fndClose">✕ Close</button>' +
     '</div>' +
     '<div class="foundry-gen">' +
-      '<button id="fndRandom" class="primary">🎲 Random batch</button>' +
+      '<label class="fnd-typel">Kind ' +
+        '<select id="fndType">' +
+          '<option value="any">🎲 Surprise me</option>' +
+          ARCHETYPES.map((a) => '<option value="' + a.name + '">' + a.name + '</option>').join('') +
+          '<option value="random">Full random (chaotic)</option>' +
+        '</select>' +
+      '</label>' +
+      '<button id="fndGen" class="primary">Generate ' + FOUNDRY_N + '</button>' +
       '<button id="fndMutate">🧬 Mutate current sound</button>' +
       '<span id="fndCount" class="hint"></span>' +
+    '</div>' +
+    '<div class="fnd-styles" id="fndStyles">' +
+      '<span class="fnd-slabel">Console style</span>' +
+      STYLES.map((s, i) => '<label class="fnd-style"><input type="radio" name="fndstyle" value="' + s.name + '"' + (i === 0 ? ' checked' : '') + '><span>' + s.name + '</span></label>').join('') +
     '</div>' +
     '<div id="fndGrid" class="breed-grid"></div>' +
     '<div class="foundry-keep">' +
@@ -1855,15 +1935,19 @@ function renderFoundryKeep() {
   if (!fndOut.hidden) fndOut.value = buildPresetBlock(foundryKeep);   // keep the shown block fresh
 }
 function openFoundry() {
-  if (!foundryCands.length) foundryCands = foundryGenerate("random");
+  if (!foundryCands.length) foundryCands = foundryGenerate("any", fndStyleVal());   // start with usable sounds, not chaos
   renderFoundryGrid();
   renderFoundryKeep();
   foundryModal.hidden = false;
 }
 
 document.getElementById("foundry").addEventListener("click", openFoundry);
-foundryModal.querySelector("#fndRandom").addEventListener("click", () => { foundryCands = foundryGenerate("random"); renderFoundryGrid(); });
-foundryModal.querySelector("#fndMutate").addEventListener("click", () => { foundryCands = foundryGenerate("mutate"); renderFoundryGrid(); });
+const fndType = foundryModal.querySelector("#fndType");
+const fndStyles = foundryModal.querySelector("#fndStyles");
+const fndStyleVal = () => (fndStyles.querySelector('input[name="fndstyle"]:checked') || {}).value || "Generic";
+foundryModal.querySelector("#fndGen").addEventListener("click", () => { foundryCands = foundryGenerate(fndType.value, fndStyleVal()); renderFoundryGrid(); });
+foundryModal.querySelector("#fndMutate").addEventListener("click", () => { foundryCands = foundryGenerate("mutate", fndStyleVal()); renderFoundryGrid(); });
+fndStyles.addEventListener("change", () => { foundryCands = foundryGenerate(fndType.value, fndStyleVal()); renderFoundryGrid(); });   // flip a console, hear it immediately
 foundryModal.querySelector("#fndClear").addEventListener("click", () => { foundryKeep = []; fndOut.hidden = true; renderFoundryKeep(); fndMsg.textContent = ""; });
 foundryModal.querySelector("#fndClose").addEventListener("click", () => { foundryModal.hidden = true; });
 foundryModal.addEventListener("click", (e) => { if (e.target === foundryModal) foundryModal.hidden = true; });
