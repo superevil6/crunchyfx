@@ -11,6 +11,7 @@
   <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
   <button id="rand" class="accent2">🎲 Randomize</button>
   <button id="breed" class="accent2">🧬 Breed</button>
+  <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets">⚒ Foundry</button>
   <button id="export">⬇ Export WAV</button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
@@ -1716,6 +1717,177 @@ function loadProject(data) {
     renderSeq();
   }
   applyPreset(data.editor, data.label || "Project");   // reset+overlay+syncUI+play (last, so it draws the scope)
+}
+
+// ---------- Foundry (curate original presets from procedural candidates) ----------
+// The audition → generate → curate → export loop. Candidates come from randomPatch() and
+// breedChild() — Math.random + jitter, NO AI/ML anywhere in the chain. The human auditions
+// (▶) and clicks Keep on the ones they like; keepers export as a ready-to-paste PRESETS
+// block. Procedural generation + human selection = authored content, not AI-generated — this
+// is the tool's intended "make your own sounds" workflow (see the provenance notes in
+// CLAUDE.md / the AI-disclosure discussion). Nothing here calls a model.
+const FOUNDRY_N = 8;              // candidates per batch
+const FOUNDRY_MUTATE_AMT = 0.4;  // wider than BREED_AMT so a mutation is its own sound, not a sibling
+let foundryCands = [];           // current batch: full genomes
+let foundryKeep = [];            // kept sounds: [{ id, name, genome }]
+let foundryKeepSeq = 0;
+
+// Fresh batch. mode "random" = pure procedural randomize; "mutate" = mutate the editor sound.
+function foundryGenerate(mode) {
+  const out = [];
+  if (mode === "mutate") {
+    const seed = genomeFromState();
+    for (let i = 0; i < FOUNDRY_N; i++) out.push(breedChild([seed], FOUNDRY_MUTATE_AMT));
+  } else {
+    for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(randomPatch));
+  }
+  return out;
+}
+// Non-default params only (same rule as encodePatch / a preset patch is a diff from defaults).
+function patchDiff(genome) {
+  const d = {};
+  for (const p of PARAMS) { const k = p[0]; const v = (k in genome) ? genome[k] : p[5]; if (v !== p[5]) d[k] = v; }
+  return d;
+}
+// Trim float noise from jitter/step math (e.g. 0.30000000000000004 -> 0.3) without lying about ints.
+function foundryNum(v) { return String(Number(Number(v).toFixed(6))); }
+function presetEntry(name, genome) {
+  const body = Object.entries(patchDiff(genome)).map(([k, v]) => k + ":" + foundryNum(v)).join(", ");
+  return JSON.stringify(name) + ": { " + body + " },";
+}
+// The copy/paste deliverable: PRESETS entries + a PRESET_CATEGORIES line for presets.js.
+function buildPresetBlock(keepers) {
+  const entries = keepers.map((k) => "  " + presetEntry(k.name, k.genome)).join("\n");
+  const names = keepers.map((k) => JSON.stringify(k.name)).join(", ");
+  return "// crunchyfx Foundry — procedurally generated + hand-curated (no AI). Paste into presets.js:\n" +
+         "// 1) add these to window.PRESETS —\n" +
+         entries + "\n" +
+         "// 2) list the names under a section in window.PRESET_CATEGORIES —\n" +
+         "//    [\"My Sounds\", [" + names + "]]\n";
+}
+
+const foundryModal = document.createElement("div");
+foundryModal.className = "modal";
+foundryModal.hidden = true;
+foundryModal.innerHTML =
+  '<div class="modal-box">' +
+    '<div class="modal-head">' +
+      '<h2>⚒ Foundry</h2>' +
+      '<span class="hint">Generate → ▶ audition → ＋ Keep the ones you like → export as presets. All procedural + your ear — no AI.</span>' +
+      '<button id="fndClose">✕ Close</button>' +
+    '</div>' +
+    '<div class="foundry-gen">' +
+      '<button id="fndRandom" class="primary">🎲 Random batch</button>' +
+      '<button id="fndMutate">🧬 Mutate current sound</button>' +
+      '<span id="fndCount" class="hint"></span>' +
+    '</div>' +
+    '<div id="fndGrid" class="breed-grid"></div>' +
+    '<div class="foundry-keep">' +
+      '<div class="foundry-keep-head"><span>Kept</span> <span id="fndKeepN" class="hint"></span></div>' +
+      '<div id="fndKeepList" class="fnd-keep-list"></div>' +
+      '<textarea id="fndOut" class="fnd-out" spellcheck="false" hidden></textarea>' +
+    '</div>' +
+    '<div class="modal-foot">' +
+      '<button id="fndCopy" class="primary">📋 Copy preset block</button>' +
+      (isDesktop ? '<button id="fndSaveMy">★ Save kept to My Presets</button>' : '') +
+      '<button id="fndClear">Clear kept</button>' +
+      '<span id="fndMsg" class="hint"></span>' +
+    '</div>' +
+  '</div>';
+document.body.appendChild(foundryModal);
+const fndGrid = foundryModal.querySelector("#fndGrid");
+const fndKeepList = foundryModal.querySelector("#fndKeepList");
+const fndCount = foundryModal.querySelector("#fndCount");
+const fndKeepN = foundryModal.querySelector("#fndKeepN");
+const fndOut = foundryModal.querySelector("#fndOut");
+const fndMsg = foundryModal.querySelector("#fndMsg");
+
+function foundryPlay(genome) { const r = withState(genome, () => render()); playBuffer(r.L, r.R); }
+function foundryAddKeep(genome) {
+  foundryKeep.push({ id: ++foundryKeepSeq, name: "Foundry " + foundryKeepSeq, genome });
+  renderFoundryKeep();
+}
+function renderFoundryGrid() {
+  fndGrid.innerHTML = "";
+  foundryCands.forEach((g, i) => {
+    const { L, R } = withState(g, () => render());
+    const cell = document.createElement("div");
+    cell.className = "breed-cell";
+    const cv = document.createElement("canvas");
+    cv.width = 280; cv.height = 62;
+    cell.appendChild(cv);
+    const bar = document.createElement("div");
+    bar.className = "breed-cell-bar";
+    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-keepbtn">＋ Keep</button><span class="breed-tag">#' + (i + 1) + '</span>';
+    cell.appendChild(bar);
+    fndGrid.appendChild(cell);
+    drawMini(cv, L, R);
+    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); foundryPlay(g); });
+    bar.querySelector(".fnd-keepbtn").addEventListener("click", (e) => { e.stopPropagation(); foundryAddKeep(g); });
+    cell.addEventListener("click", () => foundryPlay(g));   // click tile = audition
+  });
+  fndCount.textContent = foundryCands.length ? foundryCands.length + " candidates — click a tile to hear it" : "";
+}
+function renderFoundryKeep() {
+  fndKeepList.innerHTML = "";
+  if (!foundryKeep.length) {
+    fndKeepList.innerHTML = '<div class="mp-empty">Nothing kept yet — hit ＋ Keep on the candidates you like.</div>';
+  } else {
+    foundryKeep.forEach((k) => {
+      const el = document.createElement("div");
+      el.className = "up-item";
+      el.innerHTML =
+        '<button class="up-play" title="Hear">▶</button>' +
+        '<input class="up-name" spellcheck="false">' +
+        '<button class="up-load" title="Load into editor">✎</button>' +
+        '<button class="up-del" title="Remove from kept">✕</button>';
+      const nameInput = el.querySelector(".up-name");
+      nameInput.value = k.name;
+      el.querySelector(".up-play").addEventListener("click", () => foundryPlay(k.genome));
+      el.querySelector(".up-load").addEventListener("click", () => { applyPreset(k.genome, k.name); });
+      el.querySelector(".up-del").addEventListener("click", () => { foundryKeep = foundryKeep.filter((x) => x.id !== k.id); renderFoundryKeep(); });
+      nameInput.addEventListener("change", () => { k.name = nameInput.value.trim() || k.name; nameInput.value = k.name; });
+      nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+      fndKeepList.appendChild(el);
+    });
+  }
+  fndKeepN.textContent = foundryKeep.length ? "(" + foundryKeep.length + ")" : "";
+  if (!fndOut.hidden) fndOut.value = buildPresetBlock(foundryKeep);   // keep the shown block fresh
+}
+function openFoundry() {
+  if (!foundryCands.length) foundryCands = foundryGenerate("random");
+  renderFoundryGrid();
+  renderFoundryKeep();
+  foundryModal.hidden = false;
+}
+
+document.getElementById("foundry").addEventListener("click", openFoundry);
+foundryModal.querySelector("#fndRandom").addEventListener("click", () => { foundryCands = foundryGenerate("random"); renderFoundryGrid(); });
+foundryModal.querySelector("#fndMutate").addEventListener("click", () => { foundryCands = foundryGenerate("mutate"); renderFoundryGrid(); });
+foundryModal.querySelector("#fndClear").addEventListener("click", () => { foundryKeep = []; fndOut.hidden = true; renderFoundryKeep(); fndMsg.textContent = ""; });
+foundryModal.querySelector("#fndClose").addEventListener("click", () => { foundryModal.hidden = true; });
+foundryModal.addEventListener("click", (e) => { if (e.target === foundryModal) foundryModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !foundryModal.hidden) foundryModal.hidden = true; });
+foundryModal.querySelector("#fndCopy").addEventListener("click", async () => {
+  if (!foundryKeep.length) { fndMsg.textContent = "Keep at least one sound first."; return; }
+  const block = buildPresetBlock(foundryKeep);
+  try {
+    await navigator.clipboard.writeText(block);   // undefined on file:// -> caught
+    fndMsg.textContent = "✓ Copied " + foundryKeep.length + " preset" + (foundryKeep.length === 1 ? "" : "s") + " to clipboard.";
+  } catch (e) {
+    fndOut.hidden = false; fndOut.value = block; fndOut.focus(); fndOut.select();   // fallback: manual copy
+    fndMsg.textContent = "Clipboard blocked — select the text below and copy.";
+  }
+});
+if (isDesktop) {
+  const saveMy = foundryModal.querySelector("#fndSaveMy");
+  if (saveMy) saveMy.addEventListener("click", () => {
+    if (!foundryKeep.length) { fndMsg.textContent = "Keep at least one sound first."; return; }
+    for (const k of foundryKeep) userPresets.unshift({ id: ++upSeq, name: k.name, state: withState(k.genome, () => snapshotState()) });
+    saveUserPresets();
+    renderMyPresets();
+    fndMsg.textContent = "✓ Saved " + foundryKeep.length + " to My Presets.";
+  });
 }
 
 if (isDesktop) {
