@@ -1,12 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core defaults plus WAV export: native Save dialog + writing the chosen file.",
+  "description": "Core defaults plus WAV export (Save dialog + write), batch export to a chosen folder (Open dialog, directory), and project files (Open dialog + read).",
   "windows": ["*"],
   "permissions": [
     "core:default",
     "dialog:allow-save",
+    "dialog:allow-open",
     "fs:allow-write-file",
+    "fs:allow-read-file",
     {
       "identifier": "fs:scope",
       "allow": [
