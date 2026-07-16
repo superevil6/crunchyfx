@@ -159,8 +159,12 @@
   button.primary:hover { background: #ff8a5c; }
   button.accent2 { border-color: var(--accent2); color: var(--accent2); }
   .spacer { flex: 1; }
+  .dragchip { cursor: grab; }
+  .dragchip:active { cursor: grabbing; }
   .fmtgroup { display: inline-flex; gap: 5px; align-items: center; }
   .fmtgroup select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; border-radius: 8px; }
+  .fmt-loop { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .fmt-loop input { cursor: pointer; }
   canvas {
     width: 100%;
     height: 90px;
@@ -300,6 +304,10 @@
   .mp-head > span { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
   .mp-head button { padding: 5px 9px; font-size: 12px; }
   .mp-head-btns { display: inline-flex; gap: 6px; }
+  .mp-naming { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .mp-naming label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .mp-naming input { width: 150px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; font: inherit; font-size: 12px; }
+  .mp-naming .hint { font-family: monospace; }
   .mp-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
   .mp-empty { font-size: 12px; color: var(--muted); padding: 4px 2px; }
   .up-item { display: flex; align-items: center; gap: 6px; }
@@ -342,6 +350,18 @@
   .fnd-style:hover span { border-color: var(--accent2); color: var(--ink); }
   .fnd-style input:checked + span { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .fnd-style input:focus-visible + span { outline: 2px solid var(--accent2); outline-offset: 1px; }
+  /* Web-only "Get the Desktop app" modal (premium features, Coming soon) */
+  button[disabled] { opacity: 0.55; cursor: default; }
+  button[disabled]:hover { background: var(--accent); }
+  .steam-box { width: min(640px, 100%); }
+  .steam-badge { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: #201005; background: var(--accent); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+  .steam-body { padding: 18px; overflow-y: auto; }
+  .steam-feats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .steam-feats li { font-size: 14px; line-height: 1.45; color: var(--ink); }
+  .steam-feats b { color: var(--accent2); }
+  .steam-feats code { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .steam-note { margin: 16px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
   .breed-cell-bar .fnd-keepbtn { padding: 2px 9px; font-size: 12px; }
   .foundry-keep { padding: 4px 18px 0; border-top: 1px solid var(--line); margin-top: 4px; }
   .foundry-keep-head { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 8px; }
