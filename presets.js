@@ -1171,6 +1171,23 @@ window.PRESETS = {
             _vary:{ freq:0.16, modalInharm:0.15 } },
   "Shaker": { wave:15, particleRate:120, particleTone:0.85, particleDecay:0.08, particleSpread:0.3, attack:0.005, hold:0.005, decay:0.05, sustain:1, release:0.05, cutoff:16000, reso:0.1, duration:0.16,
             _vary:{ particleTone:0.12, particleRate:0.3 } },
+  // Additive / spectral pads (wave 16): stacked harmonics with slowly drifting amplitudes.
+  "Warm Pad": { wave:16, freq:220, addPartials:12, addTilt:0.4, addDrift:0.5, addDriftRate:0.15, addDetune:0.4, attack:0.3, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:14000, reso:0.1, reverb:0.35, reverbSize:0.7, duration:2.0,
+            _vary:{ freq:0.12, addTilt:0.2, addDrift:0.2 } },
+  "Choir Aah": { wave:16, freq:330, addPartials:16, addTilt:0.6, addDrift:0.6, addDriftRate:0.2, addDetune:0.5, attack:0.25, hold:0.02, decay:0.1, sustain:1, release:0.5, cutoff:15000, reso:0.1, reverb:0.4, reverbSize:0.75, duration:2.0,
+            _vary:{ freq:0.12, addDetune:0.2 } },
+  "Sci-Fi Drone": { wave:16, freq:110, addPartials:20, addTilt:0.5, addDrift:0.7, addDriftRate:0.1, addDetune:0.6, attack:0.4, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:14000, reso:0.1, convMix:0.35, convType:1, convSize:2.5, convTone:0.4, duration:2.0,
+            _vary:{ freq:0.1, addDrift:0.2, addDetune:0.2 } },
+  "Glass Pad": { wave:16, freq:440, addPartials:24, addTilt:0.8, addDrift:0.6, addDriftRate:0.3, addDetune:0.35, attack:0.2, hold:0.02, decay:0.1, sustain:1, release:0.5, cutoff:16000, reso:0.1, reverb:0.35, reverbSize:0.7, duration:2.0,
+            _vary:{ freq:0.16, addTilt:0.15, addDrift:0.2 } },
+  "Deep Drone": { wave:16, freq:65, addPartials:16, addTilt:0.3, addDrift:0.5, addDriftRate:0.08, addDetune:0.5, attack:0.4, hold:0.02, decay:0.1, sustain:1, release:0.7, cutoff:12000, reso:0.1, reverb:0.4, reverbSize:0.85, duration:2.0,
+            _vary:{ freq:0.1, addDrift:0.2 } },
+  "Shimmer Pad": { wave:16, freq:330, addPartials:28, addTilt:0.7, addDrift:0.9, addDriftRate:0.4, addDetune:0.7, attack:0.3, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:16000, reso:0.1, convMix:0.3, convType:2, convSize:1.8, convTone:0.6, duration:2.0,
+            _vary:{ freq:0.14, addDrift:0.1, addDetune:0.15 } },
+  "Power Hum": { wave:16, freq:120, addPartials:8, addTilt:0.35, addDrift:0.2, addDriftRate:0.05, addDetune:0.2, attack:0.15, hold:0.02, decay:0.1, sustain:1, release:0.3, cutoff:10000, reso:0.1, duration:1.8,
+            _vary:{ freq:0.12, addTilt:0.2 } },
+  "Angelic Wash": { wave:16, freq:523, addPartials:20, addTilt:0.65, addDrift:0.7, addDriftRate:0.25, addDetune:0.6, attack:0.35, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:16000, reso:0.1, reverb:0.5, reverbSize:0.85, duration:2.0,
+            _vary:{ freq:0.12, addDrift:0.15, addDetune:0.15 } },
 };
 
 window.PRESET_CATEGORIES = [
@@ -1180,6 +1197,7 @@ window.PRESET_CATEGORIES = [
   ["Water / Liquid", ["Bubble Drop", "Droplet Plink", "Bubbling Stream", "Boiling Pot", "Underwater", "Pouring Water", "Lava Bloop", "Sci-Fi Bloop"]],
   ["Crackle / Particle", ["Crackling Fire", "Heavy Rain", "Frying Sizzle", "Geiger Counter", "Electric Sparks", "Gravel Steps", "Crowd Applause", "Static Hiss"]],
   ["Drums / Percussion", ["Analog Kick", "Classic Kick", "Punch Kick", "Snare", "Tight Snare", "Rimshot", "Clap", "Closed Hat", "Open Hat", "Low Tom", "High Tom", "Crash Cymbal", "Ride Cymbal", "Cowbell", "Woodblock", "Shaker"]],
+  ["Pads / Drones", ["Warm Pad", "Choir Aah", "Sci-Fi Drone", "Glass Pad", "Deep Drone", "Shimmer Pad", "Power Hum", "Angelic Wash"]],
   ["Magic", ["Teleport", "Magic Sparkle", "Cure", "Poison", "Fireball Cast", "Frost Bolt", "Lightning Strike", "Arcane Blast", "Holy Smite", "Dark Curse", "Mana Charge", "Magic Missile", "Wind Slash", "Magic Fizzle", "Ice", "Healing Aura", "Curse Whoosh", "Shield Cast", "Enchant", "Summon Portal", "Hex Bolt", "Fireball Cast 2", "Teleport 2", "Magic Sparkle 2", "Arcane Sigil", "Arcane Shimmer", "Fae Glyph", "Wyrd Bloom", "Arcane Weave", "Arcane Rune", "Mystic Whorl", "Ethereal Aura", "Radiant Aura", "Astral Aura", "Wyrd Spark", "Ethereal Rune", "Celestial Bloom", "Runic Chime", "Glimmer Whorl", "Arcane Chime", "Glimmer Aura", "Prism Surge", "Enchanted Bloom", "Shadow Hymn", "Ethereal Spark", "Shadow Shimmer", "Astral Hymn", "Glimmer Weave", "Fae Bloom", "Astral Chime"]],
   ["UI", ["UI Click", "Confirm", "Cancel", "Error Buzz", "Alarm Siren", "Blip", "Notification", "Menu Open", "Tab Switch", "Unlock", "UI Click 2", "Confirm 2", "Quick Tone", "Silky Chirp", "Quick Chirp", "Muted Tap", "Soft Tick", "Silky Cue", "Sharp Beep", "Bright Nudge", "Soft Pop", "Sharp Tone", "Crisp Chirp", "Quick Beep", "Crisp Blip"]],
   ["Explosions", ["Explosion", "Deep Impact", "Cinematic Boom", "Sub Drop Hit", "Meteor Impact", "Glass Shatter", "Grenade Blast", "Distant Boom", "Barrel Burst", "Nuke Rumble", "Explosion 2", "Cinematic Boom 2", "Distant Wallop", "Seismic Detonation", "Massive Blast", "Concussive Wallop", "Cavern Shockwave", "Seismic Shockwave", "Rolling Shockwave", "Deep Boom", "Cavern Wallop", "Concussive Kaboom", "Muffled Wallop", "Thunderous Boom", "Thunderous Wallop"]],

@@ -111,7 +111,7 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 // Vowel formant frequencies [F1, F2, F3] (Hz, neutral voice) for the "formant" waveform.
 // formantVowel morphs across these A→E→I→O→U; formantSize scales them (tract length).
@@ -166,6 +166,13 @@ const PARAMS = [
   ["particleTone","Particle tone",0, 1, 0.01, 0.5, "", "Particle"],
   ["particleDecay","Particle decay",0, 1, 0.01, 0.3, "","Particle"],
   ["particleSpread","Particle spread",0, 1, 0.01, 0.5, "","Particle"],
+  // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
+  // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
+  ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
+  ["addTilt",     "Brightness", 0, 1, 0.01, 0.4, "",  "Additive"],
+  ["addDrift",    "Drift depth",0, 1, 0.01, 0.5, "",  "Additive"],
+  ["addDriftRate","Drift rate", 0.02, 2, 0.01, 0.15, "Hz", "Additive"],
+  ["addDetune",   "Detune/width",0, 1, 0.01, 0.4, "", "Additive"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
@@ -772,6 +779,33 @@ function render() {
     const pr = makeParticles(n, state.particleTone, state.particleRate, state.particleDecay, state.particleSpread, 0x00facade);
     parL = pr.L; parR = pr.R;
   }
+  // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
+  // slow amplitude-drift LFO (random rate/phase) → evolving pad. Per-partial data is constant
+  // across the render, so precompute it once; only the partial phases advance per sample.
+  const isAdditive = waveType === 16;
+  const ADD_MAX = 48;
+  const addAmp = new Float32Array(ADD_MAX), addDet = new Float32Array(ADD_MAX), addPh = new Float32Array(ADD_MAX);
+  const addLfoRate = new Float32Array(ADD_MAX), addLfoPh = new Float32Array(ADD_MAX);
+  const addPanL = new Float32Array(ADD_MAX), addPanR = new Float32Array(ADD_MAX);
+  let nAdd = 1;
+  const addDrift = state.addDrift, addDriftRate = state.addDriftRate;
+  if (isAdditive) {
+    nAdd = Math.max(1, Math.min(ADD_MAX, Math.round(state.addPartials)));
+    const exp = 2 - 1.8 * state.addTilt, det = state.addDetune;
+    let s = 0x5eed1234 >>> 0;
+    const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };   // deterministic
+    let norm = 0;
+    for (let k = 0; k < nAdd; k++) {
+      addAmp[k] = 1 / Math.pow(k + 1, exp);
+      addDet[k] = 1 + (rnd() * 2 - 1) * det * 0.01;              // ±1%·detune → slow beating
+      addLfoRate[k] = addDriftRate * (0.5 + rnd());              // each partial drifts at its own rate
+      addLfoPh[k] = rnd() * 2 * Math.PI;
+      const pan = (rnd() * 2 - 1) * det;                         // stereo spread (det 0 = mono)
+      addPanL[k] = Math.cos((pan + 1) * Math.PI / 4); addPanR[k] = Math.sin((pan + 1) * Math.PI / 4);
+      norm += addAmp[k];
+    }
+    if (norm > 0) for (let k = 0; k < nAdd; k++) addAmp[k] /= norm;
+  }
 
   // Body layer: a clean low sine with its OWN exponential decay and a downward
   // pitch drop, independent of the crack envelope. Because it rings longer than the
@@ -860,6 +894,17 @@ function render() {
       oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
     } else if (isParticle) {
       oscL = parL[i]; oscR = parR[i];                 // prebuilt particle cloud (already stereo)
+    } else if (isAdditive) {
+      let sL = 0, sR = 0;
+      for (let k = 0; k < nAdd; k++) {
+        const fk = fOsc * (k + 1) * addDet[k];
+        if (fk >= 20000) continue;                    // band-limit
+        addPh[k] += fk / SR; if (addPh[k] >= 1) addPh[k] -= 1;
+        const drift = 1 - addDrift * (0.5 + 0.5 * Math.cos(2 * Math.PI * addLfoRate[k] * t + addLfoPh[k]));
+        const v = Math.sin(2 * Math.PI * addPh[k]) * addAmp[k] * drift;
+        sL += v * addPanL[k]; sR += v * addPanR[k];
+      }
+      oscL = sL * 1.4; oscR = sR * 1.4;               // makeup for a healthy level
     } else {
       // sum unison voices into L/R
       for (let v = 0; v < V; v++) {
@@ -1599,6 +1644,7 @@ const PANEL_WAVES = {
   "Formant": [13],
   "Bubble": [14],
   "Particle": [15],
+  "Additive": [16],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
