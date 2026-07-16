@@ -111,8 +111,12 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
+// Vowel formant frequencies [F1, F2, F3] (Hz, neutral voice) for the "formant" waveform.
+// formantVowel morphs across these A→E→I→O→U; formantSize scales them (tract length).
+const VOWELS = [[700, 1220, 2600], [530, 1840, 2480], [270, 2290, 3010], [570, 840, 2410], [300, 870, 2240]];
+const FORMANT_GAIN = [1.0, 0.6, 0.35];   // relative loudness of F1/F2/F3
 
 const PARAMS = [
   // Oscillator
@@ -142,6 +146,24 @@ const PARAMS = [
   ["grainSpray",  "Grain spray", 0, 1, 0.01, 0, "",   "Granular"],
   ["grainScan",   "Grain scan",  0, 2, 0.01, 1, "x",  "Granular"],
   ["grainSpread", "Grain spread",0, 1, 0.01, 0, "",   "Granular"],
+  // Formant / vocal (wave "formant"): a buzz source through 3 tuned resonators = vowels / voices /
+  // creatures. Ignored unless wave is "formant", so defaults don't affect existing presets.
+  ["formantVowel","Vowel",      0, 1, 0.01, 0, "",     "Formant"],
+  ["formantSize", "Voice size", 0.5, 2, 0.01, 1, "",   "Formant"],
+  ["formantQ",    "Formant Q",  0, 1, 0.01, 0.5, "",   "Formant"],
+  ["formantBreath","Breath",    0, 1, 0.01, 0, "",     "Formant"],
+  // Bubble / water (wave "bubble"): scattered decaying rising-pitch sines (the Minnaert bubble
+  // model) → drops / streams / boiling. Ignored unless wave is "bubble".
+  ["bubbleRate",  "Bubble rate",1, 60, 1, 8, "/s",     "Bubble"],
+  ["bubbleRise",  "Pitch rise", 0, 1, 0.01, 0.5, "",   "Bubble"],
+  ["bubbleSpread","Bubble spread",0, 1, 0.01, 0.3, "", "Bubble"],
+  ["bubbleDecay", "Bubble decay",0, 1, 0.01, 0.4, "",  "Bubble"],
+  // Particle / crackle (wave "particle"): scattered resonant noise bursts → fire / rain / sparks /
+  // footsteps / geiger / sizzle. Ignored unless wave is "particle".
+  ["particleRate","Particle rate",5, 200, 1, 40, "/s", "Particle"],
+  ["particleTone","Particle tone",0, 1, 0.01, 0.5, "", "Particle"],
+  ["particleDecay","Particle decay",0, 1, 0.01, 0.3, "","Particle"],
+  ["particleSpread","Particle spread",0, 1, 0.01, 0.5, "","Particle"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
@@ -196,6 +218,9 @@ const PARAMS = [
 
 const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
+// Custom drawn single-cycle waveform (wave "custom"). Stored IN the patch as a compact base64
+// int8 string so it travels with presets / share-links / history (empty = default sine).
+state.customWave = "";
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
@@ -203,6 +228,50 @@ let sampleName = "";      // filename of the loaded sample (for the UI)
 let seqLabel = "Sound";   // label of the sound currently in the editor (for Sequence chips)
 
 const SR = 44100;
+
+// ---------- Custom drawn waveform ----------
+// The user draws one cycle at CUSTOM_N points (−1..1). At render time we band-limit it to the
+// note being played (FFT the drawing, drop harmonics that would alias, resynthesize a smooth
+// table) — matching the "keep oscillators band-limited" rule. Stored in the patch as base64 int8.
+const CUSTOM_N = 256;          // drawn resolution (stored)
+const CUSTOM_TABLE_N = 2048;   // playback table resolution (read by waveform())
+let customTable = null;        // band-limited single cycle for the current render (set by render())
+const CUSTOM_DEFAULT_DRAWN = new Float32Array(CUSTOM_N);
+for (let i = 0; i < CUSTOM_N; i++) CUSTOM_DEFAULT_DRAWN[i] = Math.sin(2 * Math.PI * i / CUSTOM_N);
+
+function customWaveToB64(buf) {
+  const b = new Uint8Array(buf.length);
+  for (let i = 0; i < buf.length; i++) b[i] = (Math.round(Math.max(-1, Math.min(1, buf[i])) * 127)) & 0xff;
+  let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
+function b64ToCustomWave(str) {
+  try {
+    const bin = atob(str), buf = new Float32Array(bin.length);
+    for (let i = 0; i < bin.length; i++) { let v = bin.charCodeAt(i); if (v > 127) v -= 256; buf[i] = v / 127; }
+    return buf.length ? buf : null;
+  } catch (e) { return null; }
+}
+// FFT the drawn cycle, keep harmonics 1..maxH (drop DC + everything above → no aliasing), then
+// inverse-FFT and resample to a smooth CUSTOM_TABLE_N cycle, normalized to ±1.
+function buildCustomTable(drawn, maxH) {
+  const D = drawn.length, re = new Float64Array(D), im = new Float64Array(D);
+  for (let i = 0; i < D; i++) re[i] = drawn[i];
+  fftInPlace(re, im, -1);
+  const keep = Math.max(1, Math.min((D >> 1) - 1, maxH | 0));
+  re[0] = im[0] = 0;                                        // drop DC (center the wave)
+  for (let k = keep + 1; k < D - keep; k++) { re[k] = 0; im[k] = 0; }   // kill harmonics above `keep`
+  fftInPlace(re, im, 1);                                    // back to time domain (scaled by D)
+  const N = CUSTOM_TABLE_N, out = new Float32Array(N);
+  let peak = 0;
+  for (let i = 0; i < N; i++) {
+    const x = i / N * D, i0 = Math.floor(x) % D, i1 = (i0 + 1) % D, fr = x - Math.floor(x);
+    const v = (re[i0] * (1 - fr) + re[i1] * fr) / D;
+    out[i] = v; const a = Math.abs(v); if (a > peak) peak = a;
+  }
+  if (peak > 1e-6) for (let i = 0; i < N; i++) out[i] /= peak;
+  return out;
+}
 
 // ---------- DSP helpers ----------
 // PolyBLEP: a small correction added at each discontinuity to band-limit the
@@ -254,6 +323,11 @@ function waveform(type, phase, dt, duty) {
     case 7: {                                                // half-sine — rectified, hollow/reedy
       const s = Math.max(0, Math.sin(2 * Math.PI * phase));
       return (s - 0.3183) * 1.4;                             // subtract mean (1/pi) to remove DC
+    }
+    case 12: {                                               // custom drawn wave (band-limited table)
+      const T = customTable; if (!T) return 0;
+      const x = phase * T.length, i0 = Math.floor(x) % T.length, i1 = (i0 + 1) % T.length, fr = x - Math.floor(x);
+      return T[i0] * (1 - fr) + T[i1] * fr;
     }
     default: return 0;
   }
@@ -387,6 +461,82 @@ function granSynthSource() {
     src[i] = (Math.sin(ph) + (0.4 + 0.4 * u) * Math.sin(2 * ph) + (0.2 * u) * Math.sin(3 * ph)) / 1.8;
   }
   return src;
+}
+
+// ---------- Bubble / water synthesis ----------
+// The Minnaert bubble model: a single bubble is a short decaying sine whose pitch RISES over its
+// brief life (the "bloop"). A stream/boil is many of them scattered in time. Built into a stereo
+// buffer before render's loop (bubbles overlap / need random access), then read per-sample.
+// Deterministic (own seeded LCG). Bigger bubbles (lower f0) ring a little longer. Always fires one
+// bubble at t=0 so a low rate still gives a reliable single drop.
+function makeBubbles(n, freq, rate, rise, spread, decay, seed) {
+  const outL = new Float32Array(n), outR = new Float32Array(n);
+  if (n < 4) return { L: outL, R: outR };
+  let s = (seed >>> 0) || 1;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const baseTau = 0.03 + decay * 0.22;                           // 30..250 ms ring
+  const spawnEvery = Math.max(1, Math.floor(SR / Math.max(0.5, rate)));
+  for (let onset = 0; onset < n; onset += spawnEvery) {
+    let start = onset + (spread > 0 ? Math.floor((rnd() * 2 - 1) * spread * spawnEvery * 0.8) : 0);
+    if (start < 0) start = 0;
+    if (start >= n) continue;
+    const f0 = freq * Math.pow(2, (rnd() * 2 - 1) * spread * 1.5);          // bubble size → pitch
+    const tau = baseTau * Math.min(3, Math.max(0.3, Math.sqrt(freq / Math.max(1, f0))));
+    const life = Math.min(n - start, Math.floor(tau * 5 * SR));             // ~5 time constants
+    if (life < 4) continue;
+    const pan = spread > 0 ? (rnd() * 2 - 1) * spread : 0;
+    const pl = Math.cos((pan + 1) * Math.PI / 4), pr = Math.sin((pan + 1) * Math.PI / 4);
+    let ph = 0;
+    for (let g = 0; g < life; g++) {
+      ph += 2 * Math.PI * (f0 * (1 + rise * 0.7 * (g / life))) / SR;        // rising-pitch chirp
+      const y = Math.sin(ph) * Math.exp(-g / SR / tau);
+      outL[start + g] += y * pl; outR[start + g] += y * pr;
+    }
+  }
+  const gnorm = 1 / Math.max(1, Math.sqrt(baseTau * 5 * SR / spawnEvery));  // level ~constant vs overlap
+  for (let i = 0; i < n; i++) { outL[i] *= gnorm; outR[i] *= gnorm; }
+  return { L: outL, R: outR };
+}
+
+// ---------- Particle / crackle synthesis ----------
+// Granular's event-based cousin: scatter short resonant NOISE bursts → fire, rain, sparks, geiger,
+// footsteps, sizzle, applause. Each event = a bandpass (colored by `tone`) excited by a decaying
+// noise burst. `spread` skews amplitudes (occasional loud pops among quiet hiss) + jitters pitch /
+// timing / pan. Built into a stereo buffer before render's loop, read per-sample. Deterministic.
+function makeParticles(n, tone, rate, decay, spread, seed) {
+  const outL = new Float32Array(n), outR = new Float32Array(n);
+  if (n < 4) return { L: outL, R: outR };
+  let s = (seed >>> 0) || 1;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const spawnEvery = Math.max(1, Math.floor(SR / Math.max(1, rate)));
+  const baseTau = 0.002 + decay * 0.05;                                     // 2..52 ms event ring
+  const baseFc = 200 * Math.pow(40, Math.max(0, Math.min(1, tone)));        // 200..8000 Hz color
+  const Q = 1.5;
+  for (let onset = 0; onset < n; onset += spawnEvery) {
+    let start = onset + (spread > 0 ? Math.floor((rnd() * 2 - 1) * spread * spawnEvery) : 0);
+    if (start < 0) start = 0;
+    if (start >= n) continue;
+    const amp = Math.pow(rnd(), 1 + spread * 4);                            // skew → occasional loud pops
+    const fc = Math.max(80, Math.min(0.45 * SR, baseFc * Math.pow(2, (rnd() * 2 - 1) * spread * 2)));
+    const tau = baseTau * (1 + (rnd() * 2 - 1) * spread * 0.5);
+    const life = Math.min(n - start, Math.floor(tau * 6 * SR));
+    if (life < 3) continue;
+    const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+    const b0 = alpha / a0, a1 = -2 * Math.cos(w0) / a0, a2 = (1 - alpha) / a0;   // RBJ bandpass
+    const pan = spread > 0 ? (rnd() * 2 - 1) * spread : 0;
+    const pl = Math.cos((pan + 1) * Math.PI / 4), pr = Math.sin((pan + 1) * Math.PI / 4);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let g = 0; g < life; g++) {
+      const drive = (rnd() * 2 - 1) * Math.exp(-g / SR / tau);              // decaying noise burst
+      const o = b0 * (drive - x2) - a1 * y1 - a2 * y2;                      // bandpass: b1=0, b2=−b0
+      x2 = x1; x1 = drive; y2 = y1; y1 = o;                                // shift filter states
+      const val = o * amp;
+      outL[start + g] += val * pl; outR[start + g] += val * pr;
+    }
+  }
+  const gnorm = 2.2 / Math.max(1, Math.sqrt(baseTau * 6 * SR / spawnEvery));   // makeup + overlap-norm
+  for (let i = 0; i < n; i++) { outL[i] *= gnorm; outR[i] *= gnorm; }
+  return { L: outL, R: outR };
 }
 
 // ---------- Master finishing stage ----------
@@ -574,6 +724,52 @@ function render() {
     const gr = makeGranular(src, n, baseFreq, state.grainSize, state.grainDensity, state.grainSpray, state.grainScan, state.grainSpread, 0x00c0ffee);
     granL = gr.L; granR = gr.R;
   }
+  // Custom drawn wave (wave 12): band-limit the drawing to this note's highest frequency (up-sweep
+  // pushes it higher) so it can't alias, into the module-level table waveform() reads. Read via the
+  // normal unison path, so detune/width/vibrato all work. customTable is cleared otherwise.
+  customTable = null;
+  if (waveType === 12) {
+    const drawn = b64ToCustomWave(state.customWave) || CUSTOM_DEFAULT_DRAWN;
+    const swMul = state.sweep > 0 ? Math.pow(2, state.sweep * 4) : 1;
+    const fMax = Math.min(20000, Math.max(1, baseFreq * swMul));
+    customTable = buildCustomTable(drawn, Math.floor(22050 / fMax));
+  }
+  // Formant / vocal (wave "formant"): a buzz (band-limited saw) through 3 parallel resonant
+  // bandpasses tuned to vowel formants → "ahh/ooo/eee", voices, creatures, robots. Formant freqs
+  // depend only on state (constant across the render), so coeffs are precomputed once here; only
+  // the biquad states + source phase advance per sample. Special-cased (mono, ignores unison).
+  const isFormant = waveType === 13;
+  let fmPhase = 0;
+  const F_N = 3, fmB0 = new Float64Array(F_N), fmA1 = new Float64Array(F_N), fmA2 = new Float64Array(F_N);
+  const fmX1 = new Float64Array(F_N), fmX2 = new Float64Array(F_N), fmY1 = new Float64Array(F_N), fmY2 = new Float64Array(F_N);
+  const fmBreath = state.formantBreath;
+  if (isFormant) {
+    const p = Math.max(0, Math.min(1, state.formantVowel)) * (VOWELS.length - 1);
+    const i0 = Math.floor(p), i1 = Math.min(VOWELS.length - 1, i0 + 1), fr = p - i0;
+    const Q = 4 + Math.max(0, Math.min(1, state.formantQ)) * 16;   // formant sharpness
+    for (let fi = 0; fi < F_N; fi++) {
+      let fc = (VOWELS[i0][fi] * (1 - fr) + VOWELS[i1][fi] * fr) * state.formantSize;
+      fc = Math.max(60, Math.min(0.45 * SR, fc));                  // keep the resonator stable
+      const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+      fmB0[fi] = alpha / a0;                                       // RBJ bandpass (b1=0, b2=−b0)
+      fmA1[fi] = -2 * Math.cos(w0) / a0;
+      fmA2[fi] = (1 - alpha) / a0;
+    }
+  }
+  // Bubble / water (wave "bubble"): built up front into a stereo buffer, then read per-sample.
+  const isBubble = waveType === 14;
+  let bubL = null, bubR = null;
+  if (isBubble) {
+    const b = makeBubbles(n, baseFreq, state.bubbleRate, state.bubbleRise, state.bubbleSpread, state.bubbleDecay, 0x00b0bb1e);
+    bubL = b.L; bubR = b.R;
+  }
+  // Particle / crackle (wave "particle"): built up front into a stereo buffer, then read per-sample.
+  const isParticle = waveType === 15;
+  let parL = null, parR = null;
+  if (isParticle) {
+    const pr = makeParticles(n, state.particleTone, state.particleRate, state.particleDecay, state.particleSpread, 0x00facade);
+    parL = pr.L; parR = pr.R;
+  }
 
   // Body layer: a clean low sine with its OWN exponential decay and a downward
   // pitch drop, independent of the crack envelope. Because it rings longer than the
@@ -645,6 +841,23 @@ function render() {
       oscL = y * 2; oscR = y * 2;                     // mono, centered; ×2 for a healthy level
     } else if (isGranular) {
       oscL = granL[i]; oscR = granR[i];               // prebuilt grain cloud (already stereo)
+    } else if (isFormant) {
+      // buzz source (band-limited saw) + optional breath noise, through 3 formant resonators
+      const dt = fOsc / SR;
+      fmPhase += dt; if (fmPhase >= 1) fmPhase -= 1;
+      let src = waveform(2, fmPhase, dt, 0.25);
+      if (fmBreath > 0) src = src * (1 - fmBreath) + (rnd() * 2 - 1) * fmBreath;
+      let y = 0;
+      for (let fi = 0; fi < F_N; fi++) {
+        const o = fmB0[fi] * (src - fmX2[fi]) - fmA1[fi] * fmY1[fi] - fmA2[fi] * fmY2[fi];   // b1=0, b2=−b0
+        fmX2[fi] = fmX1[fi]; fmX1[fi] = src; fmY2[fi] = fmY1[fi]; fmY1[fi] = o;
+        y += o * FORMANT_GAIN[fi];
+      }
+      oscL = y * 1.6; oscR = y * 1.6;                 // mono, centered; makeup for a healthy level
+    } else if (isBubble) {
+      oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
+    } else if (isParticle) {
+      oscL = parL[i]; oscR = parR[i];                 // prebuilt particle cloud (already stereo)
     } else {
       // sum unison voices into L/R
       for (let v = 0; v < V; v++) {
@@ -863,8 +1076,10 @@ function play(label) {
 function withState(snap, fn) {
   const backup = {};
   for (const p of PARAMS) backup[p[0]] = state[p[0]];
+  backup.customWave = state.customWave;
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
-  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; }
+  state.customWave = "customWave" in snap ? snap.customWave : "";
+  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; }
 }
 
 // ---------- WAV export (16-bit stereo PCM) ----------
@@ -1056,11 +1271,12 @@ const HIST_KEY = "crunchyfx.history.v1";   // storage key — history persists a
 function snapshotState() {
   const s = {};
   for (const p of PARAMS) s[p[0]] = state[p[0]];
+  if (state.customWave) s.customWave = state.customWave;   // carry the drawn wave with the snapshot
   return s;
 }
 function sameState(a, b) {
   for (const p of PARAMS) if (a[p[0]] !== b[p[0]]) return false;
-  return true;
+  return (a.customWave || "") === (b.customWave || "");
 }
 function thumbPeaks(L) {
   const N = 96, out = new Float32Array(N), step = L.length / N;
@@ -1274,6 +1490,96 @@ for (const [group, ps] of Object.entries(groups)) {
   panels.appendChild(panel);
 }
 
+// ---------- Custom-wave draw editor ----------
+// A canvas where you draw one cycle (−1..1 per x). It commits to state.customWave (so it travels
+// with presets/share/history) and auto-selects the "custom" waveform so you hear it immediately.
+const customDraw = new Float32Array(CUSTOM_N);
+customDraw.set(CUSTOM_DEFAULT_DRAWN);
+const cwPanel = document.createElement("div");
+cwPanel.className = "panel";
+cwPanel.innerHTML =
+  '<h2>Custom wave</h2>' +
+  '<canvas id="customCanvas" class="cw-canvas" width="560" height="220"></canvas>' +
+  '<div class="cw-btns">' +
+    '<button data-shape="sine">Sine</button><button data-shape="saw">Saw</button>' +
+    '<button data-shape="square">Square</button><button data-shape="triangle">Tri</button>' +
+    '<button data-shape="random">Random</button><button data-shape="clear">Clear</button>' +
+  '</div>' +
+  '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback).</div>';
+panels.appendChild(cwPanel);
+const cwCanvas = document.getElementById("customCanvas");
+const cwCtx = cwCanvas.getContext("2d");
+
+function drawCustomCanvas() {
+  const w = cwCanvas.width, h = cwCanvas.height, ctx = cwCtx;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();   // center axis
+  ctx.strokeStyle = "#ff7a45"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < CUSTOM_N; i++) {
+    const x = i / (CUSTOM_N - 1) * w, y = h / 2 - customDraw[i] * (h / 2 - 3);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+function syncCustomCanvas() {   // called by syncUI: reload the editor from state (preset/share/history)
+  const d = b64ToCustomWave(state.customWave);
+  customDraw.set(d && d.length === CUSTOM_N ? d : CUSTOM_DEFAULT_DRAWN);
+  drawCustomCanvas();
+}
+function commitCustomWave(replay) {
+  state.customWave = customWaveToB64(customDraw);
+  drawCustomCanvas();
+  if (replay) play("Custom wave");
+}
+function selectCustomWave() {   // switch the oscillator to "custom" + reflect in the wave <select>
+  state.wave = 12;
+  const sel = document.querySelector('select[data-key="wave"]');
+  if (sel) sel.value = 12;
+}
+const cwShapes = {
+  sine: (i) => Math.sin(2 * Math.PI * i / CUSTOM_N),
+  saw: (i) => 1 - 2 * i / CUSTOM_N,
+  square: (i) => i < CUSTOM_N / 2 ? 1 : -1,
+  triangle: (i) => 1 - 4 * Math.abs(i / CUSTOM_N - 0.5),
+  random: () => Math.random() * 2 - 1,
+  clear: () => 0,
+};
+cwPanel.querySelectorAll(".cw-btns button").forEach((b) => {
+  b.addEventListener("click", () => {
+    const f = cwShapes[b.dataset.shape];
+    for (let i = 0; i < CUSTOM_N; i++) customDraw[i] = f(i);
+    if (b.dataset.shape === "random") {   // smooth the noise a touch so it's a wave, not hiss
+      const t = customDraw.slice();
+      for (let i = 0; i < CUSTOM_N; i++) customDraw[i] = (t[(i - 1 + CUSTOM_N) % CUSTOM_N] + t[i] + t[(i + 1) % CUSTOM_N]) / 3;
+    }
+    selectCustomWave();
+    commitCustomWave(true);
+  });
+});
+let cwDrawing = false, cwLastIdx = -1, cwLastAmp = 0;
+function cwPoint(ev) {
+  const r = cwCanvas.getBoundingClientRect();
+  let idx = Math.round(((ev.clientX - r.left) / r.width) * (CUSTOM_N - 1));
+  idx = Math.max(0, Math.min(CUSTOM_N - 1, idx));
+  let amp = 1 - 2 * ((ev.clientY - r.top) / r.height);
+  amp = Math.max(-1, Math.min(1, amp));
+  if (cwLastIdx >= 0 && cwLastIdx !== idx) {   // fill the gap for fast drags
+    const lo = Math.min(cwLastIdx, idx), hi = Math.max(cwLastIdx, idx);
+    const loA = cwLastIdx < idx ? cwLastAmp : amp, hiA = cwLastIdx < idx ? amp : cwLastAmp;
+    for (let i = lo; i <= hi; i++) customDraw[i] = loA + (hiA - loA) * ((i - lo) / (hi - lo));
+  } else customDraw[idx] = amp;
+  cwLastIdx = idx; cwLastAmp = amp;
+  drawCustomCanvas();
+}
+cwCanvas.addEventListener("pointerdown", (e) => { cwDrawing = true; cwLastIdx = -1; selectCustomWave(); cwPoint(e); try { cwCanvas.setPointerCapture(e.pointerId); } catch (_) {} });
+cwCanvas.addEventListener("pointermove", (e) => { if (cwDrawing) cwPoint(e); });
+const cwEnd = () => { if (cwDrawing) { cwDrawing = false; commitCustomWave(true); } };
+cwCanvas.addEventListener("pointerup", cwEnd);
+cwCanvas.addEventListener("pointercancel", cwEnd);
+drawCustomCanvas();
+
 function syncUI() {
   for (const p of PARAMS) {
     const key = p[0];
@@ -1281,6 +1587,7 @@ function syncUI() {
     if (el) el.value = state[key];
     if (outputs[key]) outputs[key].textContent = fmt(p, state[key]);
   }
+  if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
   updateMacros();
 }
 
@@ -1308,7 +1615,8 @@ function randomPatch() {
     let v = min + Math.random() * (max - min);
     v = Math.round(v / step) * step;
     patch[key] = (kind === "wave" || kind === "enum") ? Math.round(v) : v;
-    if (key === "wave" && patch[key] === 9) patch[key] = Math.floor(Math.random() * 9);  // never randomize to "sample"
+    // never randomize into "sample" (9) or "custom" (12) — both need user-supplied data
+    if (key === "wave" && (patch[key] === 9 || patch[key] === 12)) patch[key] = Math.floor(Math.random() * 9);
   }
   if (waveLocked) patch.wave = state.wave;   // respect the waveform lock
   return patch;
@@ -1362,6 +1670,7 @@ function applyPreset(obj, label) {
   // reset to defaults first, then overlay (ignore any _vary metadata)
   const keepWave = state.wave;
   for (const p of PARAMS) state[p[0]] = p[5];
+  state.customWave = "";                    // reset the drawn wave too (overlaid below if present)
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
@@ -1641,6 +1950,7 @@ document.addEventListener("keydown", (e) => {
 function encodePatch() {
   const diff = {};
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
+  if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
   return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -1710,7 +2020,7 @@ const BREED_SKIP = new Set(["wave", "duration", "gain"]);
 const BREED_AMT = 0.22;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; return g; }
+function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; return g; }
 function mutateGenome(src, amount) {
   const g = {};
   for (const p of PARAMS) {
