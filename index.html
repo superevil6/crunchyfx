@@ -127,18 +127,20 @@ const PARAMS = [
   ["vibRate",    "Vib rate",   0, 40, 0.1, 6, "Hz", "Oscillator"],
   ["unison",     "Unison",     1, 7, 1, 1, "v",     "Oscillator"],
   ["detune",     "Detune",     0, 50, 0.5, 12, "ct","Oscillator"],
-  // Pulse width + PWM (applies to the pulse wave); pluck damping (Karplus-Strong)
-  ["pulseWidth", "Pulse width",0.05, 0.95, 0.01, 0.25, "", "Oscillator"],
-  ["pwmDepth",   "PWM depth",  0, 0.45, 0.01, 0, "",  "Oscillator"],
-  ["pwmRate",    "PWM rate",   0, 20, 0.1, 2, "Hz",   "Oscillator"],
-  ["pluckDamp",  "Pluck damp", 0, 1, 0.01, 0.5, "",   "Oscillator"],
+  // Pulse width + PWM (applies to the pulse wave); pluck damping (Karplus-Strong). These live in
+  // their own groups so their panels only appear when the matching waveform is selected (see
+  // PANEL_WAVES / updateWavePanels) — keeps the editor uncluttered as waveforms proliferate.
+  ["pulseWidth", "Pulse width",0.05, 0.95, 0.01, 0.25, "", "Pulse (PWM)"],
+  ["pwmDepth",   "PWM depth",  0, 0.45, 0.01, 0, "",  "Pulse (PWM)"],
+  ["pwmRate",    "PWM rate",   0, 20, 0.1, 2, "Hz",   "Pulse (PWM)"],
+  ["pluckDamp",  "Pluck damp", 0, 1, 0.01, 0.5, "",   "Pluck"],
   // Modal resonator bank (wave "modal"): struck bells / bars / metal / mallets. A sum of
   // exponentially-decaying tuned partials; inharm morphs harmonic->bar/bell ratios. Ignored
   // unless wave is "modal", so defaults are neutral for every existing preset.
-  ["modalPartials","Modal partials",1, 16, 1, 6, "",  "Oscillator"],
-  ["modalDecay",  "Modal decay", 0.05, 3, 0.01, 0.6, "s", "Oscillator"],
-  ["modalInharm", "Modal inharm",0, 1, 0.01, 0, "",   "Oscillator"],
-  ["modalBright", "Modal bright",0, 1, 0.01, 0.5, "", "Oscillator"],
+  ["modalPartials","Modal partials",1, 16, 1, 6, "",  "Modal"],
+  ["modalDecay",  "Modal decay", 0.05, 3, 0.01, 0.6, "s", "Modal"],
+  ["modalInharm", "Modal inharm",0, 1, 0.01, 0, "",   "Modal"],
+  ["modalBright", "Modal bright",0, 1, 0.01, 0.5, "", "Modal"],
   // Granular synthesis (wave "granular"): grain cloud over the imported sample, or a synth tone
   // when none is loaded. scan decouples time from pitch. Ignored unless wave is "granular".
   ["grainSize",   "Grain size",  5, 200, 1, 60, "ms", "Granular"],
@@ -1443,6 +1445,7 @@ function fmt(p, val) {
 for (const [group, ps] of Object.entries(groups)) {
   const panel = document.createElement("div");
   panel.className = "panel";
+  panel.dataset.group = group;                 // so updateWavePanels() can show/hide it by waveform
   panel.innerHTML = `<h2>${group}</h2>`;
   for (const p of ps) {
     const [key, label, min, max, step, def, unit, , kind] = p;
@@ -1456,7 +1459,7 @@ for (const [group, ps] of Object.entries(groups)) {
       panel.appendChild(row);
       const el = row.querySelector("select");
       el.value = state[key];
-      el.addEventListener("change", () => { state[key] = +el.value; play(); });
+      el.addEventListener("change", () => { state[key] = +el.value; updateWavePanels(); play(); });
       row.querySelector("#waveLock").addEventListener("change", (e) => { waveLocked = e.target.checked; });
     } else if (kind === "enum") {
       const list = p[9];
@@ -1497,6 +1500,7 @@ const customDraw = new Float32Array(CUSTOM_N);
 customDraw.set(CUSTOM_DEFAULT_DRAWN);
 const cwPanel = document.createElement("div");
 cwPanel.className = "panel";
+cwPanel.dataset.group = "Custom wave";
 cwPanel.innerHTML =
   '<h2>Custom wave</h2>' +
   '<canvas id="customCanvas" class="cw-canvas" width="560" height="220"></canvas>' +
@@ -1506,7 +1510,9 @@ cwPanel.innerHTML =
     '<button data-shape="random">Random</button><button data-shape="clear">Clear</button>' +
   '</div>' +
   '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback).</div>';
-panels.appendChild(cwPanel);
+// place the draw editor among the other wave-specific panels (before "Mix"), not at the very end
+const mixPanel = panels.querySelector('[data-group="Mix"]');
+if (mixPanel) panels.insertBefore(cwPanel, mixPanel); else panels.appendChild(cwPanel);
 const cwCanvas = document.getElementById("customCanvas");
 const cwCtx = cwCanvas.getContext("2d");
 
@@ -1580,6 +1586,29 @@ cwCanvas.addEventListener("pointerup", cwEnd);
 cwCanvas.addEventListener("pointercancel", cwEnd);
 drawCustomCanvas();
 
+// ---------- Contextual panels ----------
+// Wave-specific panels are hidden unless their waveform is selected, so the editor only ever shows
+// controls that do something. Universal panels (Oscillator, Mix, Filter, …) are always visible.
+// Add a new engine → add one row here; it stays clutter-free automatically.
+const PANEL_WAVES = {
+  "Pulse (PWM)": [4],
+  "Pluck": [8],
+  "Modal": [10],
+  "Granular": [11],
+  "Custom wave": [12],
+  "Formant": [13],
+  "Bubble": [14],
+  "Particle": [15],
+};
+function updateWavePanels() {
+  const w = Math.round(state.wave);
+  for (const [group, waves] of Object.entries(PANEL_WAVES)) {
+    const panel = panels.querySelector(`[data-group="${group}"]`);
+    if (panel) panel.hidden = !waves.includes(w);
+  }
+}
+updateWavePanels();   // set initial visibility for the startup waveform
+
 function syncUI() {
   for (const p of PARAMS) {
     const key = p[0];
@@ -1588,6 +1617,7 @@ function syncUI() {
     if (outputs[key]) outputs[key].textContent = fmt(p, state[key]);
   }
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
+  updateWavePanels();                                               // show only the current wave's panels
   updateMacros();
 }
 
