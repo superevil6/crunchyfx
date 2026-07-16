@@ -1102,6 +1102,10 @@ window.PRESETS = {
             _vary:{ freq:0.14, formantVowel:0.2, sweep:0.3 } },
   "Ooo Drone": { wave:13, freq:150, formantVowel:0.95, formantSize:1, formantQ:0.55, formantBreath:0.1, vibDepth:0.1, vibRate:4, attack:0.15, hold:0.02, decay:0.1, sustain:1, release:0.5, cutoff:10000, reso:0.1, reverb:0.4, convMix:0.3, convType:1, convSize:2.0, convTone:0.4, duration:2.0,
             _vary:{ freq:0.1, formantVowel:0.15 } },
+  "Vowel Talk": { wave:13, freq:150, formantVowel:0.5, formantSize:1, formantQ:0.7, formantBreath:0.05, formantLfoRate:2.5, formantLfoDepth:0.5, attack:0.02, hold:0.01, decay:0.1, sustain:1, release:0.2, cutoff:13000, reso:0.1, duration:1.5,
+            _vary:{ freq:0.14, formantLfoRate:0.3, formantLfoDepth:0.2 } },
+  "Wah Voice": { wave:13, freq:200, formantVowel:0.4, formantSize:1.1, formantQ:0.8, formantLfoRate:1.2, formantLfoDepth:0.4, vibDepth:0.1, vibRate:5, attack:0.03, hold:0.01, decay:0.1, sustain:1, release:0.3, cutoff:13000, reso:0.1, reverb:0.2, duration:1.8,
+            _vary:{ freq:0.16, formantLfoRate:0.3 } },
   // Bubble / water physical model (wave 14): decaying rising-pitch sines scattered in time.
   "Bubble Drop": { wave:14, freq:700, bubbleRate:1.5, bubbleRise:0.6, bubbleSpread:0.15, bubbleDecay:0.5, attack:0.001, hold:0.004, decay:0.1, sustain:1, release:0.1, cutoff:14000, reso:0.1, duration:0.5,
             _vary:{ freq:0.18, bubbleRise:0.2, bubbleSpread:0.3 } },
@@ -1188,16 +1192,26 @@ window.PRESETS = {
             _vary:{ freq:0.12, addTilt:0.2 } },
   "Angelic Wash": { wave:16, freq:523, addPartials:20, addTilt:0.65, addDrift:0.7, addDriftRate:0.25, addDetune:0.6, attack:0.35, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:16000, reso:0.1, reverb:0.5, reverbSize:0.85, duration:2.0,
             _vary:{ freq:0.12, addDrift:0.15, addDetune:0.15 } },
+  // Speech / vox (wave 17): the retro formant speech synth. speechText carries the words.
+  "Say Hello": { wave:17, speechText:"hello", freq:130, speechRate:1, speechSize:1, sustain:1, cutoff:16000, duration:0.6 },
+  "Game Over Voice": { wave:17, speechText:"game over", freq:120, speechRate:0.9, speechSize:1, sustain:1, cutoff:16000, drive:0.1, duration:1.1 },
+  "Warning": { wave:17, speechText:"warning", freq:150, speechRate:0.95, speechSize:0.95, sustain:1, cutoff:16000, duration:0.9 },
+  "Robot Yes": { wave:17, speechText:"yes", freq:110, speechRate:1, speechSize:0.9, sustain:1, cutoff:14000, ringMod:0.12, ringFreq:50, bitcrush:6, duration:0.5 },
+  "Robot No": { wave:17, speechText:"no", freq:110, speechRate:1, speechSize:0.9, sustain:1, cutoff:14000, ringMod:0.12, ringFreq:50, bitcrush:6, duration:0.5 },
+  "Level Up Vox": { wave:17, speechText:"level up", freq:170, speechRate:1, speechSize:1.15, sustain:1, cutoff:16000, reverb:0.2, duration:1.0 },
+  "System Ready": { wave:17, speechText:"system ready", freq:140, speechRate:1, speechSize:1, sustain:1, cutoff:16000, duration:1.3 },
+  "Monster Speak": { wave:17, speechText:"i am hungry", freq:70, speechRate:0.8, speechSize:0.65, sustain:1, cutoff:8000, drive:0.3, duration:2.0 },
 };
 
 window.PRESET_CATEGORIES = [
   ["Bells / Mallets", ["Bell", "Church Bell", "Hand Bell", "Wind Chime", "Kalimba", "Music Box Note", "Glass Ping", "Marimba", "Vibraphone", "Metal Clang", "Gong", "Triangle Ting", "Cathedral Bell", "Spring Chime"]],
   ["Granular / Texture", ["Grain Cloud", "Shimmer Wash", "Time Freeze", "Stutter Glitch", "Granular Drone", "Pixie Dust"]],
-  ["Voice / Vocal", ["Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone"]],
+  ["Voice / Vocal", ["Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone", "Vowel Talk", "Wah Voice"]],
   ["Water / Liquid", ["Bubble Drop", "Droplet Plink", "Bubbling Stream", "Boiling Pot", "Underwater", "Pouring Water", "Lava Bloop", "Sci-Fi Bloop"]],
   ["Crackle / Particle", ["Crackling Fire", "Heavy Rain", "Frying Sizzle", "Geiger Counter", "Electric Sparks", "Gravel Steps", "Crowd Applause", "Static Hiss"]],
   ["Drums / Percussion", ["Analog Kick", "Classic Kick", "Punch Kick", "Snare", "Tight Snare", "Rimshot", "Clap", "Closed Hat", "Open Hat", "Low Tom", "High Tom", "Crash Cymbal", "Ride Cymbal", "Cowbell", "Woodblock", "Shaker"]],
   ["Pads / Drones", ["Warm Pad", "Choir Aah", "Sci-Fi Drone", "Glass Pad", "Deep Drone", "Shimmer Pad", "Power Hum", "Angelic Wash"]],
+  ["Speech / Vox", ["Say Hello", "Game Over Voice", "Warning", "Robot Yes", "Robot No", "Level Up Vox", "System Ready", "Monster Speak"]],
   ["Magic", ["Teleport", "Magic Sparkle", "Cure", "Poison", "Fireball Cast", "Frost Bolt", "Lightning Strike", "Arcane Blast", "Holy Smite", "Dark Curse", "Mana Charge", "Magic Missile", "Wind Slash", "Magic Fizzle", "Ice", "Healing Aura", "Curse Whoosh", "Shield Cast", "Enchant", "Summon Portal", "Hex Bolt", "Fireball Cast 2", "Teleport 2", "Magic Sparkle 2", "Arcane Sigil", "Arcane Shimmer", "Fae Glyph", "Wyrd Bloom", "Arcane Weave", "Arcane Rune", "Mystic Whorl", "Ethereal Aura", "Radiant Aura", "Astral Aura", "Wyrd Spark", "Ethereal Rune", "Celestial Bloom", "Runic Chime", "Glimmer Whorl", "Arcane Chime", "Glimmer Aura", "Prism Surge", "Enchanted Bloom", "Shadow Hymn", "Ethereal Spark", "Shadow Shimmer", "Astral Hymn", "Glimmer Weave", "Fae Bloom", "Astral Chime"]],
   ["UI", ["UI Click", "Confirm", "Cancel", "Error Buzz", "Alarm Siren", "Blip", "Notification", "Menu Open", "Tab Switch", "Unlock", "UI Click 2", "Confirm 2", "Quick Tone", "Silky Chirp", "Quick Chirp", "Muted Tap", "Soft Tick", "Silky Cue", "Sharp Beep", "Bright Nudge", "Soft Pop", "Sharp Tone", "Crisp Chirp", "Quick Beep", "Crisp Blip"]],
   ["Explosions", ["Explosion", "Deep Impact", "Cinematic Boom", "Sub Drop Hit", "Meteor Impact", "Glass Shatter", "Grenade Blast", "Distant Boom", "Barrel Burst", "Nuke Rumble", "Explosion 2", "Cinematic Boom 2", "Distant Wallop", "Seismic Detonation", "Massive Blast", "Concussive Wallop", "Cavern Shockwave", "Seismic Shockwave", "Rolling Shockwave", "Deep Boom", "Cavern Wallop", "Concussive Kaboom", "Muffled Wallop", "Thunderous Boom", "Thunderous Wallop"]],

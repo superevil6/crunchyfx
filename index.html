@@ -111,7 +111,7 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 // Vowel formant frequencies [F1, F2, F3] (Hz, neutral voice) for the "formant" waveform.
 // formantVowel morphs across these A→E→I→O→U; formantSize scales them (tract length).
@@ -154,6 +154,10 @@ const PARAMS = [
   ["formantSize", "Voice size", 0.5, 2, 0.01, 1, "",   "Formant"],
   ["formantQ",    "Formant Q",  0, 1, 0.01, 0.5, "",   "Formant"],
   ["formantBreath","Breath",    0, 1, 0.01, 0, "",     "Formant"],
+  // Vowel LFO — slowly morphs the vowel over time so the voice "talks" (aa-ee-oo). Both default 0
+  // (off) so existing formant presets are unchanged.
+  ["formantLfoRate","Vowel rate",0, 8, 0.01, 0, "Hz",  "Formant"],
+  ["formantLfoDepth","Vowel move",0, 1, 0.01, 0, "",   "Formant"],
   // Bubble / water (wave "bubble"): scattered decaying rising-pitch sines (the Minnaert bubble
   // model) → drops / streams / boiling. Ignored unless wave is "bubble".
   ["bubbleRate",  "Bubble rate",1, 60, 1, 8, "/s",     "Bubble"],
@@ -173,6 +177,10 @@ const PARAMS = [
   ["addDrift",    "Drift depth",0, 1, 0.01, 0.5, "",  "Additive"],
   ["addDriftRate","Drift rate", 0.02, 2, 0.01, 0.15, "Hz", "Additive"],
   ["addDetune",   "Detune/width",0, 1, 0.01, 0.4, "", "Additive"],
+  // Speech (wave "speech"): retro formant speech synth. Text lives in state.speechText (a text box
+  // in the Speech panel); these shape the voice. Pitch = Frequency. Ignored unless wave is "speech".
+  ["speechRate",  "Speak rate", 0.5, 2, 0.01, 1, "x",  "Speech"],
+  ["speechSize",  "Voice size", 0.5, 2, 0.01, 1, "",   "Speech"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
@@ -230,6 +238,8 @@ for (const p of PARAMS) state[p[0]] = p[5];
 // Custom drawn single-cycle waveform (wave "custom"). Stored IN the patch as a compact base64
 // int8 string so it travels with presets / share-links / history (empty = default sine).
 state.customWave = "";
+// Text for the "speech" waveform — also stored in the patch (travels with presets/share/history).
+state.speechText = "";
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
@@ -548,6 +558,135 @@ function makeParticles(n, tone, rate, decay, spread, seed) {
   return { L: outL, R: outR };
 }
 
+// ---------- Formant speech synthesis (retro robot voice) ----------
+// A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +
+// voiced/unvoiced source, driven through 3 bandpasses. Intelligible-but-robotic (on purpose).
+// Each phoneme: f=[F1,F2,F3] Hz, v=voicing (1 buzz / 0 noise / ~0.35 voiced fricative), d=ms,
+// a=amp, to=[…] diphthong glide target, stop=leading-silence burst consonant, nasal=lower level.
+const SPEECH_PHON = {
+  AA: { f: [700, 1220, 2600], v: 1, d: 150 }, AE: { f: [660, 1720, 2410], v: 1, d: 150 },
+  AH: { f: [640, 1190, 2390], v: 1, d: 110, a: 0.9 }, AO: { f: [570, 840, 2410], v: 1, d: 150 },
+  EH: { f: [530, 1840, 2480], v: 1, d: 130 }, ER: { f: [490, 1350, 1690], v: 1, d: 150, a: 0.9 },
+  IH: { f: [400, 1920, 2560], v: 1, d: 110, a: 0.9 }, IY: { f: [270, 2290, 3010], v: 1, d: 150 },
+  UH: { f: [440, 1020, 2240], v: 1, d: 110, a: 0.9 }, UW: { f: [300, 870, 2240], v: 1, d: 150 },
+  OW: { f: [570, 840, 2410], v: 1, d: 170, to: [360, 800, 2400] }, EY: { f: [530, 1840, 2480], v: 1, d: 170, to: [340, 2200, 3000] },
+  AY: { f: [700, 1220, 2600], v: 1, d: 180, to: [340, 2200, 3000] }, AW: { f: [700, 1220, 2600], v: 1, d: 180, to: [360, 800, 2400] },
+  OY: { f: [570, 840, 2410], v: 1, d: 180, to: [340, 2200, 3000] },
+  L: { f: [360, 1300, 2600], v: 1, d: 70, a: 0.85 }, R: { f: [420, 1300, 1600], v: 1, d: 70, a: 0.85 },
+  W: { f: [300, 800, 2400], v: 1, d: 60, a: 0.8 }, Y: { f: [300, 2200, 3000], v: 1, d: 55, a: 0.8 },
+  M: { f: [280, 900, 2200], v: 1, d: 85, a: 0.65, nasal: 1 }, N: { f: [280, 1700, 2600], v: 1, d: 85, a: 0.65, nasal: 1 },
+  NG: { f: [280, 2300, 2750], v: 1, d: 85, a: 0.6, nasal: 1 },
+  F: { f: [400, 1100, 2000], v: 0, d: 100, a: 0.5 }, V: { f: [400, 1100, 2000], v: 0.35, d: 80, a: 0.5 },
+  S: { f: [500, 1400, 5500], v: 0, d: 110, a: 0.55 }, Z: { f: [500, 1400, 5000], v: 0.35, d: 90, a: 0.5 },
+  SH: { f: [500, 1800, 2600], v: 0, d: 110, a: 0.55 }, ZH: { f: [500, 1800, 2600], v: 0.35, d: 90, a: 0.5 },
+  TH: { f: [400, 1400, 2500], v: 0, d: 90, a: 0.4 }, DH: { f: [400, 1400, 2500], v: 0.35, d: 70, a: 0.4 },
+  HH: { f: [500, 1500, 2500], v: 0, d: 70, a: 0.4 },
+  P: { f: [600, 1500, 2500], v: 0, d: 70, a: 0.5, stop: 1 }, B: { f: [500, 1200, 2200], v: 0.3, d: 65, a: 0.5, stop: 1 },
+  T: { f: [600, 1800, 2800], v: 0, d: 75, a: 0.5, stop: 1 }, D: { f: [500, 1600, 2600], v: 0.3, d: 65, a: 0.5, stop: 1 },
+  K: { f: [500, 1500, 2500], v: 0, d: 80, a: 0.5, stop: 1 }, G: { f: [400, 1300, 2300], v: 0.3, d: 65, a: 0.5, stop: 1 },
+  CH: { f: [500, 1800, 2600], v: 0, d: 100, a: 0.5, stop: 1 }, JH: { f: [500, 1800, 2600], v: 0.3, d: 90, a: 0.5, stop: 1 },
+};
+
+// Grapheme→phoneme for one lowercase word. Rule-based, greedy left-to-right; handles common
+// digraphs, vowel teams, r-controlled vowels, and magic-e. Imperfect on irregular spellings.
+function word2phon(w) {
+  const ph = [], n = w.length, V = "aeiou", isV = (c) => V.indexOf(c) >= 0, at = (j) => w[j] || "";
+  let i = 0;
+  while (i < n) {
+    const c = w[i], c2 = w.substr(i, 2), c3 = w.substr(i, 3);
+    if (c3 === "igh") { ph.push("AY"); i += 3; continue; }
+    const dg = { th: "TH", sh: "SH", ch: "CH", ph: "F", wh: "W", ck: "K", ng: "NG" };
+    if (c2 === "qu") { ph.push("K", "W"); i += 2; continue; }
+    if (dg[c2]) { ph.push(dg[c2]); i += 2; continue; }
+    if (c2 === "ee" || c2 === "ea") { ph.push("IY"); i += 2; continue; }
+    if (c2 === "oo") { ph.push("UW"); i += 2; continue; }
+    if (c2 === "ou" || c2 === "ow") { ph.push("AW"); i += 2; continue; }
+    if (c2 === "oi" || c2 === "oy") { ph.push("OY"); i += 2; continue; }
+    if (c2 === "ai" || c2 === "ay") { ph.push("EY"); i += 2; continue; }
+    if (c2 === "oa") { ph.push("OW"); i += 2; continue; }
+    if (c2 === "au" || c2 === "aw") { ph.push("AO"); i += 2; continue; }
+    if (c2 === "ar") { ph.push("AA", "R"); i += 2; continue; }
+    if (c2 === "or") { ph.push("AO", "R"); i += 2; continue; }
+    if (c2 === "er" || c2 === "ir" || c2 === "ur") { ph.push("ER"); i += 2; continue; }
+    if (isV(c)) {
+      const longByE = (i + 2 === n - 1) && !isV(at(i + 1)) && at(n - 1) === "e";   // magic-e: vCe$
+      if (longByE) { ph.push({ a: "EY", e: "IY", i: "AY", o: "OW", u: "UW" }[c]); i += 1; continue; }
+      ph.push({ a: "AE", e: "EH", i: "IH", o: "AO", u: "AH" }[c]); i += 1; continue;
+    }
+    if (c === "e" && i === n - 1) { i++; continue; }                                // silent final e
+    if (c === "c") { ph.push("eiy".indexOf(at(i + 1)) >= 0 ? "S" : "K"); i++; continue; }
+    if (c === "g" && "eiy".indexOf(at(i + 1)) >= 0) { ph.push("JH"); i++; continue; }
+    if (c === "x") { ph.push("K", "S"); i++; continue; }
+    const map = { b: "B", d: "D", f: "F", g: "G", h: "HH", j: "JH", k: "K", l: "L", m: "M", n: "N", p: "P", q: "K", r: "R", s: "S", t: "T", v: "V", w: "W", y: "Y", z: "Z" };
+    if (map[c]) ph.push(map[c]);
+    i++;
+  }
+  const out = [];                                                                   // collapse doubled consonants
+  for (const p of ph) { if (out.length && out[out.length - 1] === p && !SPEECH_PHON[p].to) continue; out.push(p); }
+  return out;
+}
+function textToPhonemes(text) {
+  const words = String(text).toLowerCase().replace(/[^a-z ]+/g, " ").split(/\s+/).filter(Boolean);
+  const out = [];
+  for (const w of words) { const p = word2phon(w); if (p.length) { out.push(...p); out.push("_"); } }  // "_" = word gap
+  return out;
+}
+// Render text to a mono speech buffer of length n. freq = pitch, size scales formants (voice size),
+// rateScale = speaking speed. Formant/amp/voicing glide smoothly between phonemes (coarticulation).
+function makeSpeech(n, text, freq, size, rateScale, seed) {
+  const out = new Float32Array(n);
+  const phon = textToPhonemes(text);
+  if (!phon.length || n < 4) return out;
+  let s = (seed >>> 0) || 1;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 * 2 - 1; };
+  const Q = 9, gl = 0.005, rs = Math.max(0.25, rateScale);
+  let ph = 0, curAmp = 0, curVoi = 1, idx = 0;
+  const cf = [500, 1500, 2500], x1 = [0, 0, 0], x2 = [0, 0, 0], y1 = [0, 0, 0], y2 = [0, 0, 0];
+  for (const key of phon) {
+    if (key === "_") { const sil = Math.floor(0.05 * SR / rs); for (let k = 0; k < sil && idx < n; k++) { curAmp += -curAmp * 0.02; out[idx++] = 0; } continue; }
+    const spec = SPEECH_PHON[key]; if (!spec) continue;
+    if (spec.stop) { const sil = Math.floor(0.045 * SR / rs); for (let k = 0; k < sil && idx < n; k++) { curAmp += -curAmp * 0.05; out[idx++] = 0; } }
+    const dur = Math.max(4, Math.floor((spec.d || 120) / 1000 * SR / rs));
+    const t0 = spec.f, t1 = spec.to || spec.f, voi = spec.v == null ? 1 : spec.v, amp = spec.a == null ? 1 : spec.a;
+    for (let k = 0; k < dur && idx < n; k++, idx++) {
+      const fr = k / dur;
+      for (let i2 = 0; i2 < 3; i2++) { const tgt = (t0[i2] + (t1[i2] - t0[i2]) * fr) * size; cf[i2] += (tgt - cf[i2]) * gl; }
+      curAmp += (amp - curAmp) * 0.01; curVoi += (voi - curVoi) * 0.02;
+      ph += freq / SR; if (ph >= 1) ph -= 1;
+      const src = curVoi * (2 * ph - 1) + (1 - curVoi) * rnd();
+      let y = 0;
+      for (let i2 = 0; i2 < 3; i2++) {
+        const w0 = 2 * Math.PI * Math.max(60, Math.min(0.45 * SR, cf[i2])) / SR, al = Math.sin(w0) / (2 * Q), a0 = 1 + al;
+        const b0 = al / a0, A1 = -2 * Math.cos(w0) / a0, A2 = (1 - al) / a0;
+        const o = b0 * (src - x2[i2]) - A1 * y1[i2] - A2 * y2[i2];
+        x2[i2] = x1[i2]; x1[i2] = src; y2[i2] = y1[i2]; y1[i2] = o;
+        y += o * FORMANT_GAIN[i2];
+      }
+      out[idx] = y * curAmp;
+    }
+  }
+  const fade = Math.floor(0.006 * SR);                                              // declick the ends
+  let pk = 0; for (let i = 0; i < n; i++) { const a = Math.abs(out[i]); if (a > pk) pk = a; }
+  const g = pk > 0.001 ? 0.75 / pk : 1;
+  for (let i = 0; i < n; i++) { let e = 1; if (i < fade) e = i / fade; else if (i > idx - fade && i < idx) e = (idx - i) / fade; out[i] *= g * e; }
+  return out;
+}
+// (speech uses freq for pitch and `size` to scale the formants; sweep/vibrato don't apply since
+// the buffer is prebuilt — pitch is set once per utterance.)
+
+// Fill the 3 formant bandpass coefficient sets for a vowel (0..1 morph A→E→I→O→U), voice size, and
+// Q. Shared by the static precompute and the per-sample vowel-LFO path (RBJ bandpass; b1=0, b2=−b0).
+function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
+  const p = Math.max(0, Math.min(1, vowel)) * (VOWELS.length - 1);
+  const i0 = Math.floor(p), i1 = Math.min(VOWELS.length - 1, i0 + 1), fr = p - i0;
+  for (let fi = 0; fi < 3; fi++) {
+    let fc = (VOWELS[i0][fi] * (1 - fr) + VOWELS[i1][fi] * fr) * size;
+    fc = Math.max(60, Math.min(0.45 * SR, fc));
+    const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+    b0[fi] = alpha / a0; a1[fi] = -2 * Math.cos(w0) / a0; a2[fi] = (1 - alpha) / a0;
+  }
+}
+
 // ---------- Master finishing stage ----------
 // Transient shaper: emphasize (+) or soften (−) attacks. A fast and a slow envelope follower
 // track the signal; their difference (fast − slow) is positive during an attack, so scaling by
@@ -752,19 +891,12 @@ function render() {
   const F_N = 3, fmB0 = new Float64Array(F_N), fmA1 = new Float64Array(F_N), fmA2 = new Float64Array(F_N);
   const fmX1 = new Float64Array(F_N), fmX2 = new Float64Array(F_N), fmY1 = new Float64Array(F_N), fmY2 = new Float64Array(F_N);
   const fmBreath = state.formantBreath;
-  if (isFormant) {
-    const p = Math.max(0, Math.min(1, state.formantVowel)) * (VOWELS.length - 1);
-    const i0 = Math.floor(p), i1 = Math.min(VOWELS.length - 1, i0 + 1), fr = p - i0;
-    const Q = 4 + Math.max(0, Math.min(1, state.formantQ)) * 16;   // formant sharpness
-    for (let fi = 0; fi < F_N; fi++) {
-      let fc = (VOWELS[i0][fi] * (1 - fr) + VOWELS[i1][fi] * fr) * state.formantSize;
-      fc = Math.max(60, Math.min(0.45 * SR, fc));                  // keep the resonator stable
-      const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
-      fmB0[fi] = alpha / a0;                                       // RBJ bandpass (b1=0, b2=−b0)
-      fmA1[fi] = -2 * Math.cos(w0) / a0;
-      fmA2[fi] = (1 - alpha) / a0;
-    }
-  }
+  const fmQ = 4 + Math.max(0, Math.min(1, state.formantQ)) * 16;   // formant sharpness
+  const fmLfoRate = state.formantLfoRate, fmLfoDepth = state.formantLfoDepth;
+  const fmLfoOn = isFormant && fmLfoRate > 0 && fmLfoDepth > 0;    // vowel morphs over time
+  // Static vowel → coeffs are constant, precompute once (unchanged path). LFO on → recompute
+  // per sample from the morphing vowel (in the osc branch below).
+  if (isFormant && !fmLfoOn) computeFormantCoeffs(state.formantVowel, state.formantSize, fmQ, fmB0, fmA1, fmA2);
   // Bubble / water (wave "bubble"): built up front into a stereo buffer, then read per-sample.
   const isBubble = waveType === 14;
   let bubL = null, bubR = null;
@@ -806,6 +938,10 @@ function render() {
     }
     if (norm > 0) for (let k = 0; k < nAdd; k++) addAmp[k] /= norm;
   }
+  // Speech (wave "speech"): render the text to a mono buffer up front, then read it per-sample.
+  const isSpeech = waveType === 17;
+  let speechBuf = null;
+  if (isSpeech) speechBuf = makeSpeech(n, state.speechText, baseFreq, state.speechSize, state.speechRate, 0x5eec0de);
 
   // Body layer: a clean low sine with its OWN exponential decay and a downward
   // pitch drop, independent of the crack envelope. Because it rings longer than the
@@ -879,6 +1015,7 @@ function render() {
       oscL = granL[i]; oscR = granR[i];               // prebuilt grain cloud (already stereo)
     } else if (isFormant) {
       // buzz source (band-limited saw) + optional breath noise, through 3 formant resonators
+      if (fmLfoOn) computeFormantCoeffs(state.formantVowel + fmLfoDepth * Math.sin(2 * Math.PI * fmLfoRate * t), state.formantSize, fmQ, fmB0, fmA1, fmA2);
       const dt = fOsc / SR;
       fmPhase += dt; if (fmPhase >= 1) fmPhase -= 1;
       let src = waveform(2, fmPhase, dt, 0.25);
@@ -905,6 +1042,8 @@ function render() {
         sL += v * addPanL[k]; sR += v * addPanR[k];
       }
       oscL = sL * 1.4; oscR = sR * 1.4;               // makeup for a healthy level
+    } else if (isSpeech) {
+      const v = speechBuf[i]; oscL = v; oscR = v;     // prebuilt speech utterance (mono)
     } else {
       // sum unison voices into L/R
       for (let v = 0; v < V; v++) {
@@ -1123,10 +1262,11 @@ function play(label) {
 function withState(snap, fn) {
   const backup = {};
   for (const p of PARAMS) backup[p[0]] = state[p[0]];
-  backup.customWave = state.customWave;
+  backup.customWave = state.customWave; backup.speechText = state.speechText;
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
   state.customWave = "customWave" in snap ? snap.customWave : "";
-  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; }
+  state.speechText = "speechText" in snap ? snap.speechText : "";
+  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; state.speechText = backup.speechText; }
 }
 
 // ---------- WAV export (16-bit stereo PCM) ----------
@@ -1319,11 +1459,12 @@ function snapshotState() {
   const s = {};
   for (const p of PARAMS) s[p[0]] = state[p[0]];
   if (state.customWave) s.customWave = state.customWave;   // carry the drawn wave with the snapshot
+  if (state.speechText) s.speechText = state.speechText;   // …and the speech text
   return s;
 }
 function sameState(a, b) {
   for (const p of PARAMS) if (a[p[0]] !== b[p[0]]) return false;
-  return (a.customWave || "") === (b.customWave || "");
+  return (a.customWave || "") === (b.customWave || "") && (a.speechText || "") === (b.speechText || "");
 }
 function thumbPeaks(L) {
   const N = 96, out = new Float32Array(N), step = L.length / N;
@@ -1631,6 +1772,40 @@ cwCanvas.addEventListener("pointerup", cwEnd);
 cwCanvas.addEventListener("pointercancel", cwEnd);
 drawCustomCanvas();
 
+// ---------- Speech text box ----------
+// Injected into the auto-built Speech panel (which already holds the rate/size sliders). Typing
+// text commits it to state.speechText (travels with the patch), selects the speech wave, and
+// auto-fits Duration to the utterance length so short phrases "just play".
+const speechPanel = panels.querySelector('[data-group="Speech"]');
+let speechInput = null;
+if (speechPanel) {
+  speechInput = document.createElement("input");
+  speechInput.id = "speechInput"; speechInput.className = "speech-input";
+  speechInput.placeholder = "Type words to speak…"; speechInput.spellcheck = false;
+  speechInput.value = state.speechText;
+  speechPanel.querySelector("h2").insertAdjacentElement("afterend", speechInput);
+  const shint = document.createElement("div");
+  shint.className = "hint";
+  shint.textContent = "Retro robot speech (pitch = Frequency). Robotic + imperfect on odd spellings — respell phonetically to fix.";
+  speechPanel.appendChild(shint);
+  const commitSpeech = () => {
+    state.speechText = speechInput.value;
+    state.wave = 17;                                  // select the speech wave
+    const sel = document.querySelector('select[data-key="wave"]');
+    if (sel) sel.value = 17;
+    updateWavePanels();
+    const est = Math.min(2, Math.max(0.2, textToPhonemes(state.speechText).length * 0.11 / (state.speechRate || 1)));
+    state.duration = +est.toFixed(2);                 // auto-fit duration to the utterance
+    const durEl = document.querySelector('[data-key="duration"]'), durP = PARAMS.find((p) => p[0] === "duration");
+    if (durEl) durEl.value = state.duration;
+    if (outputs.duration) outputs.duration.textContent = fmt(durP, state.duration);
+    play("Speech");
+  };
+  speechInput.addEventListener("change", commitSpeech);
+  speechInput.addEventListener("keydown", (e) => { if (e.key === "Enter") speechInput.blur(); });
+}
+function syncSpeechInput() { if (speechInput) speechInput.value = state.speechText; }
+
 // ---------- Contextual panels ----------
 // Wave-specific panels are hidden unless their waveform is selected, so the editor only ever shows
 // controls that do something. Universal panels (Oscillator, Mix, Filter, …) are always visible.
@@ -1645,6 +1820,7 @@ const PANEL_WAVES = {
   "Bubble": [14],
   "Particle": [15],
   "Additive": [16],
+  "Speech": [17],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
@@ -1663,6 +1839,7 @@ function syncUI() {
     if (outputs[key]) outputs[key].textContent = fmt(p, state[key]);
   }
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
+  if (typeof syncSpeechInput === "function") syncSpeechInput();     // restore the speech text box
   updateWavePanels();                                               // show only the current wave's panels
   updateMacros();
 }
@@ -1691,8 +1868,8 @@ function randomPatch() {
     let v = min + Math.random() * (max - min);
     v = Math.round(v / step) * step;
     patch[key] = (kind === "wave" || kind === "enum") ? Math.round(v) : v;
-    // never randomize into "sample" (9) or "custom" (12) — both need user-supplied data
-    if (key === "wave" && (patch[key] === 9 || patch[key] === 12)) patch[key] = Math.floor(Math.random() * 9);
+    // never randomize into "sample" (9), "custom" (12) or "speech" (17) — all need user-supplied data
+    if (key === "wave" && (patch[key] === 9 || patch[key] === 12 || patch[key] === 17)) patch[key] = Math.floor(Math.random() * 9);
   }
   if (waveLocked) patch.wave = state.wave;   // respect the waveform lock
   return patch;
@@ -1746,7 +1923,7 @@ function applyPreset(obj, label) {
   // reset to defaults first, then overlay (ignore any _vary metadata)
   const keepWave = state.wave;
   for (const p of PARAMS) state[p[0]] = p[5];
-  state.customWave = "";                    // reset the drawn wave too (overlaid below if present)
+  state.customWave = ""; state.speechText = "";   // reset drawn-wave + speech text (overlaid below if present)
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
@@ -2027,6 +2204,7 @@ function encodePatch() {
   const diff = {};
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
   if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
+  if (state.speechText) diff.speechText = state.speechText;   // …and speech text
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
   return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -2096,7 +2274,7 @@ const BREED_SKIP = new Set(["wave", "duration", "gain"]);
 const BREED_AMT = 0.22;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; return g; }
+function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; if (state.speechText) g.speechText = state.speechText; return g; }
 function mutateGenome(src, amount) {
   const g = {};
   for (const p of PARAMS) {
