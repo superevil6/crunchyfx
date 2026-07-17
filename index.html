@@ -1,6 +1,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CrunchySFX — sound effect generator</title>
+<meta name="description" content="Free, from-scratch sound-effect generator in your browser — coins, lasers, explosions, robot voices, bells and more. Make a sound, share it as a link, export a WAV.">
+<link rel="canonical" href="https://crunchysfx.com/">
+<!-- Open Graph / Twitter card: a shared CrunchySFX link unfurls into a branded
+     "click to hear" card on Reddit / Discord / HN / social. Absolute URLs point at
+     the production domain; the card activates once crunchysfx.com is live (a crawler
+     can't fetch a link before the site exists). Per-sound titles are injected at the
+     edge — see functions/_middleware.js. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CrunchySFX">
+<meta property="og:title" content="CrunchySFX — make &amp; share sound effects">
+<meta property="og:description" content="Click to hear this sound. A free, from-scratch sound-effect generator — coins, lasers, explosions, robot voices, bells. Make your own and share it as a link.">
+<meta property="og:url" content="https://crunchysfx.com/">
+<meta property="og:image" content="https://crunchysfx.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="CrunchySFX — a from-scratch sound effect generator">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CrunchySFX — make &amp; share sound effects">
+<meta name="twitter:description" content="Click to hear this sound. A free, from-scratch sound-effect generator. Make your own and share it as a link.">
+<meta name="twitter:image" content="https://crunchysfx.com/og.png">
 <link rel="stylesheet" href="styles.css">
 
 <header>
@@ -1773,6 +1793,9 @@ function encodePatch() {
   if (state.speechText) diff.speechText = state.speechText;   // …and speech text
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
+  // Carry the sound's display name so the recipient sees "Laser Zap" not "Shared",
+  // and the edge function can title the social card per-sound (functions/_middleware.js).
+  if (typeof seqLabel === "string" && seqLabel && seqLabel !== "Sound") payload.t = seqLabel;
   return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 function decodePatch(str) {
@@ -1782,15 +1805,18 @@ function decodePatch(str) {
   if (!obj || typeof obj.s !== "object") throw new Error("unrecognized link");
   return obj;
 }
-// If the URL carries a shared sound (#s=…), load & play it. Returns true if it did.
-function loadFromHash() {
-  const m = location.hash.match(/[#&]s=([^&]+)/);
+// If the URL carries a shared sound, load & play it. Returns true if it did.
+// Reads ?s=… (current, server-visible so the edge function can build a per-sound card)
+// and falls back to #s=… for links shared before the switch.
+function loadSharedSound(src) {
+  const q = src != null ? src : (location.search + location.hash);  // search wins if both present
+  const m = q.match(/[?#&]s=([A-Za-z0-9\-_]+)/);   // base64url alphabet only — stops at #/&/?
   if (!m) return false;
   try {
     const obj = decodePatch(m[1]);
     normalizeOut = obj.n !== 0;                 // absent -> default (on)
     updateNormBtn();
-    applyPreset(obj.s, "Shared");               // reset-to-defaults + overlay + syncUI + play
+    applyPreset(obj.s, obj.t || "Shared");      // reset-to-defaults + overlay + syncUI + play
     return true;
   } catch (e) {
     console.warn("crunchysfx: could not read shared link —", e.message);
@@ -1801,15 +1827,17 @@ function loadFromHash() {
 // The desktop build runs from a tauri://… origin, so a share link built from location.href
 // points at the local app and can't be opened by anyone else. Set this to the permanent
 // hosted URL of the WEB build (e.g. "https://crunchysfx.com/") and desktop share links will
-// point there instead — the recipient opens the web version, which reads the same #s=… hash.
+// point there instead — the recipient opens the web version, which reads the same ?s=… link.
 // Leave "" until hosting exists (desktop then falls back to the local URL, as before).
-const WEB_BASE_URL = "";
+const WEB_BASE_URL = "https://crunchysfx.com/";
 
 // Pure URL builder (kept separate so it's unit-testable). On desktop with a hosted base set,
 // links point at the web build; otherwise they use the current page URL (correct for web).
+// Uses ?s=… (a query, not a #hash) so the crawler/edge function can see the sound and render
+// a per-sound Open Graph card. Strips any existing query/hash off the base first.
 function buildShareUrl(enc, desktop, webBase, href) {
-  const base = (desktop && webBase) ? webBase.replace(/#.*$/, "") : href.split("#")[0];
-  return base + "#s=" + enc;
+  const base = ((desktop && webBase) ? webBase : href).replace(/[?#].*$/, "");
+  return base + "?s=" + enc;
 }
 
 const shareBtn = document.getElementById("share");
@@ -1818,7 +1846,7 @@ shareBtn.addEventListener("click", async () => {
   const url = buildShareUrl(enc, isDesktop, WEB_BASE_URL, location.href);
   // Reflect the sound in the address bar on the web build (bookmarkable). Skip on desktop:
   // the address bar is hidden and its URL is tauri://…, not the shareable link we copied.
-  if (!isDesktop) { try { history.replaceState(null, "", "#s=" + enc); } catch (e) { location.hash = "s=" + enc; } }
+  if (!isDesktop) { try { history.replaceState(null, "", "?s=" + enc); } catch (e) { try { location.hash = "s=" + enc; } catch (_) {} } }
   const label = shareBtn.textContent;
   try {
     await navigator.clipboard.writeText(url);   // undefined on insecure/file:// -> caught
@@ -2589,5 +2617,5 @@ if (isDesktop) {
 }
 
 // initial draw — or load a shared sound from the URL, if one is present
-if (!loadFromHash()) { const { L, R } = render(); drawScope(L, R); }
+if (!loadSharedSound()) { const { L, R } = render(); drawScope(L, R); }
 </script>
