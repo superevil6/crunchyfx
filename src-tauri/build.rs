@@ -1,4 +1,4 @@
-// crunchyfx ships as index.html + presets.js + dsp.js + styles.css at the repo root — the SAME
+// CrunchySFX ships as index.html + presets.js + dsp.js + styles.css at the repo root — the SAME
 // files the web version serves. Tauri wants a frontend directory, so before compiling we copy them
 // into ../dist/ (the configured frontendDist). Runs on every build via cargo, on every
 // platform, with no external tooling. Keeps web + desktop in sync.

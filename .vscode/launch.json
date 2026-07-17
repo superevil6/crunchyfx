@@ -1,5 +1,5 @@
 {
-  // Press F5 (Run and Debug) to launch crunchyfx.
+  // Press F5 (Run and Debug) to launch CrunchySFX.
   //
   //  • "Desktop app (Tauri)" builds and runs the native app under a debugger.
   //    Needs: rust-analyzer + CodeLLDB extensions and a working Rust toolchain.

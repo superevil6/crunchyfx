@@ -7,5 +7,5 @@ fn main() {
         .plugin(tauri_plugin_fs::init())     // write the chosen file to disk
         .plugin(tauri_plugin_drag::init())   // drag a rendered WAV out into the OS / an engine
         .run(tauri::generate_context!())
-        .expect("error while running crunchyfx");
+        .expect("error while running CrunchySFX");
 }

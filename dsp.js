@@ -1,4 +1,4 @@
-// crunchyfx — DSP engines & helpers (pure functions + shared constants), extracted from
+// CrunchySFX — DSP engines & helpers (pure functions + shared constants), extracted from
 // index.html for organization. Loaded via <script src="dsp.js"> BEFORE the main <script>
 // (classic scripts share one global scope, like presets.js). No app state / DOM here.
 "use strict";

@@ -1,4 +1,4 @@
-# crunchyfx — desktop build (Tauri)
+# CrunchySFX — desktop build (Tauri)
 
 The desktop app is a thin [Tauri](https://tauri.app) wrapper around the **same
 `index.html`** the web version serves. One source of truth: fix a bug once, both the

@@ -8,4 +8,4 @@ src-tauri/target/
 src-tauri/gen/
 
 # Saved project files (produced by the Save project feature — user data, not source).
-*.crunchyfx
+*.crunchysfx

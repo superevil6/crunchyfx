@@ -1,4 +1,4 @@
-// crunchyfx — preset library (data only). Extracted from index.html for organization.
+// CrunchySFX — preset library (data only). Extracted from index.html for organization.
 // Loaded via <script src="presets.js"> BEFORE the main <script>, which reads these two globals.
 // Adding a preset = add its patch to window.PRESETS AND list its name under a section in
 // window.PRESET_CATEGORIES (unlisted names fall into an auto "Uncategorized" section).

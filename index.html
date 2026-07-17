@@ -1,9 +1,10 @@
 <meta charset="utf-8">
-<title>crunchyfx — sound effect generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrunchySFX — sound effect generator</title>
 <link rel="stylesheet" href="styles.css">
 
 <header>
-  <h1>crunchy<b>fx</b></h1>
+  <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
 </header>
 
@@ -99,9 +100,9 @@
 
 <footer class="license">
   <h2>License</h2>
-  <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with crunchyfx is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention crunchyfx.</p>
+  <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with CrunchySFX is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention CrunchySFX.</p>
   <p>The built-in engine synthesizes everything from scratch — no third-party samples. If you <strong>import your own audio</strong>, the CC0 dedication above doesn't extend to that clip: its licensing is your responsibility.</p>
-  <p class="tool-notice">crunchyfx (the app) &copy; 2026 Alex Cassells — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
+  <p class="tool-notice">CrunchySFX (the app) &copy; 2026 Alex Cassells — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
 </footer>
 
 <script src="presets.js"></script>
@@ -863,7 +864,7 @@ function wavChunk(id, body) {
 }
 // LIST/INFO metadata: software tag (always) + title (if given). null if nothing to write.
 function wavInfoChunk(title) {
-  const subs = [wavChunk("ISFT", new TextEncoder().encode("crunchyfx\0"))];
+  const subs = [wavChunk("ISFT", new TextEncoder().encode("CrunchySFX\0"))];
   if (title) subs.push(wavChunk("INAM", new TextEncoder().encode(title + "\0")));
   let len = 4; for (const s of subs) len += s.length;
   const body = new Uint8Array(len);
@@ -950,7 +951,7 @@ async function downloadWav(L, R, name, title) {
       const path = await T.dialog.save({ defaultPath: name, filters: [{ name: "WAV audio", extensions: ["wav"] }] });
       if (path) await T.fs.writeFile(path, new Uint8Array(buffer));   // user cancelled -> path is null
       return;
-    } catch (e) { console.warn("crunchyfx: native save failed, falling back to browser download —", e); }
+    } catch (e) { console.warn("crunchysfx: native save failed, falling back to browser download —", e); }
   }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
@@ -961,7 +962,7 @@ async function downloadWav(L, R, name, title) {
 
 function exportWav() {
   const { L, R } = render();
-  downloadWav(L, R, "crunchyfx-" + Date.now() + ".wav");
+  downloadWav(L, R, "crunchysfx-" + Date.now() + ".wav");
 }
 
 // ---------- Drag-out (DESKTOP-ONLY) ----------
@@ -986,13 +987,13 @@ async function ensureDragIcon() {                         // written once, reuse
   if (dragIconPath) return dragIconPath;
   const bin = atob(DRAG_ICON_B64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const p = await tempFilePath("crunchyfx-drag.png");
+  const p = await tempFilePath("crunchysfx-drag.png");
   await window.__TAURI__.fs.writeFile(p, bytes);
   return (dragIconPath = p);
 }
 async function dragOutWav(L, R, filename, title) {
   const T = window.__TAURI__;
-  if (!(T && T.core && T.fs && T.path)) { console.warn("crunchyfx: drag-out unavailable (not desktop)"); return; }
+  if (!(T && T.core && T.fs && T.path)) { console.warn("crunchysfx: drag-out unavailable (not desktop)"); return; }
   try {
     const buf = encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: title || filename });
     const wavPath = await tempFilePath(sanitizeFilename(filename) + ".wav");
@@ -1000,9 +1001,9 @@ async function dragOutWav(L, R, filename, title) {
     const icon = await ensureDragIcon();
     // start_drag also requires an `onEvent` Channel (drag lifecycle: over / drop / cancel).
     const onEvent = new T.core.Channel();
-    onEvent.onmessage = (m) => console.debug("crunchyfx: drag event", m);
+    onEvent.onmessage = (m) => console.debug("crunchysfx: drag event", m);
     await T.core.invoke("plugin:drag|start_drag", { item: [wavPath], image: icon, onEvent });
-  } catch (e) { console.warn("crunchyfx: drag-out failed —", e); }
+  } catch (e) { console.warn("crunchysfx: drag-out failed —", e); }
 }
 
 // ---------- History ----------
@@ -1093,13 +1094,13 @@ function renderHistory() {
     el.querySelector('[data-a="wav"]').addEventListener("click", () => withState(item.state, () => {
       const { L, R } = render();
       const slug = item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      downloadWav(L, R, "crunchyfx-" + (slug || "sound") + "-" + item.id + ".wav");
+      downloadWav(L, R, "crunchysfx-" + (slug || "sound") + "-" + item.id + ".wav");
     }));
     const histDrag = el.querySelector('[data-a="drag"]');
     if (histDrag) histDrag.addEventListener("dragstart", (e) => {
       e.preventDefault();
       const r = withState(item.state, () => render());
-      dragOutWav(r.L, r.R, item.label || "crunchyfx-sound", item.label);
+      dragOutWav(r.L, r.R, item.label || "crunchysfx-sound", item.label);
     });
     histList.appendChild(el);
   }
@@ -1562,7 +1563,7 @@ function savePreset() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "crunchyfx-preset.json";
+  a.download = "crunchysfx-preset.json";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -1792,14 +1793,14 @@ function loadFromHash() {
     applyPreset(obj.s, "Shared");               // reset-to-defaults + overlay + syncUI + play
     return true;
   } catch (e) {
-    console.warn("crunchyfx: could not read shared link —", e.message);
+    console.warn("crunchysfx: could not read shared link —", e.message);
     return false;
   }
 }
 
 // The desktop build runs from a tauri://… origin, so a share link built from location.href
 // points at the local app and can't be opened by anyone else. Set this to the permanent
-// hosted URL of the WEB build (e.g. "https://crunchyfx.app/") and desktop share links will
+// hosted URL of the WEB build (e.g. "https://crunchysfx.com/") and desktop share links will
 // point there instead — the recipient opens the web version, which reads the same #s=… hash.
 // Leave "" until hosting exists (desktop then falls back to the local URL, as before).
 const WEB_BASE_URL = "";
@@ -1823,7 +1824,7 @@ shareBtn.addEventListener("click", async () => {
     await navigator.clipboard.writeText(url);   // undefined on insecure/file:// -> caught
     shareBtn.textContent = "✓ Link copied!";
   } catch (e) {
-    if (isDesktop) { console.warn("crunchyfx: clipboard unavailable, share link:", url); shareBtn.textContent = "⚠ Copy failed — see console"; }
+    if (isDesktop) { console.warn("crunchysfx: clipboard unavailable, share link:", url); shareBtn.textContent = "⚠ Copy failed — see console"; }
     else shareBtn.textContent = "🔗 Link in address bar";
   }
   setTimeout(() => { shareBtn.textContent = label; }, 1600);
@@ -2014,7 +2015,7 @@ function renderSequenceBuffers() {
   return { L, R };
 }
 function playSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); drawScope(L, R); playBuffer(L, R); }
-function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, "crunchyfx-sequence-" + sequence.length + "steps.wav"); }
+function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, "crunchysfx-sequence-" + sequence.length + "steps.wav"); }
 
 const seqGapInput = document.getElementById("seqGap");
 const seqGapVal = document.getElementById("seqGapVal");
@@ -2161,7 +2162,7 @@ async function batchExportUserPresets() {
   if (!(T && T.dialog && T.fs)) { alert("Batch export is a desktop-app feature."); return; }
   let dir;
   try { dir = await T.dialog.open({ directory: true, title: "Choose a folder for the WAV files" }); }
-  catch (e) { console.warn("crunchyfx: folder pick failed —", e); alert("Could not open the folder picker: " + e.message); return; }
+  catch (e) { console.warn("crunchysfx: folder pick failed —", e); alert("Could not open the folder picker: " + e.message); return; }
   if (!dir) return;   // cancelled
   const tpl = (document.getElementById("mpNameTpl") || {}).value || "{name}";
   const total = userPresets.length;
@@ -2180,20 +2181,20 @@ async function batchExportUserPresets() {
       const buf = encodeWav(r.L, r.R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: p.name });
       await T.fs.writeFile(dir + "/" + name + ".wav", new Uint8Array(buf));
       ok++;
-    } catch (e) { console.warn("crunchyfx: batch export failed for", p.name, e); fail++; }
+    } catch (e) { console.warn("crunchysfx: batch export failed for", p.name, e); fail++; }
     finally { sampleBuf = prev; }
   }
   alert("Exported " + ok + " sound" + (ok === 1 ? "" : "s") + " to the chosen folder" + (fail ? " (" + fail + " failed — see console)" : "") + ".");
 }
 
 // ---------- Project files (DESKTOP-ONLY) ----------
-// A .crunchyfx file is the whole workspace as portable JSON: current editor sound, the My
+// A .crunchysfx file is the whole workspace as portable JSON: current editor sound, the My
 // Presets library, and the sequence. Unlike localStorage (per-machine, wipeable) it's a real
 // file you can back up, move between machines, or check into a repo. Paid-desktop feature.
 const PROJECT_VERSION = 1;
 function buildProject() {
   return {
-    app: "crunchyfx", version: PROJECT_VERSION,
+    app: "crunchysfx", version: PROJECT_VERSION,
     editor: snapshotState(),
     label: seqLabel,
     userPresets: userPresets,
@@ -2204,29 +2205,29 @@ async function saveProject() {
   const T = window.__TAURI__;
   if (!(T && T.dialog && T.fs)) { alert("Saving projects is a desktop-app feature."); return; }
   try {
-    const path = await T.dialog.save({ defaultPath: "untitled.crunchyfx", filters: [{ name: "crunchyfx project", extensions: ["crunchyfx"] }] });
+    const path = await T.dialog.save({ defaultPath: "untitled.crunchysfx", filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx"] }] });
     if (!path) return;   // cancelled
     const bytes = new TextEncoder().encode(JSON.stringify(buildProject()));
     await T.fs.writeFile(path, bytes);
-  } catch (e) { console.warn("crunchyfx: save project failed —", e); alert("Could not save the project: " + e.message); }
+  } catch (e) { console.warn("crunchysfx: save project failed —", e); alert("Could not save the project: " + e.message); }
 }
 async function openProject() {
   const T = window.__TAURI__;
   if (!(T && T.dialog && T.fs)) { alert("Opening projects is a desktop-app feature."); return; }
   let path;
-  try { path = await T.dialog.open({ filters: [{ name: "crunchyfx project", extensions: ["crunchyfx"] }] }); }
-  catch (e) { console.warn("crunchyfx: open dialog failed —", e); alert("Could not open the file picker: " + e.message); return; }
+  try { path = await T.dialog.open({ filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx"] }] }); }
+  catch (e) { console.warn("crunchysfx: open dialog failed —", e); alert("Could not open the file picker: " + e.message); return; }
   if (!path) return;   // cancelled
   try {
     const bytes = await T.fs.readFile(path);
     const data = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)));
     loadProject(data);
-  } catch (e) { console.warn("crunchyfx: open project failed —", e); alert("Could not read that project file: " + e.message); }
+  } catch (e) { console.warn("crunchysfx: open project failed —", e); alert("Could not read that project file: " + e.message); }
 }
 // Restore a parsed project. Defensive: each section is validated independently so a partial
 // or hand-edited file still loads what it can.
 function loadProject(data) {
-  if (!data || data.app !== "crunchyfx" || typeof data.editor !== "object") throw new Error("not a crunchyfx project");
+  if (!data || data.app !== "crunchysfx" || typeof data.editor !== "object") throw new Error("not a crunchysfx project");
   if (Array.isArray(data.userPresets)) {
     userPresets = data.userPresets.filter((p) => p && typeof p.state === "object");
     upSeq = userPresets.reduce((m, p) => Math.max(m, p.id || 0), 0);
@@ -2350,7 +2351,7 @@ function presetEntry(name, genome) {
 // The copy/paste deliverable: PRESETS entries + a PRESET_CATEGORIES line for presets.js.
 function buildPresetBlock(keepers) {
   const entries = keepers.map((k) => "  " + presetEntry(k.name, k.genome)).join("\n");
-  return "// crunchyfx Foundry — procedural + hand-curated (no AI). Paste inside the NEW = { … }\n" +
+  return "// CrunchySFX Foundry — procedural + hand-curated (no AI). Paste inside the NEW = { … }\n" +
          "// object in new_presets.js; it auto-files these under the \"My Sounds\" section.\n" +
          entries + "\n";
 }
@@ -2517,11 +2518,11 @@ if (isDesktop) {
   // Project Save/Open — injected into the controls bar, desktop-only (needs native dialogs).
   const projSave = document.createElement("button");
   projSave.id = "projSave"; projSave.textContent = "💾 Save project";
-  projSave.title = "Save the whole workspace (editor sound, My Presets, sequence) to a .crunchyfx file";
+  projSave.title = "Save the whole workspace (editor sound, My Presets, sequence) to a .crunchysfx file";
   projSave.addEventListener("click", saveProject);
   const projOpen = document.createElement("button");
   projOpen.id = "projOpen"; projOpen.textContent = "📁 Open project";
-  projOpen.title = "Load a .crunchyfx project file";
+  projOpen.title = "Load a .crunchysfx project file";
   projOpen.addEventListener("click", openProject);
   const cbar = document.querySelector(".controls");
   cbar.appendChild(projSave);
@@ -2536,7 +2537,7 @@ if (isDesktop) {
   dragChip.addEventListener("dragstart", (e) => {
     e.preventDefault();   // suppress the webview's own (non-functional) HTML5 drag; use the native one
     const { L, R } = render();
-    dragOutWav(L, R, (seqLabel && seqLabel !== "Sound") ? seqLabel : "crunchyfx-sound", seqLabel);
+    dragOutWav(L, R, (seqLabel && seqLabel !== "Sound") ? seqLabel : "crunchysfx-sound", seqLabel);
   });
   cbar.appendChild(dragChip);
 } else {
@@ -2556,7 +2557,7 @@ if (isDesktop) {
   steamModal.innerHTML =
     '<div class="modal-box steam-box">' +
       '<div class="modal-head">' +
-        '<h2>🎮 crunchyfx Desktop</h2>' +
+        '<h2>🎮 CrunchySFX Desktop</h2>' +
         '<span class="steam-badge">Coming soon</span>' +
         '<span class="hint">The web version stays free — the desktop app adds a pro workflow.</span>' +
         '<button id="steamClose">✕ Close</button>' +
@@ -2565,7 +2566,7 @@ if (isDesktop) {
         '<ul class="steam-feats">' +
           '<li><b>★ My Presets library</b> — save, name, and organize your own sounds; persists on disk.</li>' +
           '<li><b>⬇ Batch export</b> — render your whole library to WAV files in one click, into a folder you pick.</li>' +
-          '<li><b>💾 Project files</b> — save &amp; reopen your entire workspace (editor sound, library, sequence) as a <code>.crunchyfx</code> file.</li>' +
+          '<li><b>💾 Project files</b> — save &amp; reopen your entire workspace (editor sound, library, sequence) as a <code>.crunchysfx</code> file.</li>' +
           '<li><b>📂 Native import / export</b> — real system Save/Open dialogs, and import WAVs straight into your library.</li>' +
           '<li><b>🔧 One-time purchase</b> — no account, no subscription; supports development.</li>' +
         '</ul>' +

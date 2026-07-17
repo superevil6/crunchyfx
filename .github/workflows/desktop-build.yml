@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # crunchyfx is one index.html at the repo root; copy it into ../dist for Tauri.
+      # CrunchySFX is one index.html at the repo root; copy it into ../dist for Tauri.
       # (build.rs also does this, but doing it here first is belt-and-suspenders.)
       - name: Prepare frontend
         shell: bash
@@ -53,7 +53,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "crunchyfx ${{ github.ref_name }}"
-          releaseBody: "Desktop builds of crunchyfx. Windows installer + Linux .deb/.AppImage attached below."
+          releaseName: "CrunchySFX ${{ github.ref_name }}"
+          releaseBody: "Desktop builds of CrunchySFX. Windows installer + Linux .deb/.AppImage attached below."
           releaseDraft: true
           prerelease: false

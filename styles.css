@@ -1,5 +1,5 @@
 @charset "utf-8";
-/* crunchyfx — styles, extracted from index.html for organization.
+/* CrunchySFX — styles, extracted from index.html for organization.
    Linked via <link rel="stylesheet" href="styles.css"> in the <head>.
    Static CSS only. Keep this file beside index.html; the desktop build copies both
    (see src-tauri/build.rs). */
@@ -398,4 +398,38 @@
       align-items: start;
     }
     .ws-browser .presetsearch, .ws-editor .macro { margin-top: 12px; }   /* align column tops */
+  }
+
+  /* ---- Phones (portrait) ---------------------------------------------------
+     A shared link most often opens on a phone, so the priority is: it must PLAY
+     and read cleanly one-handed. Shrink the generous desktop side-insets (24px →
+     12px) so narrow screens don't waste width, drop to a single preset column,
+     and let the controls bar breathe when it wraps. The editor stays usable but
+     is not the focus at this width. */
+  @media (max-width: 600px) {
+    header { padding: 16px 14px 6px; }
+    h1 { font-size: 20px; }
+    .controls { padding: 9px 12px; gap: 8px; }
+    main { grid-template-columns: 1fr; padding: 12px 12px 28px; gap: 12px; }
+    .scoperow { padding: 12px 12px 0; }
+    .workspace { margin: 0 12px; }
+    .seqbar { padding-left: 12px; padding-right: 12px; }
+    footer.license { margin: 24px 12px 40px; }
+    /* tighter param rows so the slider keeps real estate on a narrow panel */
+    .row { grid-template-columns: 74px 1fr 46px; gap: 6px; }
+    .waverow { grid-template-columns: 74px 1fr auto; gap: 6px; }
+    /* 16px on form controls stops iOS Safari from auto-zooming when they focus */
+    select, .fmtgroup select, .speech-input, input[type=text], input[type=search] { font-size: 16px; }
+  }
+
+  /* ---- Touch devices (any size) --------------------------------------------
+     Coarse pointers need bigger hit targets than a 14px mouse thumb. Fatten the
+     slider handle and give buttons a comfortable minimum tap height. Gated on
+     pointer:coarse so desktop mouse styling is untouched. */
+  @media (pointer: coarse) {
+    input[type=range] { height: 6px; }
+    input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    input[type=range]::-moz-range-thumb { width: 24px; height: 24px; }
+    button { min-height: 40px; }
+    .wavelock input, .fmt-loop input { width: 20px; height: 20px; }
   }
