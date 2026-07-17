@@ -112,7 +112,7 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -178,11 +178,20 @@ const PARAMS = [
   // in the Speech panel); these shape the voice. Pitch = Frequency. Ignored unless wave is "speech".
   ["speechRate",  "Speak rate", 0.5, 2, 0.01, 1, "x",  "Speech"],
   ["speechSize",  "Voice size", 0.5, 2, 0.01, 1, "",   "Speech"],
+  // 4-operator FM synth (wave "FM 4op"): DX-style. algorithm picks the operator routing; op1 is the
+  // base carrier (ratio 1), op2/3/4 ratios set the timbre; index = FM depth; feedback = grit.
+  ["fmAlgo",      "FM algorithm",0, 5, 1, 0, "", "FM synth", "enum", ["Chain", "Y-Mod", "Twin", "3→Carrier", "Y+Carrier", "Additive"]],
+  ["fmRatio2",    "Op2 ratio",  0.5, 16, 0.5, 1, "", "FM synth"],
+  ["fmRatio3",    "Op3 ratio",  0.5, 16, 0.5, 2, "", "FM synth"],
+  ["fmRatio4",    "Op4 ratio",  0.5, 16, 0.5, 3, "", "FM synth"],
+  ["fmIndex",     "FM index",   0, 1, 0.01, 0.5, "", "FM synth"],
+  ["fmFeedback",  "FM feedback",0, 1, 0.01, 0, "", "FM synth"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
   ["ringMod",    "Ring mod",   0, 1, 0.01, 0, "",   "Mix"],
   ["ringFreq",   "Ring freq",  0, 2000, 1, 200, "Hz","Mix"],
+  ["noiseColor", "Noise color",0, 1, 0.01, 0, "",   "Mix"],   // 0 white → 1 brown (pink in between)
   // Body: a deep sine layer with its own long decay + pitch drop, for weight/depth
   ["boom",       "Boom level", 0, 1, 0.01, 0, "",    "Body"],
   ["boomFreq",   "Boom freq",  25, 200, 1, 80, "Hz", "Body"],
@@ -194,6 +203,7 @@ const PARAMS = [
   ["sustain",    "Sustain",    0, 1, 0.01, 0.0, "",     "Amp Envelope"],
   ["release",    "Release",    0, 1.5, 0.001, 0.1, "s", "Amp Envelope"],
   ["hold",       "Hold",       0, 1, 0.001, 0.02, "s",  "Amp Envelope"],
+  ["envCurve",   "Env curve",  0, 1, 0.01, 0, "",       "Amp Envelope"],   // 0 linear → 1 exponential
   // Filter
   ["filterMode", "Filter type",0, FILTER_MODES.length - 1, 1, 0, "", "Filter", "enum", FILTER_MODES],
   ["cutoff",     "Cutoff",     40, 12000, 1, 8000, "Hz", "Filter"],
@@ -218,9 +228,19 @@ const PARAMS = [
   ["delay",      "Delay mix",  0, 1, 0.01, 0, "",     "Space"],
   ["delayTime",  "Delay time", 0.01, 0.5, 0.005, 0.15, "s", "Space"],
   ["delayFb",    "Delay fbk",  0, 0.9, 0.01, 0.35, "", "Space"],
+  ["pingpong",   "Ping-pong",  0, 1, 0.01, 0, "",     "Space"],   // cross-feed L/R echoes (0 = normal delay)
+  // Modulation FX (phaser + chorus). Both default mix 0 = off, so existing presets are unchanged.
+  ["phaserMix",  "Phaser",     0, 1, 0.01, 0, "",     "Modulation"],
+  ["phaserRate", "Phaser rate",0.05, 4, 0.01, 0.5, "Hz","Modulation"],
+  ["phaserDepth","Phaser depth",0, 1, 0.01, 0.7, "",  "Modulation"],
+  ["chorusMix",  "Chorus",     0, 1, 0.01, 0, "",     "Modulation"],
+  ["chorusRate", "Chorus rate",0.05, 6, 0.01, 1.5, "Hz","Modulation"],
+  ["chorusDepth","Chorus depth",0, 1, 0.01, 0.4, "",  "Modulation"],
   // Burst / full-auto: retrigger the whole shot N times at a fixed rate
   ["repeat",     "Shots",      1, 12, 1, 1, "x",    "Burst"],
   ["rate",       "Fire rate",  1, 30, 0.5, 10, "Hz","Burst"],
+  // Arpeggio: shift each repeat shot's pitch by N semitones (rising/falling runs). Default 0 = off.
+  ["arpStep",    "Arp step",   -12, 12, 1, 0, "st", "Burst"],
   // Master finishing stage (transient shaper + lookahead limiter). Both default to off/neutral,
   // so existing presets are unchanged and there's no CPU cost until engaged.
   ["transient",  "Transient",  -1, 1, 0.01, 0, "",      "Master"],
@@ -431,6 +451,14 @@ function render() {
   const isSpeech = waveType === 17;
   let speechBuf = null;
   if (isSpeech) speechBuf = makeSpeech(n, state.speechText, baseFreq, state.speechSize, state.speechRate, 0x5eec0de);
+  // 4-operator FM (wave "FM 4op"): per-sample; ops evaluated 3→2→1→0 so mods resolve in one pass.
+  const isFM4 = waveType === 18;
+  const fmRatio = [1, state.fmRatio2, state.fmRatio3, state.fmRatio4];
+  const fmPh = [0, 0, 0, 0], fmOut = [0, 0, 0, 0];
+  let fmFbPrev = 0, fmPrevShot = -1;
+  const fmModDepth = state.fmIndex * 6, fmFbAmt = state.fmFeedback * 5;
+  const fmAlg = FM_ALGOS[Math.round(state.fmAlgo)] || FM_ALGOS[0];
+  const fmMods = fmAlg.mods, fmCarr = fmAlg.carriers;
 
   // Body layer: a clean low sine with its OWN exponential decay and a downward
   // pitch drop, independent of the crack envelope. Because it rings longer than the
@@ -439,6 +467,9 @@ function render() {
   const boom = state.boom, boomF0 = state.boomFreq;
   const boomDrop = state.boomDrop, boomDec = Math.max(0.01, state.boomDecay);
   let boomPhase = 0, prevShot = -1;
+  // colored-noise state + exponential-envelope exponent (both default to neutral → unchanged output)
+  const noiseColor = state.noiseColor, eexp = 1 + state.envCurve * 3;
+  let brownN = 0;
 
   for (let i = 0; i < n; i++) {
     const t = i / SR;
@@ -448,7 +479,9 @@ function render() {
 
     const sweepMul = Math.pow(2, sweep * 4 * prog);
     const vib = state.vibDepth * Math.sin(vibPhase);
-    const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5);
+    // arpeggio: each repeat shot steps arpStep semitones (default 0 → ×1, so unchanged)
+    const arpMul = state.arpStep ? Math.pow(2, state.arpStep * shotIdx / 12) : 1;
+    const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5) * arpMul;
     // keep the fundamental in the reproducible band so upward sweeps don't push it
     // ultrasonic (which aliases to garbage / near-silence instead of a real tone)
     const fOsc = Math.min(f, 20000);
@@ -533,6 +566,22 @@ function render() {
       oscL = sL * 1.4; oscR = sR * 1.4;               // makeup for a healthy level
     } else if (isSpeech) {
       const v = speechBuf[i]; oscL = v; oscR = v;     // prebuilt speech utterance (mono)
+    } else if (isFM4) {
+      if (shotIdx !== fmPrevShot) { fmPrevShot = shotIdx; fmPh[0] = fmPh[1] = fmPh[2] = fmPh[3] = 0; fmFbPrev = 0; }
+      let s3 = 0;
+      for (let oi = 3; oi >= 0; oi--) {                // higher ops first (they modulate lower ops)
+        let modIn = oi === 3 ? fmFbAmt * fmFbPrev : 0;
+        const md = fmMods[oi];
+        for (let m = 0; m < md.length; m++) modIn += fmOut[md[m]];
+        const raw = Math.sin(2 * Math.PI * fmPh[oi] + modIn);
+        fmPh[oi] += fOsc * fmRatio[oi] / SR; if (fmPh[oi] >= 1) fmPh[oi] -= 1;
+        if (oi === 3) s3 = raw;
+        fmOut[oi] = fmCarr.indexOf(oi) >= 0 ? raw : raw * fmModDepth;   // carrier = audio; modulator = radians
+      }
+      fmFbPrev = s3;
+      let y = 0; for (let c = 0; c < fmCarr.length; c++) y += fmOut[fmCarr[c]];
+      y /= fmCarr.length;
+      oscL = y; oscR = y;                             // mono, centered
     } else {
       // sum unison voices into L/R
       for (let v = 0; v < V; v++) {
@@ -558,7 +607,12 @@ function render() {
     // noise (centered)
     let sL = oscL, sR = oscR;
     if (state.noise > 0) {
-      const nz = rnd() * state.noise, k = 1 - state.noise;
+      let wn = rnd();
+      if (noiseColor > 0) {   // lowpass toward brown; blend white↔brown by color (makeup for the level drop)
+        brownN += (wn - brownN) * (1 - noiseColor * 0.98);
+        wn = wn * (1 - noiseColor) + brownN * noiseColor * (1 + noiseColor * 4);
+      }
+      const nz = wn * state.noise, k = 1 - state.noise;
       sL = oscL * k + nz; sR = oscR * k + nz;
     }
 
@@ -575,9 +629,9 @@ function render() {
     let env;
     if (lt < atk) env = atk > 0 ? lt / atk : 1;
     else if (lt < atk + hold) env = 1;
-    else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); env = 1 - (1 - susLevel) * d; }
+    else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); env = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
     else if (lt < relStart) env = susLevel;
-    else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * (1 - r); }
+    else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
     sL *= env; sR *= env;
 
@@ -665,14 +719,30 @@ function render() {
     }
   }
 
-  // feedback delay (per channel), then reverb -> space & depth
+  // modulation FX (chorus/phaser) before the delay/reverb tail — no-ops when their mix is 0
+  chorusProcess(L, R, state.chorusMix, state.chorusRate, state.chorusDepth);
+  phaserProcess(L, R, state.phaserMix, state.phaserRate, state.phaserDepth);
+
+  // feedback delay, then reverb -> space & depth.
   if (state.delay > 0) {
     const dt = Math.max(1, Math.round(state.delayTime * SR));
-    const fbk = state.delayFb, wet = state.delay;
-    for (const buf of [L, R]) {
+    const fbk = state.delayFb, wet = state.delay, pp = state.pingpong;
+    if (pp <= 0) {
+      // per-channel feedback delay (unchanged / byte-identical when ping-pong is off)
+      for (const buf of [L, R]) {
+        const acc = new Float32Array(n);
+        for (let i = 0; i < n; i++) acc[i] = buf[i] + (i >= dt ? fbk * acc[i - dt] : 0);
+        for (let i = dt; i < n; i++) buf[i] += wet * acc[i - dt];
+      }
+    } else {
+      // ping-pong: one mono feedback line whose successive dt-taps alternate L/R (pp = how hard)
       const acc = new Float32Array(n);
-      for (let i = 0; i < n; i++) acc[i] = buf[i] + (i >= dt ? fbk * acc[i - dt] : 0);
-      for (let i = dt; i < n; i++) buf[i] += wet * acc[i - dt];
+      for (let i = 0; i < n; i++) acc[i] = (L[i] + R[i]) * 0.5 + (i >= dt ? fbk * acc[i - dt] : 0);
+      for (let i = dt; i < n; i++) {
+        const echo = wet * acc[i - dt], tap = Math.floor(i / dt) & 1;
+        L[i] += echo * (tap ? 1 : 1 - pp);
+        R[i] += echo * (tap ? 1 - pp : 1);
+      }
     }
   }
   if (state.reverb > 0) reverbProcess(L, R, state.reverbSize, state.reverbTone, state.reverb);
@@ -1310,6 +1380,7 @@ const PANEL_WAVES = {
   "Particle": [15],
   "Additive": [16],
   "Speech": [17],
+  "FM synth": [18],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
@@ -1607,7 +1678,8 @@ const MACROS = [
     to: (v) => ({ cutoff: Math.round(300 * Math.pow(40, v)), reverbTone: +v.toFixed(2), filterMode: 0 }),  // 300 Hz .. 12 kHz
     from: () => clamp01(Math.log(state.cutoff / 300) / Math.log(40)) },
   { id: "m-space", name: "Space", left: "Dry", right: "Huge",
-    to: (v) => ({ reverb: +(v * 0.85).toFixed(2), reverbSize: +(0.3 + v * 0.65).toFixed(2), delay: +(v * 0.35).toFixed(2) }),
+    // beyond ~40% the delay echoes start bouncing L/R (ping-pong) for a wider tail
+    to: (v) => ({ reverb: +(v * 0.85).toFixed(2), reverbSize: +(0.3 + v * 0.65).toFixed(2), delay: +(v * 0.35).toFixed(2), pingpong: +Math.max(0, (v - 0.4) / 0.6).toFixed(2) }),
     from: () => clamp01(state.reverb / 0.85) },
   { id: "m-punch", name: "Punch", left: "Soft", right: "Punchy",
     to: (v) => ({ attack: +(0.08 * (1 - v) + 0.001).toFixed(3), decay: +(0.4 - v * 0.28).toFixed(3), sustain: +((1 - v) * 0.6).toFixed(2), hold: +((1 - v) * 0.05).toFixed(3) }),
@@ -1640,6 +1712,10 @@ const MACROS = [
   { id: "m-wobble", name: "Wobble", left: "Steady", right: "Wobbly",
     to: (v) => ({ vibDepth: +(v * 0.6).toFixed(2), vibRate: +(4 + v * 10).toFixed(1) }),
     from: () => clamp01(state.vibDepth / 0.6) },
+  // Modulation FX: chorus (thickening) leads, phaser (sweep) joins in as it rises.
+  { id: "m-swirl", name: "Swirl", left: "Static", right: "Swirly",
+    to: (v) => ({ chorusMix: +(v * 0.7).toFixed(2), chorusDepth: +(0.3 + v * 0.4).toFixed(2), phaserMix: +Math.max(0, (v - 0.3) / 0.7 * 0.6).toFixed(2), phaserDepth: +(0.5 + v * 0.4).toFixed(2) }),
+    from: () => clamp01(state.chorusMix / 0.7) },
 ];
 
 function applyMacro(m, v) {

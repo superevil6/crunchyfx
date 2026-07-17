@@ -8,6 +8,17 @@
 const VOWELS = [[700, 1220, 2600], [530, 1840, 2480], [270, 2290, 3010], [570, 840, 2410], [300, 870, 2240]];
 
 const FORMANT_GAIN = [1.0, 0.6, 0.35];   // relative loudness of F1/F2/F3
+// 4-operator FM routing (wave "FM 4op"). Ops 0..3; mods[i] = op-indices that modulate op i;
+// carriers[] = ops summed to the output. All routings only let a HIGHER op modulate a LOWER one,
+// so evaluating in order 3→2→1→0 resolves every dependency in one pass. Op3 also self-feeds-back.
+const FM_ALGOS = [
+  { mods: [[1], [2], [3], []], carriers: [0] },        // 0 Chain      3→2→1→0
+  { mods: [[1], [2, 3], [], []], carriers: [0] },       // 1 Y-Mod      (2,3)→1→0
+  { mods: [[1], [], [3], []], carriers: [0, 2] },        // 2 Twin       (1→0)+(3→2)
+  { mods: [[1, 2, 3], [], [], []], carriers: [0] },       // 3 3→Carrier  (1,2,3)→0
+  { mods: [[1, 2], [], [3], []], carriers: [0] },         // 4 Y+Carrier  1→0, 3→2→0
+  { mods: [[], [], [], []], carriers: [0, 1, 2, 3] },      // 5 Additive   sines summed (organ/bell)
+];
 
 const SR = 44100;
 
@@ -491,6 +502,41 @@ function limiterProcess(L, R, amount) {
     const target = mx > ceiling ? ceiling / mx : 1;
     g = target < g ? target : target + (g - target) * rel;   // instant attack, smooth release
     L[i] *= g; R[i] *= g;
+  }
+}
+
+// Phaser: a chain of first-order allpass stages whose coefficient is swept by an LFO, mixed with
+// the dry signal → moving notches ("whoosh"). In place; mix 0 = bypass. Stereo via an LFO offset.
+function phaserProcess(L, R, mix, rate, depth) {
+  const n = L.length; if (!n || mix <= 0) return;
+  const STAGES = 4, apL = new Float32Array(STAGES), apR = new Float32Array(STAGES);
+  const w = 2 * Math.PI * rate / SR, dry = 1 - mix * 0.5, wet = mix;
+  let ph = 0;
+  for (let i = 0; i < n; i++) {
+    ph += w; if (ph >= 2 * Math.PI) ph -= 2 * Math.PI;
+    const gL = 0.2 + depth * 0.7 * (0.5 + 0.5 * Math.sin(ph));
+    const gR = 0.2 + depth * 0.7 * (0.5 + 0.5 * Math.sin(ph + 0.6));
+    let xl = L[i]; for (let s = 0; s < STAGES; s++) { const y = -gL * xl + apL[s]; apL[s] = xl + gL * y; xl = y; }
+    let xr = R[i]; for (let s = 0; s < STAGES; s++) { const y = -gR * xr + apR[s]; apR[s] = xr + gR * y; xr = y; }
+    L[i] = L[i] * dry + xl * wet; R[i] = R[i] * dry + xr * wet;
+  }
+}
+// Chorus: a short LFO-modulated delay mixed with the dry signal → thickening/swirl (shorten the
+// delay + add feedback and it's a flanger). In place; mix 0 = bypass. Stereo via an LFO offset.
+function chorusProcess(L, R, mix, rate, depth) {
+  const n = L.length; if (!n || mix <= 0) return;
+  const maxD = Math.floor(0.028 * SR), len = maxD + 4;
+  const bl = new Float32Array(len), br = new Float32Array(len);
+  const w = 2 * Math.PI * rate / SR, dry = 1 - mix * 0.5, wet = mix;
+  const rd = (buf, wi, d) => { let rp = wi - d; while (rp < 0) rp += len; const i0 = Math.floor(rp) % len, fr = rp - Math.floor(rp), i1 = (i0 + 1) % len; return buf[i0] * (1 - fr) + buf[i1] * fr; };
+  let ph = 0, wi = 0;
+  for (let i = 0; i < n; i++) {
+    ph += w; if (ph >= 2 * Math.PI) ph -= 2 * Math.PI;
+    bl[wi] = L[i]; br[wi] = R[i];
+    const dL = 2 + (0.5 + 0.5 * Math.sin(ph)) * depth * (maxD - 4);
+    const dR = 2 + (0.5 + 0.5 * Math.sin(ph + 1.2)) * depth * (maxD - 4);
+    L[i] = L[i] * dry + rd(bl, wi, dL) * wet; R[i] = R[i] * dry + rd(br, wi, dR) * wet;
+    wi = (wi + 1) % len;
   }
 }
 
