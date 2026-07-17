@@ -9,3 +9,10 @@ src-tauri/gen/
 
 # Saved project files (produced by the Save project feature — user data, not source).
 *.crunchysfx
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
