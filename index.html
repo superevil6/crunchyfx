@@ -133,7 +133,7 @@
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -188,6 +188,12 @@ const PARAMS = [
   ["particleTone","Particle tone",0, 1, 0.01, 0.5, "", "Particle"],
   ["particleDecay","Particle decay",0, 1, 0.01, 0.3, "","Particle"],
   ["particleSpread","Particle spread",0, 1, 0.01, 0.5, "","Particle"],
+  // Impact / blast engine (wave 19): crack + body of a percussive hit. Caliber/thump = shared
+  // boom layer; environment = convolution reverb / delay. Only apply when wave==impact.
+  ["impactTone",  "Impact tone", 0, 1, 0.01, 0.5, "",  "Impact"],
+  ["impactDecay", "Impact decay",0, 1, 0.01, 0.3, "",  "Impact"],
+  ["impactPunch", "Impact punch",0, 1, 0.01, 0.6, "",  "Impact"],
+  ["impactGrit",  "Impact grit", 0, 1, 0.01, 0.3, "",  "Impact"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -441,6 +447,11 @@ function render() {
     const pr = makeParticles(n, state.particleTone, state.particleRate, state.particleDecay, state.particleSpread, 0x00facade);
     parL = pr.L; parR = pr.R;
   }
+  // Impact / blast (wave "impact"): one percussive transient, front-loaded at index 0; read at
+  // `lt` in the loop so it retriggers per burst shot (full-auto). Mono; body via boom layer.
+  const isImpact = waveType === 19;
+  let impactBuf = null;
+  if (isImpact) impactBuf = makeImpact(n, state.impactTone, state.impactDecay, state.impactPunch, state.impactGrit, 0x1a2b3c4d);
   // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
   // slow amplitude-drift LFO (random rate/phase) → evolving pad. Per-partial data is constant
   // across the render, so precompute it once; only the partial phases advance per sample.
@@ -574,6 +585,10 @@ function render() {
       oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
     } else if (isParticle) {
       oscL = parL[i]; oscR = parR[i];                 // prebuilt particle cloud (already stereo)
+    } else if (isImpact) {
+      const idx = (lt * SR) | 0;                       // time since this shot → replays the transient per shot
+      const v = idx < impactBuf.length ? impactBuf[idx] : 0;
+      oscL = v; oscR = v;                             // mono blast; boom layer adds the low thump
     } else if (isAdditive) {
       let sL = 0, sR = 0;
       for (let k = 0; k < nAdd; k++) {
@@ -1402,6 +1417,7 @@ const PANEL_WAVES = {
   "Additive": [16],
   "Speech": [17],
   "FM synth": [18],
+  "Impact": [19],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);

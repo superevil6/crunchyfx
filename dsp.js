@@ -334,6 +334,48 @@ function makeParticles(n, tone, rate, decay, spread, seed) {
   return { L: outL, R: outR };
 }
 
+// ---------- Impact / blast (gunshots, explosions, punches, slams) ----------
+// A parametric percussive transient. Real impacts = a near-instantaneous broadband CRACK
+// (the shockwave — energy in the first ~1 ms, sharper than a filtered-noise envelope can
+// make) over a decaying BODY, optionally driven nonlinear (loud/violent). Builds ONE
+// transient front-loaded at index 0 into a mono buffer; render() reads it at `lt` (time since
+// the current burst shot) so it RETRIGGERS per shot → full-auto for free. Caliber/chest-thump
+// come from the shared boom layer, the environment (crack-BOOM-echo) from convolution reverb /
+// delay — so this engine only owns the crack+body and stays lean. Ignores freq/unison.
+// Deterministic (own seeded LCG). tone: dark cannon(0)→bright rifle crack(1). decay:
+// snap(0)→long blast(1). punch: transient sharpness/click. grit: nonlinear shockwave (violence).
+function makeImpact(n, tone, decay, punch, grit, seed) {
+  const out = new Float32Array(n);
+  if (n < 2) return out;
+  let s = (seed >>> 0) || 0x1a2b3c4d;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 * 2 - 1; };  // -1..1
+  const tauBody = 0.006 + decay * 0.35;                              // 6..356 ms body decay
+  const tauCrack = 0.0006 + (1 - punch) * 0.003;                     // 0.6..3.6 ms crack (sharper w/ punch)
+  const fc = Math.min(0.45 * SR, 180 * Math.pow(70, tone));          // ~180 Hz(dark)..~12.6 kHz(bright) LP
+  const lpA = Math.exp(-2 * Math.PI * fc / SR);
+  const clickLen = Math.max(1, Math.round(SR * (0.0004 + (1 - punch) * 0.0016)));   // 0.4..2 ms initial click
+  const bodyHi = 0.1 + 0.9 * tone;                                  // bright noise mixed into the body
+  const crackAmt = (0.5 + punch * 1.6) * (0.2 + 0.8 * tone);         // ultra-fast crack, scales with tone
+  const clickAmt = (0.6 + punch) * (0.3 + 0.7 * tone);              // initial snap, scales with tone
+  let lp = 0;                                                        // → tone 0 = deep thud (cannon), 1 = crack (rifle)
+  for (let i = 0; i < n; i++) {
+    const t = i / SR, nz = rnd();
+    lp = lpA * lp + (1 - lpA) * nz;                                  // lowpassed (body / dark)
+    const hi = nz - lp;                                              // highpassed (crack / bright)
+    let x = (lp * (1 - 0.4 * tone) + hi * bodyHi) * Math.exp(-t / tauBody)         // decaying body
+          + hi * Math.exp(-t / tauCrack) * crackAmt;                 // bright crack
+    if (i < clickLen) x += rnd() * (1 - i / clickLen) * clickAmt;    // sample-sharp snap
+    out[i] = x;
+  }
+  if (grit > 0) {                                                    // nonlinear shockwave (violence)
+    const k = 1 + grit * 9, norm = Math.tanh(k);
+    for (let i = 0; i < n; i++) out[i] = Math.tanh(out[i] * k) / norm;
+  }
+  let pk = 0; for (let i = 0; i < n; i++) { const a = Math.abs(out[i]); if (a > pk) pk = a; }
+  if (pk > 1e-6) { const g = 0.92 / pk; for (let i = 0; i < n; i++) out[i] *= g; }
+  return out;
+}
+
 // ---------- Formant speech synthesis (retro robot voice) ----------
 // A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +
 // voiced/unvoiced source, driven through 3 bandpasses. Intelligible-but-robotic (on purpose).
