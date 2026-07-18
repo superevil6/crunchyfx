@@ -376,6 +376,40 @@ function makeImpact(n, tone, decay, punch, grit, seed) {
   return out;
 }
 
+// ---------- Whoosh / air (sword swings, whips, arrows, thrown things, cloth) ----------
+// The "pass-by" gesture: turbulent noise through a bandpass whose CENTRE FREQUENCY and AMPLITUDE
+// both swell up and fall together (that coupling is what makes a swing read as a swing — hard to
+// fake with a plain envelope + filter sweep). Builds ONE gesture over `n` samples; render() reads
+// it at `lt` so it retriggers per burst shot (combos), with `n` set to one shot's slot. Deterministic
+// (own seeded LCG). tone: dull air(0)→sharp swish(1). sweep: how far the pitch rises (the movement).
+// body: airy/broad(0)→whistly/resonant(1) (cloth vs whip). peak: early flick(0)→late heavy swing(1).
+function makeWhoosh(n, tone, sweep, body, peak, seed) {
+  const out = new Float32Array(n);
+  if (n < 2) return out;
+  let s = (seed >>> 0) || 0x51ce5ab1;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 * 2 - 1; };
+  const fcBase = 300 * Math.pow(13, tone);          // ~300 Hz (dull) .. ~3.9 kHz (sharp) band centre
+  const sweepOct = 0.5 + sweep * 2.5;               // octaves the band rises at mid-swing
+  const Q = 0.7 + body * 6;                          // broad/airy .. narrow/whistly
+  const pk = 0.15 + peak * 0.6;                      // where amplitude + pitch peak (early flick .. late swing)
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;                // bandpass state (continuous across the fc sweep)
+  for (let i = 0; i < n; i++) {
+    const u = i / n;                                                        // 0..1 across the swing
+    const amp = u < pk ? Math.pow(u / pk, 1.5) : Math.pow((1 - u) / (1 - pk), 1.8);   // swell up then fade
+    const fShape = u < pk ? u / pk : 1 - (u - pk) / (1 - pk);               // 0→1 at pk →0 (pitch rise/fall)
+    const fc = Math.min(0.45 * SR, fcBase * Math.pow(2, sweepOct * fShape));
+    const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+    const b0 = alpha / a0, a1 = -2 * Math.cos(w0) / a0, a2 = (1 - alpha) / a0;  // RBJ bandpass (b1=0, b2=−b0)
+    const nz = rnd();
+    const o = b0 * (nz - x2) - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = nz; y2 = y1; y1 = o;
+    out[i] = o * amp;
+  }
+  let pkv = 0; for (let i = 0; i < n; i++) { const a = Math.abs(out[i]); if (a > pkv) pkv = a; }
+  if (pkv > 1e-6) { const g = 0.85 / pkv; for (let i = 0; i < n; i++) out[i] *= g; }
+  return out;
+}
+
 // ---------- Formant speech synthesis (retro robot voice) ----------
 // A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +
 // voiced/unvoiced source, driven through 3 bandpasses. Intelligible-but-robotic (on purpose).
