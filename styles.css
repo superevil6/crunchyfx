@@ -247,7 +247,10 @@
     font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
     color: var(--accent2); font-weight: 600; margin-bottom: 10px;
   }
-  .engine-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .engine-grid { display: flex; flex-direction: column; gap: 9px; }
+  .engine-cat { display: flex; align-items: baseline; gap: 12px; }
+  .engine-cat-label { flex-shrink: 0; min-width: 84px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .engine-cat-btns { display: flex; flex-wrap: wrap; gap: 7px; }
   .engine-btn {
     padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer;
     background: var(--panel2); color: var(--muted); border: 1px solid var(--line);
@@ -255,6 +258,13 @@
   }
   .engine-btn:hover { color: var(--ink); border-color: var(--accent2); }
   .engine-btn.active { background: var(--accent); color: #201005; border-color: transparent; font-weight: 600; }
+  /* Console skin (hero section below Engine) — same block as .macro/.engine, reuses .engine-btn pills */
+  .console {
+    max-width: 1200px; margin: 10px 24px 0;
+    background: linear-gradient(90deg, #221d2b, #2c2233);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 14px;
+  }
+  .console-grid { display: flex; flex-wrap: wrap; gap: 7px; }
   .macro-row { display: flex; align-items: center; gap: 14px; }
   .macro-row + .macro-row { margin-top: 10px; }
   .macro-name { min-width: 104px; font-size: 13px; font-weight: 600; color: var(--ink); }
@@ -458,6 +468,7 @@
   .workspace { max-width: 1200px; margin: 0 24px; }
   .workspace .macro { margin: 16px 0 0; max-width: none; }   /* workspace provides the side inset */
   .workspace .engine { margin: 12px 0 0; max-width: none; }
+  .workspace .console { margin: 10px 0 0; max-width: none; }
   .workspace main { padding: 14px 0 32px; max-width: none; }
   @media (min-width: 1500px) {
     .scoperow, .seqbar, .workspace, footer.license { max-width: 1900px; }
@@ -490,6 +501,8 @@
     .waverow { grid-template-columns: 74px 1fr auto; gap: 6px; }
     /* 16px on form controls stops iOS Safari from auto-zooming when they focus */
     select, .fmtgroup select, .speech-input, input[type=text], input[type=search] { font-size: 16px; }
+    .engine-cat { flex-direction: column; gap: 4px; }   /* stack label above its buttons */
+    .engine-cat-label { min-width: 0; }
   }
 
   /* ---- Touch devices (any size) --------------------------------------------

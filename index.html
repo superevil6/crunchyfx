@@ -1296,14 +1296,35 @@ engineSection.innerHTML =
   '<div class="engine-grid" id="engineGrid"></div>';
 document.querySelector(".ws-editor").insertBefore(engineSection, panels);   // between Quick Shape & panels
 const engineGrid = engineSection.querySelector("#engineGrid");
-WAVES.forEach((w, i) => {
+// Group the 21 engines by synthesis family (each row: label + its buttons). Indices into WAVES.
+const ENGINE_CATS = [
+  ["Oscillators", [0, 1, 2, 3, 4, 5, 6, 7]],   // sine, square, saw, triangle, pulse, FM, organ, half-sine
+  ["Physical",    [8, 10, 14, 15]],            // pluck, modal, bubble, particle
+  ["Voice",       [13, 17]],                   // formant, speech
+  ["Spectral",    [11, 16, 18]],               // granular, additive, FM 4op
+  ["Foley",       [19, 20]],                   // impact, whoosh
+  ["Your own",    [9, 12]],                    // sample, custom
+];
+function makeEngineBtn(i) {
   const b = document.createElement("button");
   b.className = "engine-btn";
   b.dataset.wave = i;
-  b.textContent = w;
+  b.textContent = WAVES[i];
   b.addEventListener("click", () => { state.wave = i; updateWavePanels(); syncWaveButtons(); play(); });
-  engineGrid.appendChild(b);
-});
+  return b;
+}
+for (const [label, idxs] of ENGINE_CATS) {
+  const row = document.createElement("div");
+  row.className = "engine-cat";
+  const lab = document.createElement("span");
+  lab.className = "engine-cat-label";
+  lab.textContent = label;
+  const btns = document.createElement("div");
+  btns.className = "engine-cat-btns";
+  idxs.forEach((i) => btns.appendChild(makeEngineBtn(i)));
+  row.appendChild(lab); row.appendChild(btns);
+  engineGrid.appendChild(row);
+}
 engineSection.querySelector("#waveLock").addEventListener("change", (e) => { waveLocked = e.target.checked; });
 function syncWaveButtons() {   // light the button matching state.wave (tolerant of being called pre-build)
   const grid = document.getElementById("engineGrid");
@@ -1312,6 +1333,56 @@ function syncWaveButtons() {   // light the button matching state.wave (tolerant
   grid.querySelectorAll(".engine-btn").forEach((b) => b.classList.toggle("active", +b.dataset.wave === w));
 }
 syncWaveButtons();
+
+// ---------- Console re-voice (hero section) ----------
+// RE-VOICE the current sound on a retro chip: set the console's signature waveform + timbre (PWM,
+// filter, FM, ring-mod) + lo-fi crunch, while PRESERVING the sound's pitch, envelope and rhythm
+// (freq/sweep/attack/decay/…/duration/repeat aren't touched). So a coin becomes "the same coin
+// melody voiced on an NES vs a Genesis vs a C64" — genuinely different timbres, not a subtle skin.
+// REVOICE_KEYS = every param a console sets; applyConsole resets them to defaults then overlays the
+// console's patch (so switching never stacks). Defaults pulled straight from PARAMS.
+const REVOICE_KEYS = ["wave", "pulseWidth", "pwmDepth", "pwmRate", "filterMode", "cutoff", "reso", "filtEnv",
+  "bitcrush", "downsample", "drive", "driveOS", "ringMod", "ringFreq", "detune", "unison",
+  "reverb", "reverbSize", "reverbTone", "vibDepth", "vibRate"];
+const REVOICE_DEFAULT = {};
+for (const p of PARAMS) if (REVOICE_KEYS.indexOf(p[0]) >= 0) REVOICE_DEFAULT[p[0]] = p[5];
+const CONSOLES = [
+  ["8-Bit",     { wave: 4, pulseWidth: 0.5,  bitcrush: 10, drive: 0.12 }],                                                                 // NES — clean 50% pulse
+  ["Pocket",    { wave: 4, pulseWidth: 0.25, bitcrush: 4, downsample: 4, drive: 0.15, cutoff: 5000 }],                                     // Game Boy — narrow pulse, gritty
+  ["Super",     { wave: 3, bitcrush: 12, drive: 0.10, cutoff: 6000, reverb: 0.30, reverbSize: 0.6, reverbTone: 0.35 }],                    // SNES — warm triangle + echo
+  ["Mega",      { wave: 5, drive: 0.35, driveOS: 2, ringMod: 0.18, ringFreq: 500, bitcrush: 9 }],                                          // Genesis — FM + ring mod
+  ["Turbo",     { wave: 6, bitcrush: 7, drive: 0.12, vibDepth: 0.10, vibRate: 5 }],                                                        // PC Engine — wavetable organ
+  ["Woodgrain", { wave: 1, bitcrush: 3, downsample: 12, drive: 0.40, detune: 25, unison: 2, cutoff: 4000 }],                               // Atari 2600 — harsh detuned square
+  ["SID",       { wave: 4, pulseWidth: 0.5, pwmDepth: 0.30, pwmRate: 4, cutoff: 3500, reso: 0.65, filtEnv: 0.4, ringMod: 0.20, ringFreq: 250, drive: 0.15, bitcrush: 10 }], // C64 — PWM + resonant filter + ring
+];
+const consoleSection = document.createElement("div");
+consoleSection.className = "console";
+consoleSection.innerHTML =
+  '<div class="engine-title"><span>Console — re-voice the sound on a retro chip (keeps its pitch &amp; rhythm)</span>' +
+    '<button id="consoleClean" class="engine-btn">✕ clean</button></div>' +
+  '<div class="console-grid" id="consoleGrid"></div>';
+document.querySelector(".ws-editor").insertBefore(consoleSection, panels);   // after Engine, before panels
+const consoleGrid = consoleSection.querySelector("#consoleGrid");
+function highlightConsole(name) {   // light the active console button (name null = none). DOM-only → TDZ-safe pre-build.
+  const grid = document.getElementById("consoleGrid");
+  if (!grid) return;
+  grid.querySelectorAll(".engine-btn").forEach((b) => b.classList.toggle("active", b.dataset.console === name));
+}
+function applyConsole(name, patch) {
+  for (const k of REVOICE_KEYS) state[k] = (patch && k in patch) ? patch[k] : REVOICE_DEFAULT[k];   // reset voice keys, then overlay
+  syncUI();                 // reflect the new wave/timbre on the UI (engine buttons, panels, macros)
+  highlightConsole(name);   // …then re-light this console (null for Clean)
+  play();
+}
+CONSOLES.forEach(([name, skin]) => {
+  const b = document.createElement("button");
+  b.className = "engine-btn";
+  b.dataset.console = name;
+  b.textContent = name;
+  b.addEventListener("click", () => applyConsole(name, skin));
+  consoleGrid.appendChild(b);
+});
+consoleSection.querySelector("#consoleClean").addEventListener("click", () => applyConsole(null, {}));
 
 // ---------- Custom-wave draw editor ----------
 // A canvas where you draw one cycle (−1..1 per x). It commits to state.customWave (so it travels
@@ -1476,6 +1547,7 @@ function syncUI() {
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
   if (typeof syncSpeechInput === "function") syncSpeechInput();     // restore the speech text box
   if (typeof syncWaveButtons === "function") syncWaveButtons();     // light the active engine button
+  if (typeof highlightConsole === "function") highlightConsole(null); // deselect console skin on load (applyConsole re-lights after)
   updateWavePanels();                                               // show only the current wave's panels
   updateMacros();
 }
