@@ -341,6 +341,14 @@
   .breed-tag { font-size: 11px; color: var(--muted); }
   .breed-cell.sel .breed-tag { color: var(--accent); font-weight: 600; }
   .modal-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+  /* Share dialog (name the sound + copy its link). .share-box overrides .modal-box width — must
+     stay after it in the file so it wins at equal specificity. */
+  .share-box { width: min(460px, 92vw); }
+  .share-body { display: flex; flex-direction: column; padding: 14px 18px; }
+  .share-lbl { font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+  .share-input { width: 100%; box-sizing: border-box; background: var(--panel2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+  .share-input[readonly] { color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
   /* Foundry modal (curate original presets from procedural candidates) */
   .foundry-gen { display: flex; align-items: center; gap: 10px; padding: 12px 18px 0; flex-wrap: wrap; }
   .fnd-typel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }

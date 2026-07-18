@@ -1596,10 +1596,16 @@ presetSearch.addEventListener("keydown", (e) => {
 
 // ---------- Save / load JSON ----------
 function savePreset() {
+  // Desktop: add it to the persistent My Presets library — the reliable store there, and what the
+  // user reaches for. (The blob download below is blocked by the WebKitGTK webview on desktop, so
+  // without this "Save preset" would do nothing there.) Web has no library, so it just downloads.
+  if (isDesktop) saveCurrentUserPreset();
+  // Download a JSON copy too, named after the sound. Works on the web build.
+  const fname = (seqLabel && seqLabel !== "Sound") ? sanitizeFilename(seqLabel) : "crunchysfx-preset";
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "crunchysfx-preset.json";
+  a.download = fname + ".json";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -1665,7 +1671,14 @@ wavFileInput.addEventListener("change", () => {
 document.getElementById("play").addEventListener("click", () => play("Play"));
 document.getElementById("rand").addEventListener("click", randomize);
 document.getElementById("export").addEventListener("click", exportWav);
-document.getElementById("save").addEventListener("click", savePreset);
+document.getElementById("save").addEventListener("click", () => {
+  savePreset();
+  if (isDesktop) {   // confirm the library save (saveCurrentUserPreset also focuses the new row to rename)
+    const b = document.getElementById("save"), t = b.textContent;
+    b.textContent = "✓ Saved to My Presets";
+    setTimeout(() => { b.textContent = t; }, 1400);
+  }
+});
 
 // Export-format selectors -> exportFmt (honored by every WAV export path via downloadWav).
 {
@@ -1802,16 +1815,18 @@ document.addEventListener("keydown", (e) => {
 // preset, we store only the params that differ from their defaults, JSON'd and
 // base64url'd into the hash — so a simple sound makes a short link. Opening such a
 // link reproduces the exact sound. Version-tagged so the format can evolve.
-function encodePatch() {
+function encodePatch(nameOverride) {
   const diff = {};
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
   if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
   if (state.speechText) diff.speechText = state.speechText;   // …and speech text
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
-  // Carry the sound's display name so the recipient sees "Laser Zap" not "Shared",
-  // and the edge function can title the social card per-sound (functions/_middleware.js).
-  if (typeof seqLabel === "string" && seqLabel && seqLabel !== "Sound") payload.t = seqLabel;
+  // Carry the sound's display name so the recipient sees "Laser Zap" not "Shared", and the edge
+  // function can title the social card per-sound. The Share dialog passes a name to override the
+  // current label; an explicit empty name omits it. Capped to 60 (matches functions/_middleware.js).
+  const name = nameOverride !== undefined ? nameOverride : seqLabel;
+  if (typeof name === "string" && name.trim() && name.trim() !== "Sound") payload.t = name.trim().slice(0, 60);
   return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 function decodePatch(str) {
@@ -1856,23 +1871,65 @@ function buildShareUrl(enc, desktop, webBase, href) {
   return base + "?s=" + enc;
 }
 
+// Share dialog: name the sound (the box is prefilled with its current label, so naming is
+// optional — you can just hit Copy), see the exact link, and copy it. The name rides in the
+// link as `t`, so the recipient sees it in-app and the social card is titled per-sound.
 const shareBtn = document.getElementById("share");
-shareBtn.addEventListener("click", async () => {
-  const enc = encodePatch();
-  const url = buildShareUrl(enc, isDesktop, WEB_BASE_URL, location.href);
+const shareModal = document.createElement("div");
+shareModal.className = "modal";
+shareModal.hidden = true;
+shareModal.innerHTML =
+  '<div class="modal-box share-box">' +
+    '<div class="modal-head"><h2>Share sound</h2>' +
+      '<span class="hint">Name it (optional), then copy the link.</span>' +
+      '<button id="shareClose">✕ Close</button></div>' +
+    '<div class="share-body">' +
+      '<label class="share-lbl" for="shareName">Name</label>' +
+      '<input id="shareName" class="share-input" type="text" placeholder="Name your sound" maxlength="60" autocomplete="off">' +
+      '<label class="share-lbl" for="shareUrl">Link</label>' +
+      '<input id="shareUrl" class="share-input" type="text" readonly>' +
+    '</div>' +
+    '<div class="modal-foot"><button id="shareCopy" class="primary">🔗 Copy link</button>' +
+      '<span id="shareMsg" class="hint"></span></div>' +
+  '</div>';
+document.body.appendChild(shareModal);
+const shareName = shareModal.querySelector("#shareName");
+const shareUrl = shareModal.querySelector("#shareUrl");
+const shareMsg = shareModal.querySelector("#shareMsg");
+// rebuild the link from the current sound + the name box; return the encoded patch
+function refreshShareUrl() {
+  const enc = encodePatch(shareName.value);
+  shareUrl.value = buildShareUrl(enc, isDesktop, WEB_BASE_URL, location.href);
+  return enc;
+}
+function openShareModal() {
+  shareName.value = (seqLabel && seqLabel !== "Sound") ? seqLabel : "";   // prefill current label
+  refreshShareUrl();
+  shareMsg.textContent = "";
+  shareModal.hidden = false;
+  shareName.focus(); shareName.select();
+}
+async function copyShareLink() {
+  const enc = refreshShareUrl(), url = shareUrl.value;
   // Reflect the sound in the address bar on the web build (bookmarkable). Skip on desktop:
   // the address bar is hidden and its URL is tauri://…, not the shareable link we copied.
   if (!isDesktop) { try { history.replaceState(null, "", "?s=" + enc); } catch (e) { try { location.hash = "s=" + enc; } catch (_) {} } }
-  const label = shareBtn.textContent;
   try {
-    await navigator.clipboard.writeText(url);   // undefined on insecure/file:// -> caught
-    shareBtn.textContent = "✓ Link copied!";
+    await navigator.clipboard.writeText(url);      // undefined on insecure/file:// -> caught
+    shareMsg.textContent = "✓ Copied!";
   } catch (e) {
-    if (isDesktop) { console.warn("crunchysfx: clipboard unavailable, share link:", url); shareBtn.textContent = "⚠ Copy failed — see console"; }
-    else shareBtn.textContent = "🔗 Link in address bar";
+    shareUrl.focus(); shareUrl.select();           // let them copy the visible link by hand
+    shareMsg.textContent = isDesktop ? "Select the link above and copy it" : "Link is in the address bar (or select it above)";
   }
-  setTimeout(() => { shareBtn.textContent = label; }, 1600);
-});
+  setTimeout(() => { shareMsg.textContent = ""; }, 2500);
+}
+shareBtn.addEventListener("click", openShareModal);
+shareName.addEventListener("input", refreshShareUrl);
+shareName.addEventListener("keydown", (e) => { if (e.key === "Enter") copyShareLink(); });
+shareModal.querySelector("#shareCopy").addEventListener("click", copyShareLink);
+shareModal.querySelector("#shareClose").addEventListener("click", () => { shareModal.hidden = true; });
+shareModal.addEventListener("click", (e) => { if (e.target === shareModal) shareModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !shareModal.hidden) shareModal.hidden = true; });
 
 // ---------- Breeding (evolve sounds by picking favorites) ----------
 // A "genome" is a full param set. Open the grid on the current sound; it shows the
