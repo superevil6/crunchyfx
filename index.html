@@ -1250,17 +1250,7 @@ for (const [group, ps] of Object.entries(groups)) {
   for (const p of ps) {
     const [key, label, min, max, step, def, unit, , kind] = p;
     if (kind === "wave") {
-      const row = document.createElement("div");
-      row.className = "waverow";
-      const sel = `<select data-key="${key}">${WAVES.map((w,i)=>`<option value="${i}">${w}</option>`).join("")}</select>`;
-      row.innerHTML = `<label>${label}</label>${sel}` +
-        `<label class="wavelock" title="Keep this waveform when switching presets / randomizing">` +
-        `<input type="checkbox" id="waveLock">🔒</label>`;
-      panel.appendChild(row);
-      const el = row.querySelector("select");
-      el.value = state[key];
-      el.addEventListener("change", () => { state[key] = +el.value; updateWavePanels(); play(); });
-      row.querySelector("#waveLock").addEventListener("change", (e) => { waveLocked = e.target.checked; });
+      continue;   // the engine/waveform picker is its own hero section (built below), not a panel row
     } else if (kind === "enum") {
       const list = p[9];
       const row = document.createElement("div");
@@ -1292,6 +1282,36 @@ for (const [group, ps] of Object.entries(groups)) {
   }
   panels.appendChild(panel);
 }
+
+// ---------- Engine picker (hero section) ----------
+// The engine/waveform choice is the heart of the tool, so it gets its own full-width section right
+// below Quick Shape (was a small dropdown buried in the Oscillator panel). One button per engine;
+// the active one is lit. Clicking selects it, reveals its contextual panels, and plays.
+const engineSection = document.createElement("div");
+engineSection.className = "engine";
+engineSection.innerHTML =
+  '<div class="engine-title"><span>Engine — the synthesis method</span>' +
+    '<label class="wavelock" title="Keep this engine when switching presets / randomizing">' +
+    '<input type="checkbox" id="waveLock">🔒 lock</label></div>' +
+  '<div class="engine-grid" id="engineGrid"></div>';
+document.querySelector(".ws-editor").insertBefore(engineSection, panels);   // between Quick Shape & panels
+const engineGrid = engineSection.querySelector("#engineGrid");
+WAVES.forEach((w, i) => {
+  const b = document.createElement("button");
+  b.className = "engine-btn";
+  b.dataset.wave = i;
+  b.textContent = w;
+  b.addEventListener("click", () => { state.wave = i; updateWavePanels(); syncWaveButtons(); play(); });
+  engineGrid.appendChild(b);
+});
+engineSection.querySelector("#waveLock").addEventListener("change", (e) => { waveLocked = e.target.checked; });
+function syncWaveButtons() {   // light the button matching state.wave (tolerant of being called pre-build)
+  const grid = document.getElementById("engineGrid");
+  if (!grid) return;
+  const w = Math.round(state.wave);
+  grid.querySelectorAll(".engine-btn").forEach((b) => b.classList.toggle("active", +b.dataset.wave === w));
+}
+syncWaveButtons();
 
 // ---------- Custom-wave draw editor ----------
 // A canvas where you draw one cycle (−1..1 per x). It commits to state.customWave (so it travels
@@ -1339,10 +1359,9 @@ function commitCustomWave(replay) {
   drawCustomCanvas();
   if (replay) play("Custom wave");
 }
-function selectCustomWave() {   // switch the oscillator to "custom" + reflect in the wave <select>
+function selectCustomWave() {   // switch to the "custom" engine + light its button
   state.wave = 12;
-  const sel = document.querySelector('select[data-key="wave"]');
-  if (sel) sel.value = 12;
+  syncWaveButtons();
 }
 const cwShapes = {
   sine: (i) => Math.sin(2 * Math.PI * i / CUSTOM_N),
@@ -1404,9 +1423,8 @@ if (speechPanel) {
   speechPanel.appendChild(shint);
   const commitSpeech = () => {
     state.speechText = speechInput.value;
-    state.wave = 17;                                  // select the speech wave
-    const sel = document.querySelector('select[data-key="wave"]');
-    if (sel) sel.value = 17;
+    state.wave = 17;                                  // select the speech engine
+    syncWaveButtons();
     updateWavePanels();
     const est = Math.min(2, Math.max(0.2, textToPhonemes(state.speechText).length * 0.11 / (state.speechRate || 1)));
     state.duration = +est.toFixed(2);                 // auto-fit duration to the utterance
@@ -1457,6 +1475,7 @@ function syncUI() {
   }
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
   if (typeof syncSpeechInput === "function") syncSpeechInput();     // restore the speech text box
+  if (typeof syncWaveButtons === "function") syncWaveButtons();     // light the active engine button
   updateWavePanels();                                               // show only the current wave's panels
   updateMacros();
 }
