@@ -26,6 +26,7 @@
 <header>
   <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
+  <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings">⚙</button>
 </header>
 
 <div class="controls">
@@ -1595,16 +1596,30 @@ presetSearch.addEventListener("keydown", (e) => {
 });
 
 // ---------- Save / load JSON ----------
-function savePreset() {
+// ---------- User preferences (Settings modal) — persisted across sessions ----------
+const PREFS_KEY = "crunchyfx.prefs.v1";     // localStorage namespace matches the other keys
+let prefs = { promptPresetSave: false, tourSeen: false };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown
+try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "null"); if (p && typeof p === "object") Object.assign(prefs, p); } catch (e) { /* best-effort */ }
+function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* best-effort */ } }
+
+async function savePreset() {
   // Desktop: add it to the persistent My Presets library — the reliable store there, and what the
-  // user reaches for. (The blob download below is blocked by the WebKitGTK webview on desktop, so
-  // without this "Save preset" would do nothing there.) Web has no library, so it just downloads.
+  // user reaches for. Web has no library, so it just downloads the JSON below.
   if (isDesktop) saveCurrentUserPreset();
-  // Download a JSON copy too, named after the sound. Works on the web build.
   const fname = (seqLabel && seqLabel !== "Sound") ? sanitizeFilename(seqLabel) : "crunchysfx-preset";
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const json = JSON.stringify(state, null, 2);
+  const T = window.__TAURI__;
+  // Desktop + "Prompt on save" pref ON: open a native Save-As dialog for the .json.
+  if (isDesktop && prefs.promptPresetSave && T && T.dialog && T.fs) {
+    try {
+      const path = await T.dialog.save({ defaultPath: fname + ".json", filters: [{ name: "CrunchySFX preset", extensions: ["json"] }] });
+      if (path) await T.fs.writeFile(path, new TextEncoder().encode(json));   // null = user cancelled
+      return;
+    } catch (e) { console.warn("crunchysfx: native preset save failed, falling back —", e); }
+  }
+  // Otherwise: browser download (silent to Downloads on desktop; normal download on web).
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
   a.download = fname + ".json";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -1712,6 +1727,48 @@ normBtn.addEventListener("click", () => { normalizeOut = !normalizeOut; updateNo
 updateNormBtn();
 const controlsBar = document.querySelector(".controls");
 controlsBar.insertBefore(normBtn, controlsBar.querySelector(".spacer"));
+
+// ---------- Settings modal (⚙ in the header) ----------
+// Declutters the controls bar: the export-format group and the Normalize toggle move in here.
+// We RELOCATE the existing elements (same IDs / handlers), so all their wiring keeps working.
+const settingsModal = document.createElement("div");
+settingsModal.className = "modal";
+settingsModal.hidden = true;
+settingsModal.innerHTML =
+  '<div class="modal-box settings-box">' +
+    '<div class="modal-head"><h2>⚙ Settings</h2><span class="hint">Export format &amp; sound options.</span>' +
+      '<button id="settingsClose">✕ Close</button></div>' +
+    '<div class="settings-body">' +
+      '<div class="settings-row"><div class="settings-lbl">Export format' +
+        '<span class="settings-sub">sample rate · bit depth · channels · loop point — used by every WAV export</span></div>' +
+        '<div class="settings-ctl" id="settingsFmt"></div></div>' +
+      '<div class="settings-row"><div class="settings-lbl">Loudness' +
+        '<span class="settings-sub">boost quiet sounds to an audible, consistent level</span></div>' +
+        '<div class="settings-ctl" id="settingsNorm"></div></div>' +
+      '<div class="settings-row"><div class="settings-lbl">Getting started' +
+        '<span class="settings-sub">a quick guided tour of the workflow</span></div>' +
+        '<div class="settings-ctl"><button id="tourReplay">▶ Take the tour</button></div></div>' +
+      // Desktop-only: whether "Save preset" pops a native Save-As dialog for the .json. Gated on
+      // window.__TAURI__ directly (isDesktop const isn't initialized yet at this point in the file).
+      (window.__TAURI__ ?
+        '<div class="settings-row"><div class="settings-lbl">Prompt on preset save' +
+          '<span class="settings-sub">ask where to save the .json when you click Save preset (off = save silently to Downloads)</span></div>' +
+          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefPromptSave"> Prompt</label></div></div>'
+        : '') +
+    '</div>' +
+  '</div>';
+document.body.appendChild(settingsModal);
+settingsModal.querySelector("#settingsFmt").appendChild(document.querySelector(".fmtgroup"));   // move the rate/depth/channels/loop group
+settingsModal.querySelector("#settingsNorm").appendChild(normBtn);                              // move the Normalize toggle
+const prefPromptSave = settingsModal.querySelector("#prefPromptSave");                          // desktop-only preset-save preference
+if (prefPromptSave) {
+  prefPromptSave.checked = !!prefs.promptPresetSave;
+  prefPromptSave.addEventListener("change", () => { prefs.promptPresetSave = prefPromptSave.checked; savePrefs(); });
+}
+document.getElementById("settingsBtn").addEventListener("click", () => { settingsModal.hidden = false; });
+settingsModal.querySelector("#settingsClose").addEventListener("click", () => { settingsModal.hidden = true; });
+settingsModal.addEventListener("click", (e) => { if (e.target === settingsModal) settingsModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !settingsModal.hidden) settingsModal.hidden = true; });
 
 // ---------- Macros ----------
 // Each macro is one plain-language slider (0..1) that writes a handful of the real
@@ -2690,5 +2747,105 @@ if (isDesktop) {
 }
 
 // initial draw — or load a shared sound from the URL, if one is present
-if (!loadSharedSound()) { const { L, R } = render(); drawScope(L, R); }
+// ---------- Welcome tour (first-visit guided spotlight) ----------
+// A dependency-free product tour: each step dims the screen except a highlighted target and shows
+// a card explaining it. Walks the core workflow (presets → play → Foundry → Breed → export → share).
+// Shows once on a fresh visit (prefs.tourSeen); replayable from Settings. Skips on shared-link visits.
+const TOUR = [
+  { target: null, title: "Welcome to CrunchySFX 👋", body: "Make game & UI sound effects from scratch — coins, lasers, explosions, robot voices and more. Here's the 30-second workflow." },
+  { target: ".ws-browser", title: "1 · Start from a preset", body: "600+ ready-made sounds, grouped by type. Click any to hear it, or search by name." },
+  { target: "#play,#rand", title: "2 · Play, or roll the dice", body: "Press Play to hear the current sound — or Randomize to generate a fresh one from nothing." },
+  { target: "#foundry", title: "3 · Foundry — invent originals", body: "Foundry generates brand-new sounds procedurally. Make a batch and keep the ones you like." },
+  { target: "#breed", title: "4 · Breed — fine-tune by ear", body: "Pick a sound you like and Breed makes a grid of variations. Choose favorites and it evolves them toward what you're after." },
+  { target: "#export", title: "5 · Export a WAV", body: "Happy with it? Export drops a ready-to-use WAV straight into your game." },
+  { target: "#share", title: "Bonus · share a link", body: "Every sound is a URL — share it and the other person hears your exact sound, no file needed." },
+  { target: null, title: "You're all set! 🔊", body: "Explore the panels to shape any sound in detail. Replay this tour anytime from ⚙ Settings. Now go make some noise." },
+];
+let tourIdx = 0;
+const tourEl = document.createElement("div");
+tourEl.className = "tour";
+tourEl.hidden = true;
+tourEl.innerHTML =
+  '<div class="tour-hole"></div>' +
+  '<div class="tour-card"><div class="tour-title"></div><div class="tour-body"></div>' +
+    '<div class="tour-foot"><span class="tour-progress"></span>' +
+      '<span class="tour-btns"><button class="tour-skip">Skip</button>' +
+        '<button class="tour-prev">Back</button><button class="tour-next primary">Next</button></span></div></div>';
+document.body.appendChild(tourEl);
+const tourHole = tourEl.querySelector(".tour-hole"), tourCard = tourEl.querySelector(".tour-card");
+function tourUnionRect(els) {
+  let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
+  for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width && !r.height) continue; L = Math.min(L, r.left); T = Math.min(T, r.top); R = Math.max(R, r.right); B = Math.max(B, r.bottom); }
+  return L === Infinity ? null : { left: L, top: T, width: R - L, height: B - T, bottom: B, right: R };
+}
+function tourPlaceCard(r) {
+  const m = 12, cw = tourCard.offsetWidth, ch = tourCard.offsetHeight, vw = innerWidth, vh = innerHeight;
+  let left, top;
+  if (!r) { left = (vw - cw) / 2; top = (vh - ch) / 2; }
+  else {
+    left = Math.min(Math.max(m, r.left + r.width / 2 - cw / 2), vw - cw - m);
+    if (r.bottom + m + ch <= vh) top = r.bottom + m;
+    else if (r.top - m - ch >= 0) top = r.top - m - ch;
+    else top = Math.max(m, (vh - ch) / 2);
+  }
+  tourCard.style.left = left + "px"; tourCard.style.top = top + "px";
+}
+function showTourStep(i) {
+  tourIdx = Math.max(0, Math.min(TOUR.length - 1, i));
+  const step = TOUR[tourIdx], last = tourIdx === TOUR.length - 1;
+  tourEl.querySelector(".tour-title").textContent = step.title;
+  tourEl.querySelector(".tour-body").textContent = step.body;
+  tourEl.querySelector(".tour-progress").textContent = (tourIdx + 1) + " / " + TOUR.length;
+  tourEl.querySelector(".tour-next").textContent = last ? "Got it 🔊" : "Next";
+  tourEl.querySelector(".tour-prev").style.visibility = tourIdx === 0 ? "hidden" : "visible";
+  tourEl.querySelector(".tour-skip").style.visibility = last ? "hidden" : "visible";
+  const els = step.target ? Array.from(document.querySelectorAll(step.target)).filter((e) => e.getClientRects().length) : [];
+  if (els.length) els[0].scrollIntoView({ block: "center", inline: "nearest" });
+  const r = els.length ? tourUnionRect(els) : null;
+  if (r) {
+    const pad = 6;
+    tourHole.classList.remove("notarget");
+    tourHole.style.left = (r.left - pad) + "px"; tourHole.style.top = (r.top - pad) + "px";
+    tourHole.style.width = (r.width + pad * 2) + "px"; tourHole.style.height = (r.height + pad * 2) + "px";
+  } else {
+    tourHole.classList.add("notarget");
+    tourHole.style.left = "50%"; tourHole.style.top = "0"; tourHole.style.width = "0"; tourHole.style.height = "0";
+  }
+  tourPlaceCard(r);
+}
+function onTourResize() { if (!tourEl.hidden) showTourStep(tourIdx); }
+function startTour() { tourEl.hidden = false; addEventListener("resize", onTourResize); showTourStep(0); }
+function endTour(markSeen) { tourEl.hidden = true; removeEventListener("resize", onTourResize); if (markSeen && !prefs.tourSeen) { prefs.tourSeen = true; savePrefs(); } }
+tourEl.querySelector(".tour-next").addEventListener("click", () => { if (tourIdx === TOUR.length - 1) endTour(true); else showTourStep(tourIdx + 1); });
+tourEl.querySelector(".tour-prev").addEventListener("click", () => showTourStep(tourIdx - 1));
+tourEl.querySelector(".tour-skip").addEventListener("click", () => endTour(true));
+document.addEventListener("keydown", (e) => { if (tourEl.hidden) return; if (e.key === "Escape") endTour(true); else if (e.key === "ArrowRight") tourEl.querySelector(".tour-next").click(); else if (e.key === "ArrowLeft") showTourStep(tourIdx - 1); });
+{ const rb = document.getElementById("tourReplay"); if (rb) rb.addEventListener("click", () => { settingsModal.hidden = true; startTour(); }); }
+
+// Share-link first-timers came for THE sound, not a tutorial — don't hijack them with the full
+// tour. Instead show a small dismissible offer once they've landed (and they must press Play to
+// hear it anyway, since browsers block autoplay). Taking it or dismissing it both count as onboarded.
+const tourOffer = document.createElement("div");
+tourOffer.className = "tour-offer";
+tourOffer.hidden = true;
+tourOffer.innerHTML =
+  '<span class="tour-offer-msg"></span>' +
+  '<button class="tour-offer-go primary">Take a quick tour</button>' +
+  '<button class="tour-offer-x" title="Dismiss" aria-label="Dismiss">✕</button>';
+document.body.appendChild(tourOffer);
+function showTourOffer() {
+  const nm = (seqLabel && seqLabel !== "Sound" && seqLabel !== "Shared") ? '“' + seqLabel + '”' : "This sound";
+  tourOffer.querySelector(".tour-offer-msg").textContent = "🔊 " + nm + " was made with CrunchySFX — press ▶ Play to hear it. New here?";
+  tourOffer.hidden = false;
+}
+function hideTourOffer(markSeen) { tourOffer.hidden = true; if (markSeen && !prefs.tourSeen) { prefs.tourSeen = true; savePrefs(); } }
+tourOffer.querySelector(".tour-offer-go").addEventListener("click", () => { hideTourOffer(false); startTour(); });
+tourOffer.querySelector(".tour-offer-x").addEventListener("click", () => hideTourOffer(true));
+
+if (!loadSharedSound()) {
+  const { L, R } = render(); drawScope(L, R);
+  if (!prefs.tourSeen) startTour();       // direct first visit: full guided tour
+} else if (!prefs.tourSeen) {
+  showTourOffer();                        // shared-link first visit: gentle offer, don't hijack the sound
+}
 </script>

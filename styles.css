@@ -349,6 +349,45 @@
   .share-input { width: 100%; box-sizing: border-box; background: var(--panel2); color: var(--ink);
     border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
   .share-input[readonly] { color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  /* Settings cog (header) + settings modal */
+  .cog { margin-left: auto; align-self: center; background: transparent; border: 1px solid var(--line);
+    color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 9px; border-radius: 8px; cursor: pointer; }
+  .cog:hover { color: var(--ink); border-color: var(--accent2); background: var(--panel2); }
+  .settings-box { width: min(520px, 92vw); }
+  .settings-body { padding: 4px 18px 14px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-lbl { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--ink); }
+  .settings-sub { font-size: 12px; color: var(--muted); max-width: 300px; }
+  .settings-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .settings-chk { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; user-select: none; }
+  .settings-chk input { cursor: pointer; }
+  /* Welcome tour (guided spotlight). .tour covers the screen (blocks background); the hole's big
+     box-shadow dims everything except the highlighted target; the card explains the step. */
+  .tour { position: fixed; inset: 0; z-index: 300; }
+  .tour[hidden] { display: none; }
+  .tour-hole { position: absolute; border-radius: 10px; border: 2px solid var(--accent2); pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(8, 6, 12, 0.74); transition: left .18s, top .18s, width .18s, height .18s; }
+  .tour-hole.notarget { border-color: transparent; box-shadow: 0 0 0 9999px rgba(8, 6, 12, 0.82); }
+  .tour-card { position: absolute; width: min(340px, 90vw); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 15px 17px; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55); }
+  .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .tour-body { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+  .tour-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 10px; }
+  .tour-progress { font-size: 12px; color: var(--muted); }
+  .tour-btns { display: flex; gap: 8px; }
+  .tour-btns button { padding: 6px 12px; font-size: 13px; }
+  .tour-skip { background: transparent; border-color: transparent; color: var(--muted); }
+  /* Share-link first-timer's tour offer (small dismissible banner, not the full overlay) */
+  .tour-offer { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 260;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+    background: var(--panel); border: 1px solid var(--accent2); border-radius: 12px;
+    padding: 10px 12px 10px 16px; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5); max-width: min(640px, 94vw); }
+  .tour-offer[hidden] { display: none; }
+  .tour-offer-msg { font-size: 13.5px; color: var(--ink); }
+  .tour-offer-go { padding: 7px 13px; font-size: 13px; }
+  .tour-offer-x { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
   /* Foundry modal (curate original presets from procedural candidates) */
   .foundry-gen { display: flex; align-items: center; gap: 10px; padding: 12px 18px 0; flex-wrap: wrap; }
   .fnd-typel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
