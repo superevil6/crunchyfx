@@ -62,6 +62,7 @@
   <button id="load">Load preset</button>
   <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
   <button id="importwav" title="Import a WAV/audio file to mangle with the tools">📂 Import WAV</button>
+  <button id="recordbtn" title="Record from your mic and use it as the waveform (say “boom”, then shape it)">🎤 Record</button>
   <span id="samplename" class="hint"></span>
   <input type="file" id="loadfile" accept="application/json" hidden>
   <input type="file" id="wavfile" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden>
@@ -1775,22 +1776,94 @@ wavFileInput.addEventListener("change", () => {
       const n = audio.length, chs = audio.numberOfChannels;
       const mono = new Float32Array(n);
       for (let c = 0; c < chs; c++) { const d = audio.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / chs; }
-      sampleBuf = mono;
-      sampleName = file.name;
-      state.wave = 9;             // "sample"
-      waveLocked = false;
-      syncUI();
-      updateSampleUI();
-      play("Sample");
-      // Desktop: drop the imported sample straight into the My Presets library (with its audio)
-      if (window.__TAURI__) {
-        userPresets.unshift({ id: ++upSeq, name: file.name.replace(/\.[^.]+$/, ""), state: snapshotState(), sample: sampleToB64(mono) });
-        saveUserPresets();
-        renderMyPresets();
-      }
+      useSample(mono, file.name);
     })
     .catch((e) => alert("Could not read that audio file: " + e.message));
 });
+// Shared handoff: make a mono Float32 buffer the "sample" source + switch to that engine, so every
+// tool (envelope/filter/drive/crush/ring mod/delay/reverb/console) shapes it. Used by Import + Record.
+function useSample(mono, name) {
+  sampleBuf = mono;
+  sampleName = name;
+  state.wave = 9;             // "sample"
+  waveLocked = false;
+  syncUI();
+  updateSampleUI();
+  play("Sample");
+  if (window.__TAURI__) {     // desktop: keep it in My Presets (with its audio), like an import
+    userPresets.unshift({ id: ++upSeq, name: String(name).replace(/\.[^.]+$/, ""), state: snapshotState(), sample: sampleToB64(mono) });
+    saveUserPresets();
+    renderMyPresets();
+  }
+}
+
+// ---------- Record from the mic → use as the "sample" source ----------
+// getUserMedia + raw Float32 capture (no codec dependency). Say "boom", stop, and your voice becomes
+// the waveform — then shape it with every tool. Web-first: needs a secure context (https/localhost);
+// mic access on the desktop (Tauri) build is a follow-up.
+const REC_MAX = 4;                        // seconds cap
+let recState = null;
+const recordBtn = document.getElementById("recordbtn");
+function resampleTo(buf, from, to) {
+  if (Math.abs(from - to) < 1) return buf;
+  const ratio = to / from, n = Math.max(1, Math.round(buf.length * ratio)), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i / ratio, i0 = Math.floor(x), fr = x - i0; out[i] = (buf[i0] || 0) * (1 - fr) + (buf[i0 + 1] || 0) * fr; }
+  return out;
+}
+function processRecording(buf) {          // trim near-silence off both ends, then normalize
+  const thr = 0.02; let s = 0, e = buf.length - 1;
+  while (s < buf.length && Math.abs(buf[s]) < thr) s++;
+  while (e > s && Math.abs(buf[e]) < thr) e--;
+  if (e <= s) return new Float32Array(0);
+  s = Math.max(0, s - ((SR * 0.01) | 0));                 // ~10 ms pre-roll
+  e = Math.min(buf.length - 1, e + ((SR * 0.02) | 0));    // ~20 ms tail
+  const out = buf.slice(s, e + 1);
+  let pk = 0; for (let i = 0; i < out.length; i++) { const a = Math.abs(out[i]); if (a > pk) pk = a; }
+  if (pk > 1e-4) { const g = 0.9 / pk; for (let i = 0; i < out.length; i++) out[i] *= g; }
+  return out;
+}
+function finishRecording(chunks, srcRate) {
+  let total = 0; for (const c of chunks) total += c.length;
+  if (total < 256) return;                                // nothing usable
+  let buf = new Float32Array(total), o = 0;
+  for (const c of chunks) { buf.set(c, o); o += c.length; }
+  buf = processRecording(resampleTo(buf, srcRate, SR));
+  if (buf.length >= 256) useSample(buf, "🎤 Recording");
+}
+function setRecordingUI(on) {
+  if (!recordBtn) return;
+  recordBtn.textContent = on ? "⏹ Stop" : "🎤 Record";
+  recordBtn.classList.toggle("recording", on);
+}
+async function startRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("Recording needs microphone access, which isn't available in this browser/context."); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch (e) { alert("Couldn't access the microphone: " + e.message); return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = ctx.createMediaStreamSource(stream);
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  recState = { ctx, stream, source, node, chunks };
+  node.onaudioprocess = (e) => {
+    chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    let total = 0; for (const c of chunks) total += c.length;
+    if (total >= REC_MAX * ctx.sampleRate) stopRecording();     // auto-stop at the cap
+  };
+  source.connect(node); node.connect(ctx.destination);          // ScriptProcessor needs a sink to fire; output stays silent
+  setRecordingUI(true);
+}
+function stopRecording() {
+  const rs = recState; if (!rs) return;
+  recState = null;
+  const srcRate = rs.ctx.sampleRate, chunks = rs.chunks;
+  try { rs.node.disconnect(); rs.source.disconnect(); } catch (e) {}
+  rs.stream.getTracks().forEach((t) => t.stop());
+  rs.ctx.close();
+  setRecordingUI(false);
+  finishRecording(chunks, srcRate);
+}
+if (recordBtn) recordBtn.addEventListener("click", () => { recState ? stopRecording() : startRecording(); });
 
 // ---------- Wire buttons + keys ----------
 document.getElementById("play").addEventListener("click", () => play("Play"));

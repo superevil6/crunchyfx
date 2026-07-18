@@ -163,6 +163,8 @@
   button.primary:hover { background: #ff8a5c; }
   button.accent2 { border-color: var(--accent2); color: var(--accent2); }
   .spacer { flex: 1; }
+  #recordbtn.recording { border-color: #ff4d4d; color: #ff8080; animation: recpulse 1.1s ease-in-out infinite; }
+  @keyframes recpulse { 0%, 100% { background: var(--panel2); } 50% { background: #3a1f28; } }
   .dragchip { cursor: grab; }
   .dragchip:active { cursor: grabbing; }
   .fmtgroup { display: inline-flex; gap: 5px; align-items: center; }
