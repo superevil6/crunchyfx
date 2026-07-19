@@ -436,6 +436,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-drag",
  "tauri-plugin-fs",
+ "webkit2gtk",
 ]
 
 [[package]]

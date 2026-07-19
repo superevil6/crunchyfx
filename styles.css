@@ -154,6 +154,8 @@
   }
   button:hover { background: #302a3d; }
   button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .icon-btn { padding: 9px 11px; font-size: 16px; line-height: 1; }
   button.primary {
     background: var(--accent);
     color: #201005;
@@ -375,6 +377,12 @@
   .breed-tag { font-size: 11px; color: var(--muted); }
   .breed-cell.sel .breed-tag { color: var(--accent); font-weight: 600; }
   .modal-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+  /* Variation-pack control row */
+  .var-ctl { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .var-ctl label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .var-ctl select { width: auto; }
+  .var-ctl input[type=range] { width: 120px; }
+  .var-name { width: 130px; box-sizing: border-box; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; font: inherit; }
   /* Share dialog (name the sound + copy its link). .share-box overrides .modal-box width — must
      stay after it in the file so it wins at equal specificity. */
   .share-box { width: min(460px, 92vw); }

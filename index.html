@@ -35,9 +35,12 @@
 
 <div class="controls">
   <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
+  <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+  <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
   <button id="rand" class="accent2">🎲 Randomize</button>
   <button id="breed" class="accent2">🧬 Breed</button>
   <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets">⚒ Foundry</button>
+  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound (footstep 1–8) and export them all">📦 Variations</button>
   <button id="export">⬇ Export WAV</button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
@@ -870,7 +873,61 @@ function play(label) {
   if (!audible) markScopeSilent();
   playBuffer(L, R);
   addHistory(label || "Edit", L, audible);
+  commitHistory();                 // record this state for undo/redo (no-op if unchanged / restoring)
 }
+
+// ---------- Undo / redo (per-edit history of the editor state) ----------
+// Every edit calls play() → commitHistory() snapshots the state (deduped, so replays don't count).
+// Restoring an entry sets the state directly and re-renders WITHOUT re-committing or touching the
+// sound-history rail. Snapshots carry the sample buffer / normalize toggle / label too (by reference,
+// cheap). Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y), plus the ↶ ↷ buttons.
+let editHistory = [];
+let histPos = -1;
+let restoringHistory = false;
+const EDIT_HIST_MAX = 80;
+function updateUndoRedoUI() {
+  const u = document.getElementById("undoBtn"), r = document.getElementById("redoBtn");
+  if (u) u.disabled = histPos <= 0;
+  if (r) r.disabled = histPos >= editHistory.length - 1;
+}
+function commitHistory() {
+  if (restoringHistory) return;
+  const snap = snapshotState();
+  const cur = editHistory[histPos];
+  if (cur && sameState(cur.s, snap) && cur.buf === sampleBuf && cur.norm === normalizeOut) return;   // nothing new
+  editHistory = editHistory.slice(0, histPos + 1);          // drop any redo branch
+  editHistory.push({ s: snap, buf: sampleBuf, name: sampleName, norm: normalizeOut, label: seqLabel });
+  if (editHistory.length > EDIT_HIST_MAX) editHistory.shift();
+  histPos = editHistory.length - 1;
+  updateUndoRedoUI();
+}
+function restoreEdit(entry) {
+  restoringHistory = true;
+  for (const p of PARAMS) state[p[0]] = entry.s[p[0]];
+  state.customWave = entry.s.customWave || "";
+  state.speechText = entry.s.speechText || "";
+  sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
+  updateSampleUI(); updateNormBtn(); syncUI();
+  const { L, R, rawPeak } = render();                        // re-render/play WITHOUT addHistory or re-commit
+  drawScope(L, R);
+  if (rawPeak <= AUDIBLE_FLOOR) markScopeSilent();
+  playBuffer(L, R);
+  restoringHistory = false;
+  updateUndoRedoUI();
+}
+function undoEdit() { if (histPos > 0) { histPos--; restoreEdit(editHistory[histPos]); } }
+function redoEdit() { if (histPos < editHistory.length - 1) { histPos++; restoreEdit(editHistory[histPos]); } }
+if (document.getElementById("undoBtn")) document.getElementById("undoBtn").addEventListener("click", undoEdit);
+if (document.getElementById("redoBtn")) document.getElementById("redoBtn").addEventListener("click", redoEdit);
+document.addEventListener("keydown", (e) => {
+  const t = e.target && e.target.tagName;
+  if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;   // let text fields do their own undo
+  const mod = e.ctrlKey || e.metaKey;
+  if (!mod) return;
+  const z = e.key === "z" || e.key === "Z";
+  if (z && !e.shiftKey) { e.preventDefault(); undoEdit(); }
+  else if ((z && e.shiftKey) || e.key === "y" || e.key === "Y") { e.preventDefault(); redoEdit(); }
+});
 
 // Run fn() with the global `state` temporarily replaced by a snapshot, then
 // restore it. Lets us render/export any past sound without disturbing the editor.
@@ -1539,6 +1596,10 @@ function updateWavePanels() {
 updateWavePanels();   // set initial visibility for the startup waveform
 
 function syncUI() {
+  // Stretch the Duration slider to fit a loaded sample (record/import); back to 2 s otherwise. Must
+  // happen before the loop so the value below isn't clamped to the old max.
+  const durEl = document.querySelector('[data-key="duration"]');
+  if (durEl) durEl.max = (Math.round(state.wave) === 9 && sampleBuf) ? Math.min(30, Math.max(2, Math.ceil(sampleBuf.length / SR))) : 2;
   for (const p of PARAMS) {
     const key = p[0];
     const el = document.querySelector(`[data-key="${key}"]`);
@@ -1785,8 +1846,17 @@ wavFileInput.addEventListener("change", () => {
 function useSample(mono, name) {
   sampleBuf = mono;
   sampleName = name;
+  // Start every fresh sample (record/import) from a clean slate — reset all knobs to defaults so the
+  // raw audio plays clear and unaltered. Otherwise a previous take's drive/filter/console/crush/etc.
+  // would color the new one; the user shapes it from here.
+  for (const p of PARAMS) state[p[0]] = p[5];
+  state.customWave = ""; state.speechText = "";
   state.wave = 9;             // "sample"
   waveLocked = false;
+  // Fit the length meter to the clip and open the amp envelope, so the WHOLE recording plays back
+  // (the Duration slider's max is stretched to the clip length in syncUI). Capped at 30 s.
+  state.duration = +Math.min(mono.length / SR, 30).toFixed(2);
+  state.sustain = 1; state.attack = 0.003; state.decay = 0.05; state.release = 0.03; state.hold = 0;
   syncUI();
   updateSampleUI();
   play("Sample");
@@ -1801,7 +1871,7 @@ function useSample(mono, name) {
 // getUserMedia + raw Float32 capture (no codec dependency). Say "boom", stop, and your voice becomes
 // the waveform — then shape it with every tool. Web-first: needs a secure context (https/localhost);
 // mic access on the desktop (Tauri) build is a follow-up.
-const REC_MAX = 4;                        // seconds cap
+const REC_MAX = 10;                       // seconds cap
 let recState = null;
 const recordBtn = document.getElementById("recordbtn");
 function resampleTo(buf, from, to) {
@@ -2291,6 +2361,123 @@ breedModal.querySelector("#breedAdopt").addEventListener("click", () => adoptGen
 breedModal.querySelector("#breedClose").addEventListener("click", () => { breedModal.hidden = true; });
 breedModal.addEventListener("click", (e) => { if (e.target === breedModal) breedModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !breedModal.hidden) breedModal.hidden = true; });
+
+// ---------- Variation pack (N takes on the current sound, export them all) ----------
+// The game-audio staple: 3–8 variants of a repeated sound (footstep_01…08) so it doesn't loop
+// obviously. Reuses the breeding jitter (same engine/length, everything else nudged). Export =
+// a folder on desktop, a single dependency-free .zip on web.
+let CRC_TABLE;
+function crc32(bytes) {
+  if (!CRC_TABLE) { CRC_TABLE = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); CRC_TABLE[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function makeZip(files) {   // files: [{name, data:Uint8Array}] → a STORE-only (uncompressed) .zip
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  const push = (a) => { parts.push(a); offset += a.length; };
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length, at = offset;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(8, 0, true);   // sig, ver, STORE
+    h.setUint32(14, crc, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true); h.setUint16(26, name.length, true);
+    push(new Uint8Array(h.buffer)); push(name); push(f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true);
+    c.setUint32(16, crc, true); c.setUint32(20, sz, true); c.setUint32(24, sz, true);
+    c.setUint16(28, name.length, true); c.setUint32(42, at, true);
+    central.push(new Uint8Array(c.buffer), name);
+  }
+  const cdAt = offset; let cdSize = 0;
+  for (const c of central) { cdSize += c.length; push(c); }
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdSize, true); e.setUint32(16, cdAt, true);
+  push(new Uint8Array(e.buffer));
+  let total = 0; for (const p of parts) total += p.length;
+  const out = new Uint8Array(total); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+let varGenomes = [];
+const varModal = document.createElement("div");
+varModal.className = "modal";
+varModal.hidden = true;
+varModal.innerHTML =
+  '<div class="modal-box">' +
+    '<div class="modal-head"><h2>📦 Variation pack</h2>' +
+      '<span class="hint">N takes on the current sound — same character, slightly varied. ▶ hears one · double-click loads it into the editor.</span>' +
+      '<button id="varClose">✕ Close</button></div>' +
+    '<div class="var-ctl">' +
+      '<label>Count <select id="varCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select></label>' +
+      '<label>Variation <input id="varAmt" type="range" min="0.05" max="0.5" step="0.01" value="0.2"></label>' +
+      '<button id="varRegen">🎲 Regenerate</button>' +
+      '<span class="spacer"></span>' +
+      '<label>Name <input id="varName" type="text" class="var-name" placeholder="footstep" autocomplete="off"></label>' +
+      '<button id="varExport" class="primary">⬇ Export pack</button>' +
+    '</div>' +
+    '<div id="varGrid" class="breed-grid"></div>' +
+    '<div class="modal-foot"><span id="varMsg" class="hint"></span></div>' +
+  '</div>';
+document.body.appendChild(varModal);
+const varGrid = varModal.querySelector("#varGrid");
+const varCountEl = varModal.querySelector("#varCount");
+const varAmtEl = varModal.querySelector("#varAmt");
+const varNameEl = varModal.querySelector("#varName");
+const varMsg = varModal.querySelector("#varMsg");
+function seedVariations() {
+  const n = +varCountEl.value, amt = +varAmtEl.value, seed = genomeFromState();
+  varGenomes = [seed];                                     // #1 = the original
+  for (let i = 1; i < n; i++) varGenomes.push(breedChild([seed], amt));   // rest = same-engine jitters
+  renderVarGrid();
+}
+function renderVarGrid() {
+  varGrid.innerHTML = "";
+  varGenomes.forEach((g, i) => {
+    const { L, R } = withState(g, () => render());
+    const cell = document.createElement("div"); cell.className = "breed-cell";
+    const cv = document.createElement("canvas"); cv.width = 280; cv.height = 62; cell.appendChild(cv);
+    const bar = document.createElement("div"); bar.className = "breed-cell-bar";
+    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">#' + (i + 1) + (i === 0 ? " · original" : "") + '</span>';
+    cell.appendChild(bar); varGrid.appendChild(cell); drawMini(cv, L, R);
+    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = withState(g, () => render()); playBuffer(r.L, r.R); });
+    cell.addEventListener("dblclick", () => { applyPreset(g, "Variation"); varModal.hidden = true; });
+  });
+}
+function buildPackFiles() {
+  const base = sanitizeFilename(varNameEl.value || (seqLabel && seqLabel !== "Sound" ? seqLabel : "variation"));
+  const pad = Math.max(2, String(varGenomes.length).length);
+  return varGenomes.map((g, i) => {
+    const { L, R } = withState(g, () => render());
+    const buf = encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: base + " " + (i + 1) });
+    return { name: base + "_" + String(i + 1).padStart(pad, "0") + ".wav", data: new Uint8Array(buf) };
+  });
+}
+async function exportPack() {
+  const files = buildPackFiles();
+  const T = window.__TAURI__;
+  if (T && T.dialog && T.fs) {                              // desktop: write into a chosen folder
+    let dir; try { dir = await T.dialog.open({ directory: true, title: "Choose a folder for the variation pack" }); } catch (e) { return; }
+    if (!dir) return;
+    for (const f of files) await T.fs.writeFile(dir + "/" + f.name, f.data);
+    varMsg.textContent = "✓ Exported " + files.length + " files to the chosen folder";
+  } else {                                                  // web: one .zip
+    const base = files[0].name.replace(/_\d+\.wav$/, "");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([makeZip(files)], { type: "application/zip" }));
+    a.download = base + "_pack.zip";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    varMsg.textContent = "✓ Downloaded " + files.length + " sounds as " + base + "_pack.zip";
+  }
+}
+document.getElementById("variations").addEventListener("click", () => { seedVariations(); varMsg.textContent = ""; varModal.hidden = false; });
+varModal.querySelector("#varRegen").addEventListener("click", seedVariations);
+varCountEl.addEventListener("change", seedVariations);
+varModal.querySelector("#varExport").addEventListener("click", exportPack);
+varModal.querySelector("#varClose").addEventListener("click", () => { varModal.hidden = true; });
+varModal.addEventListener("click", (e) => { if (e.target === varModal) varModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !varModal.hidden) varModal.hidden = true; });
 
 // ---------- Sequence (chain sounds into one) ----------
 // The editor stays a single-sound workspace; the sequence is a separate layer that
@@ -3031,4 +3218,5 @@ if (!loadSharedSound()) {
 } else if (!prefs.tourSeen) {
   showTourOffer();                        // shared-link first visit: gentle offer, don't hijack the sound
 }
+commitHistory();                          // seed undo history with the initial sound (deduped if a share/preset already did)
 </script>

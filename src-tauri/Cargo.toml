@@ -15,6 +15,11 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-drag = "2"   # native drag-OUT of a WAV into the OS / a game engine
 
+# Linux only: enable WebKitGTK media-stream + grant the mic permission for the Record button
+# (main.rs setup hook). Pinned to the version wry already pulls in so it's the same instance.
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2.0", features = ["v2_40"] }
+
 [profile.release]
 codegen-units = 1
 lto = true
