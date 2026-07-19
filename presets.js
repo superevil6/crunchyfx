@@ -573,8 +573,10 @@ window.PRESETS = {
             _vary:{ sweep:0.15, cutoff:0.2, detune:0.4 } },
 
   // ---- Cartoon / Misc ----
-  "Fart 2": { wave:2, freq:110, sweep:-0.4, vibDepth:0.4, vibRate:16, noise:0.15, attack:0.005, decay:0.25, sustain:0.2, release:0.15, cutoff:1400, reso:0.6, filtEnv:-0.1, drive:0.35, bitcrush:7, downsample:4, width:0.35, duration:0.6,
-            _vary:{ freq:0.2, vibRate:0.3, sweep:0.15 } },
+  "Fart 2": { wave:13, freq:95, sweep:-0.35, vibDepth:0.5, vibRate:14, noise:0.1, attack:0.005, decay:0.3, sustain:0.35, release:0.2,
+            formantVowel:0.6, formantSize:1.7, formantQ:0.5, formantBreath:0.35, formantLfoRate:7, formantLfoDepth:0.8,
+            cutoff:2500, reso:0.2, drive:0.4, bitcrush:6, downsample:4, width:0.3, duration:0.7,   // formant "wet braaap" — vocal-tract sputter, morphing vowel = the tone flutter
+            _vary:{ freq:0.15, formantVowel:0.4, vibRate:0.3, formantLfoRate:0.3, sweep:0.15 } },
 
   // ============================================================================
   // Batch 5 (2026-07-14): procedurally bred within-category to reach 500. Each is a

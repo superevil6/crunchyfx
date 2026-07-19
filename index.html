@@ -136,7 +136,6 @@
 </footer>
 
 <script src="presets.js"></script>
-<script src="new_presets.js"></script>
 <script src="dsp.js"></script>
 <script>
 "use strict";
@@ -1402,7 +1401,8 @@ syncWaveButtons();
 // console's patch (so switching never stacks). Defaults pulled straight from PARAMS.
 const REVOICE_KEYS = ["wave", "pulseWidth", "pwmDepth", "pwmRate", "filterMode", "cutoff", "reso", "filtEnv",
   "bitcrush", "downsample", "drive", "driveOS", "ringMod", "ringFreq", "detune", "unison",
-  "reverb", "reverbSize", "reverbTone", "vibDepth", "vibRate"];
+  "reverb", "reverbSize", "reverbTone", "vibDepth", "vibRate",
+  "fmAlgo", "fmRatio2", "fmRatio3", "fmRatio4", "fmIndex", "fmFeedback"];   // so "Arcade" can voice the 4-op FM engine deterministically
 const REVOICE_DEFAULT = {};
 for (const p of PARAMS) if (REVOICE_KEYS.indexOf(p[0]) >= 0) REVOICE_DEFAULT[p[0]] = p[5];
 const CONSOLES = [
@@ -1413,6 +1413,10 @@ const CONSOLES = [
   ["Turbo",     { wave: 6, bitcrush: 7, drive: 0.12, vibDepth: 0.10, vibRate: 5 }],                                                        // PC Engine — wavetable organ
   ["Woodgrain", { wave: 1, bitcrush: 3, downsample: 12, drive: 0.40, detune: 25, unison: 2, cutoff: 4000 }],                               // Atari 2600 — harsh detuned square
   ["SID",       { wave: 4, pulseWidth: 0.5, pwmDepth: 0.30, pwmRate: 4, cutoff: 3500, reso: 0.65, filtEnv: 0.4, ringMod: 0.20, ringFreq: 250, drive: 0.15, bitcrush: 10 }], // C64 — PWM + resonant filter + ring
+  ["1-Bit",     { wave: 4, pulseWidth: 0.15, bitcrush: 1, downsample: 6, drive: 0.25, cutoff: 6500 }],                                         // ZX Spectrum / PC speaker — 1-bit beeper buzz
+  ["Pokey",     { wave: 4, pulseWidth: 0.30, cutoff: 2600, reso: 0.72, filtEnv: 0.35, bitcrush: 6, drive: 0.22, detune: 10, unison: 2 }],      // Atari 8-bit POKEY — resonant, gritty buzz
+  ["Arcade",    { wave: 18, fmAlgo: 1, fmRatio2: 2, fmRatio3: 3, fmRatio4: 1, fmIndex: 0.55, fmFeedback: 0.20, drive: 0.12, bitcrush: 12 }],   // 4-op FM coin-op / Neo-Geo lushness
+  ["AY",        { wave: 1, bitcrush: 5, detune: 8, unison: 2, vibDepth: 0.07, vibRate: 8, cutoff: 5000 }],                                     // AY-3-8910 home micros — detuned buzzy squares
 ];
 const consoleSection = document.createElement("div");
 consoleSection.className = "console";
@@ -3118,6 +3122,10 @@ const STYLES = [
   { name: "Turbo",   fn: (g) => { retro(g); if (tonal(g)) g.wave = 6; g.bitcrush = 5; g.vibDepth = Math.max(g.vibDepth, 0.08); g.vibRate = 10; return g; } },
   { name: "Woodgrain", fn: (g) => { retro(g); if (tonal(g)) g.wave = 1; g.bitcrush = pick([3, 4]); g.downsample = 8 + Math.floor(Math.random() * 5); g.drive = Math.max(g.drive, 0.4); return g; } },
   { name: "SID",     fn: (g) => { retro(g); if (tonal(g)) g.wave = pick([2, 4]); if (g.wave === 4) { g.pwmDepth = 0.2; g.pwmRate = 4; } g.reso = Math.max(g.reso, 0.4); if (Math.abs(g.filtEnv) < 0.3) g.filtEnv = 0.5; g.ringMod = Math.max(g.ringMod, 0.2); return g; } },
+  { name: "1-Bit",   fn: (g) => { retro(g); if (tonal(g)) { g.wave = 4; g.pulseWidth = 0.15; } g.bitcrush = 1; g.downsample = Math.max(g.downsample, 5); g.drive = Math.max(g.drive, 0.2); return g; } },
+  { name: "Pokey",   fn: (g) => { retro(g); if (tonal(g)) { g.wave = 4; g.pulseWidth = 0.3; } g.reso = Math.max(g.reso, 0.6); if (Math.abs(g.filtEnv) < 0.3) g.filtEnv = 0.4; g.bitcrush = Math.min(g.bitcrush, 6); g.detune = Math.max(g.detune, 10); g.unison = Math.max(g.unison, 2); return g; } },
+  { name: "Arcade",  fn: (g) => { retro(g); if (tonal(g)) { g.wave = 18; g.fmAlgo = 1; g.fmRatio2 = 2; g.fmRatio3 = 3; g.fmRatio4 = 1; g.fmIndex = 0.55; g.fmFeedback = 0.2; } g.drive = Math.max(g.drive, 0.1); return g; } },
+  { name: "AY",      fn: (g) => { retro(g); if (tonal(g)) g.wave = 1; g.bitcrush = Math.min(g.bitcrush, 5); g.detune = Math.max(g.detune, 8); g.unison = Math.max(g.unison, 2); g.vibDepth = Math.max(g.vibDepth, 0.07); g.vibRate = 8; return g; } },
 ];
 const styleByName = (n) => STYLES.find((s) => s.name === n);
 
