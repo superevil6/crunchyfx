@@ -109,6 +109,7 @@
       </div>
       <div class="mp-list" id="mpList"></div>
     </div>
+    <div class="usercats" id="userCats" hidden></div>
     <div class="presetbar" id="presets" style="margin-top:10px"></div>
   </section>
   <section class="ws-editor">
@@ -1713,6 +1714,7 @@ function makePresetButton(name) {
   const b = document.createElement("button");
   b.textContent = name;
   b.title = "Click for a fresh " + name + "-like variation";
+  b.dataset.pb = name;   // drag source id for custom categories (desktop)
   b.addEventListener("click", () => applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name));
   return b;
 }
@@ -1759,6 +1761,7 @@ function filterPresets() {
     shown += secShown;
   });
   shown += filterMyPresets(q);                       // also filter the saved-preset library
+  shown += filterUserCats(q);                        // …and any custom categories
   presetCount.textContent = q ? (shown + " match" + (shown === 1 ? "" : "es")) : "";
 }
 presetSearch.addEventListener("input", filterPresets);
@@ -2601,12 +2604,15 @@ function renderMyPresets() {
   mpList.innerHTML = "";
   if (!userPresets.length) {
     mpList.innerHTML = '<div class="mp-empty">No saved presets yet — shape a sound and hit “Save current”.</div>';
+    renderUserCats();   // categories may still hold built-in refs
     return;
   }
   for (const p of userPresets) {
     const el = document.createElement("div");
     el.className = "up-item";
+    el.dataset.upid = p.id;   // drag source id for custom categories
     el.innerHTML =
+      '<button class="uc-grip" title="Drag into a category">⠿</button>' +
       '<button class="up-play" title="Hear">▶</button>' +
       (p.sample ? '<span class="up-badge" title="imported audio">♪</span>' : '') +
       '<input class="up-name" spellcheck="false">' +
@@ -2641,6 +2647,7 @@ function renderMyPresets() {
     mpList.appendChild(el);
   }
   filterMyPresets((presetSearch.value || "").trim().toLowerCase());   // reapply any active search
+  renderUserCats();   // keep custom-category names/counts in sync with the library
 }
 // Filter the saved-preset library by the shared search query; returns how many matched.
 function filterMyPresets(q) {
@@ -2661,6 +2668,258 @@ function saveCurrentUserPreset() {
   const first = mpList.querySelector(".up-name");   // focus for immediate rename
   if (first) { first.focus(); first.select(); }
 }
+// ---------- Custom categories (desktop premium: your own drag-organized preset collections) ----------
+// ADDITIVE + non-destructive: a custom category holds REFERENCES to built-in presets (by name) and/or
+// your saved presets (by id). Built-ins stay in their curated section too — this never re-partitions
+// the 638-preset layout. Persisted like My Presets; only wired up on desktop.
+const UC_KEY = "crunchyfx.usercats.v1";
+let userCats = [];   // [{ id, name, items: [ {t:"b", n} | {t:"u", id} ] }]
+let ucSeq = 0;
+const userCatsBox = document.getElementById("userCats");
+const ucEsc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ucKey = (it) => it.t === "b" ? "b:" + it.n : "u:" + it.id;
+function loadUserCats() {
+  try {
+    const d = JSON.parse(localStorage.getItem(UC_KEY) || "null");
+    if (d && Array.isArray(d.cats)) {
+      userCats = d.cats.filter((c) => c && Array.isArray(c.items))
+        .map((c) => ({ id: c.id, name: String(c.name || "Category"), items: c.items.filter((i) => i && (i.t === "b" || i.t === "u")) }));
+      ucSeq = d.seq || userCats.reduce((m, c) => Math.max(m, c.id || 0), 0);
+    }
+  } catch (e) { /* best-effort */ }
+}
+function saveUserCats() { try { localStorage.setItem(UC_KEY, JSON.stringify({ seq: ucSeq, cats: userCats })); } catch (e) { /* best-effort */ } }
+function ucFindCat(id) { return userCats.find((c) => c.id === id); }
+// Resolve a stored ref to something displayable; null if dangling (preset deleted/renamed away).
+function ucResolve(it) {
+  if (it.t === "b") return PRESETS[it.n] ? { key: ucKey(it), name: it.n, kind: "b", sample: false } : null;
+  if (it.t === "u") { const p = userPresets.find((x) => x.id === it.id); return p ? { key: ucKey(it), name: p.name, kind: "u", sample: !!p.sample } : null; }
+  return null;
+}
+function ucApply(it) {   // click an item = load it into the editor (+ play)
+  if (it.t === "b") { if (PRESETS[it.n]) applyPreset(audiblePatch(() => varyPreset(PRESETS[it.n])), it.n); return; }
+  const p = userPresets.find((x) => x.id === it.id);
+  if (p) { if (p.sample) { sampleBuf = b64ToSample(p.sample); sampleName = p.name; updateSampleUI(); } applyPreset(p.state, p.name); }
+}
+function ucNewCategory(seedItem) {
+  const c = { id: ++ucSeq, name: "New Category", items: [] };
+  if (seedItem) c.items.push({ t: seedItem.t, n: seedItem.n, id: seedItem.id });
+  userCats.unshift(c);
+  saveUserCats(); renderUserCats();
+  const inp = userCatsBox && userCatsBox.querySelector('.usercat[data-cat="' + c.id + '"] .uc-name');
+  if (inp) { inp.focus(); inp.select(); }
+  return c;
+}
+function ucAddItem(catId, item) {   // dedup by key
+  const c = ucFindCat(catId); if (!c) return false;
+  if (c.items.some((i) => ucKey(i) === ucKey(item))) return false;
+  c.items.push({ t: item.t, n: item.n, id: item.id });
+  saveUserCats(); renderUserCats(); return true;
+}
+function ucRemoveItem(catId, key) {
+  const c = ucFindCat(catId); if (!c) return;
+  c.items = c.items.filter((i) => ucKey(i) !== key);
+  saveUserCats(); renderUserCats();
+}
+function ucMoveItem(fromCatId, key, toCatId) {
+  if (fromCatId === toCatId) return;
+  const from = ucFindCat(fromCatId); if (!from) return;
+  const it = from.items.find((i) => ucKey(i) === key); if (!it) return;
+  ucAddItem(toCatId, it);              // dedups if already there
+  ucRemoveItem(fromCatId, key);        // then take it out of the source
+}
+function ucDeleteCategory(catId) { userCats = userCats.filter((c) => c.id !== catId); saveUserCats(); renderUserCats(); }
+
+function renderUserCats() {
+  if (!userCatsBox || userCatsBox.hidden) return;   // web build: no custom categories
+  userCatsBox.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "uc-head";
+  head.innerHTML = '<button id="ucNew" class="uc-newbtn" data-uc-drop="new" title="Create a new category">＋ New Category</button>' +
+    '<span class="hint">Drag presets or your saved sounds in to organize them.</span>';
+  userCatsBox.appendChild(head);
+  head.querySelector("#ucNew").addEventListener("click", () => { if (!ucSuppressClick) ucNewCategory(); });
+
+  userCats.forEach((c) => {
+    const live = c.items.map((it) => ({ it, r: ucResolve(it) })).filter((x) => x.r);   // hide dangling refs
+    const details = document.createElement("details");
+    details.className = "preset-section usercat";
+    details.open = true;
+    details.dataset.cat = c.id;
+    details.dataset.ucDrop = c.id;
+    const summary = document.createElement("summary");
+    summary.innerHTML =
+      '<input class="uc-name" spellcheck="false">' +
+      '<span class="sec-count">(' + live.length + ')</span>' +
+      '<button class="uc-del" title="Delete this category (your presets stay put)">✕</button>';
+    const nameInp = summary.querySelector(".uc-name");
+    nameInp.value = c.name;
+    ["click", "mousedown", "pointerdown"].forEach((ev) => nameInp.addEventListener(ev, (e) => e.stopPropagation()));   // don't toggle the <details>
+    nameInp.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") nameInp.blur(); });
+    nameInp.addEventListener("change", () => { c.name = nameInp.value.trim() || c.name; nameInp.value = c.name; saveUserCats(); });
+    const delBtn = summary.querySelector(".uc-del");
+    delBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    delBtn.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); ucDeleteCategory(c.id); });   // non-destructive (refs only)
+    details.appendChild(summary);
+    const wrap = document.createElement("div");
+    wrap.className = "sec-buttons uc-buttons";
+    if (!live.length) {
+      const ph = document.createElement("div");
+      ph.className = "uc-empty";
+      ph.textContent = "Empty — drag presets here.";
+      wrap.appendChild(ph);
+    } else {
+      live.forEach(({ it, r }) => {
+        const item = document.createElement("span");
+        item.className = "uc-item";
+        item.dataset.uck = r.key;
+        item.dataset.uccat = c.id;
+        const btn = document.createElement("button");
+        btn.className = "uc-item-btn";
+        btn.textContent = (r.kind === "u" ? "★ " : "") + r.name + (r.sample ? " ♪" : "");
+        btn.title = r.kind === "u" ? "Your saved sound — click to load" : "Click for a fresh " + r.name + "-like variation";
+        btn.addEventListener("click", () => { if (!ucSuppressClick) ucApply(it); });
+        const rm = document.createElement("button");
+        rm.className = "uc-item-rm";
+        rm.textContent = "✕";
+        rm.title = "Remove from this category";
+        rm.addEventListener("pointerdown", (e) => e.stopPropagation());
+        rm.addEventListener("click", (e) => { e.stopPropagation(); ucRemoveItem(c.id, r.key); });
+        item.appendChild(btn); item.appendChild(rm);
+        wrap.appendChild(item);
+      });
+    }
+    details.appendChild(wrap);
+    userCatsBox.appendChild(details);
+  });
+  filterUserCats((presetSearch.value || "").trim().toLowerCase());
+}
+function filterUserCats(q) {
+  if (!userCatsBox || userCatsBox.hidden) return 0;
+  let shown = 0;
+  userCatsBox.querySelectorAll(".usercat").forEach((det) => {
+    const items = det.querySelectorAll(".uc-item");
+    let secShown = 0;
+    items.forEach((item) => {
+      const match = !q || item.querySelector(".uc-item-btn").textContent.toLowerCase().includes(q);
+      item.style.display = match ? "" : "none";
+      if (match) secShown++;
+    });
+    det.style.display = (q && items.length && !secShown) ? "none" : "";
+    if (q) det.open = secShown > 0;
+    shown += secShown;
+  });
+  return shown;
+}
+
+// ----- Pointer-based drag to organize (robust in every webview, unlike HTML5/native drag) -----
+let ucDrag = null;          // { payload, x, y, active, ghost, hot }
+let ucSuppressClick = false;   // swallow the click that fires right after a real drag
+function ucPayloadFrom(el) {
+  const src = el.closest("[data-pb], .up-item[data-upid], .uc-item[data-uck]");
+  if (!src) return null;
+  if (src.matches("[data-pb]")) return { item: { t: "b", n: src.dataset.pb }, label: src.dataset.pb };
+  if (src.matches(".up-item")) { const p = userPresets.find((x) => x.id === +src.dataset.upid); return p ? { item: { t: "u", id: p.id }, label: p.name } : null; }
+  if (src.matches(".uc-item")) {
+    const fromCat = +src.dataset.uccat, key = src.dataset.uck, c = ucFindCat(fromCat);
+    const it = c && c.items.find((i) => ucKey(i) === key);
+    return it ? { item: it, fromCat, key, label: (src.querySelector(".uc-item-btn").textContent || "").replace(/^★ /, "") } : null;
+  }
+  return null;
+}
+function ucDropPayload(payload, toCatId) {
+  if (payload.fromCat != null) ucMoveItem(payload.fromCat, payload.key, toCatId);
+  else ucAddItem(toCatId, payload.item);
+}
+function ucDropDispatch(payload, dropEl) {
+  const t = dropEl.dataset.ucDrop;
+  if (t === "new") { const c = ucNewCategory(); ucDropPayload(payload, c.id); }
+  else ucDropPayload(payload, +t);
+}
+function ucOnPointerDown(e) {
+  ucSuppressClick = false;
+  if (e.button && e.button !== 0) return;
+  const t = e.target;
+  let sourceEl = null;
+  if (t.closest(".uc-grip")) sourceEl = t.closest(".up-item");           // My Presets: only the grip drags
+  else if (t.closest(".uc-item-rm, .uc-del, .uc-name, .up-play, .up-use, .up-del, .up-drag, .up-name")) return;
+  else if (t.closest(".uc-item")) sourceEl = t.closest(".uc-item");      // category chip: whole chip drags
+  else if (t.closest("[data-pb]")) sourceEl = t.closest("[data-pb]");    // built-in button: whole button drags
+  if (!sourceEl) return;
+  const payload = ucPayloadFrom(sourceEl);
+  if (!payload) return;
+  ucDrag = { payload, x: e.clientX, y: e.clientY, active: false, ghost: null, hot: null };
+}
+function ucOnPointerMove(e) {
+  if (!ucDrag) return;
+  if (!ucDrag.active) {
+    if (Math.hypot(e.clientX - ucDrag.x, e.clientY - ucDrag.y) < 6) return;   // click vs drag threshold
+    ucDrag.active = true;
+    document.body.classList.add("uc-dragging");
+    const g = document.createElement("div");
+    g.className = "uc-ghost";
+    g.textContent = ucDrag.payload.label;
+    document.body.appendChild(g);
+    ucDrag.ghost = g;
+  }
+  ucDrag.ghost.style.left = (e.clientX + 12) + "px";
+  ucDrag.ghost.style.top = (e.clientY + 8) + "px";
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const drop = under && under.closest("[data-uc-drop]");
+  if (drop !== ucDrag.hot) {
+    if (ucDrag.hot) ucDrag.hot.classList.remove("uc-drop-hot");
+    ucDrag.hot = drop || null;
+    if (ucDrag.hot) ucDrag.hot.classList.add("uc-drop-hot");
+  }
+  const edge = 48;   // edge auto-scroll
+  if (e.clientY < edge) window.scrollBy(0, -14);
+  else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
+}
+function ucOnPointerUp() {
+  if (!ucDrag) return;
+  const d = ucDrag; ucDrag = null;
+  if (d.ghost) d.ghost.remove();
+  document.body.classList.remove("uc-dragging");
+  if (d.hot) d.hot.classList.remove("uc-drop-hot");
+  if (!d.active) return;          // never moved → it was a click, let it through
+  ucSuppressClick = true;
+  if (d.hot) ucDropDispatch(d.payload, d.hot);
+}
+// Right-click menu — a reliable non-drag path (and a fallback if a webview mishandles drag).
+let ucMenuEl = null;
+function closeUcMenu() { if (ucMenuEl) { ucMenuEl.remove(); ucMenuEl = null; } }
+function ucOpenMenu(e) {
+  const payload = ucPayloadFrom(e.target);
+  if (!payload) return;
+  e.preventDefault();
+  closeUcMenu();
+  const rows = userCats.map((c) => '<button data-cat="' + c.id + '">' + ucEsc(c.name) + '</button>').join("") || '<div class="uc-menu-empty">No categories yet</div>';
+  const m = document.createElement("div");
+  m.className = "uc-menu";
+  m.innerHTML = '<div class="uc-menu-h">Add “' + ucEsc(payload.label) + '” to</div>' + rows + '<button class="uc-menu-new" data-cat="new">＋ New category</button>';
+  document.body.appendChild(m);
+  m.style.left = Math.min(e.clientX, window.innerWidth - m.offsetWidth - 8) + "px";
+  m.style.top = Math.min(e.clientY, window.innerHeight - m.offsetHeight - 8) + "px";
+  m.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-cat]"); if (!b) return;
+    if (b.dataset.cat === "new") { const c = ucNewCategory(); ucDropPayload(payload, c.id); }
+    else ucDropPayload(payload, +b.dataset.cat);
+    closeUcMenu();
+  });
+  ucMenuEl = m;
+}
+function ucInitDrag() {
+  const col = document.querySelector(".ws-browser");
+  if (!col) return;
+  col.addEventListener("pointerdown", ucOnPointerDown);
+  document.addEventListener("pointermove", ucOnPointerMove);
+  document.addEventListener("pointerup", ucOnPointerUp);
+  col.addEventListener("click", (e) => { if (ucSuppressClick) { e.stopPropagation(); e.preventDefault(); ucSuppressClick = false; } }, true);
+  col.addEventListener("contextmenu", ucOpenMenu);
+  document.addEventListener("pointerdown", (e) => { if (ucMenuEl && !e.target.closest(".uc-menu")) closeUcMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeUcMenu(); });
+}
+
 // Filesystem-safe filename from a preset name (batch export writes one file per preset).
 function sanitizeFilename(name) {
   return ((name || "sound").replace(/[^\w.\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60)) || "sound";
@@ -2726,6 +2985,7 @@ function buildProject() {
     editor: snapshotState(),
     label: seqLabel,
     userPresets: userPresets,
+    userCats: userCats,
     sequence: sequence,
   };
 }
@@ -2761,6 +3021,12 @@ function loadProject(data) {
     upSeq = userPresets.reduce((m, p) => Math.max(m, p.id || 0), 0);
     saveUserPresets();
     renderMyPresets();
+  }
+  if (Array.isArray(data.userCats)) {
+    userCats = data.userCats.filter((c) => c && Array.isArray(c.items)).map((c) => ({ id: c.id, name: String(c.name || "Category"), items: c.items.filter((i) => i && (i.t === "b" || i.t === "u")) }));
+    ucSeq = userCats.reduce((m, c) => Math.max(m, c.id || 0), 0);
+    saveUserCats();
+    renderUserCats();
   }
   if (Array.isArray(data.sequence)) {
     sequence = data.sequence.filter((s) => s && typeof s.genome === "object");
@@ -2811,6 +3077,25 @@ const ARCHETYPES = [
       _vary:{ cutoff:0.35, reso:0.25, filtEnv:0.2, freq:0.2, decay:0.3 } } },
   { name: "Thud / low knock", patch: { wave:0, freq:90, subOsc:0.6, boom:0.4, boomFreq:60, attack:0, decay:0.2, sustain:0, release:0.15, cutoff:2500, drive:0.2, duration:0.4,
       _vary:{ freq:0.2, decay:0.3, boomFreq:0.2, drive:0.35, cutoff:0.2 } } },
+  // — newer-engine kinds (Impact/particle/modal/bubble/whoosh/formant + ring mod) —
+  { name: "Gunshot / blast", patch: { wave:19, impactTone:0.65, impactDecay:0.2, impactPunch:0.85, impactGrit:0.4, boom:0.55, boomFreq:80, boomDrop:0.5, boomDecay:0.18, attack:0.001, decay:0.1, sustain:0, release:0.12, drive:0.3, reverb:0.15, reverbSize:0.5, duration:0.4,
+      _vary:{ impactTone:0.4, impactDecay:0.4, impactPunch:0.2, impactGrit:0.5, boom:0.3, boomFreq:0.3, reverb:0.5, duration:0.3 } } },
+  { name: "Fire / flames",   patch: { wave:15, particleRate:90, particleTone:0.5, particleDecay:0.3, particleSpread:0.6, sustain:1, attack:0.05, decay:0.1, release:0.3, cutoff:7000, drive:0.25, reverb:0.15, duration:1.0,
+      _vary:{ particleRate:0.4, particleTone:0.4, particleDecay:0.4, particleSpread:0.3, drive:0.4, cutoff:0.2, duration:0.3 } } },
+  { name: "Ice / crystal",   patch: { wave:10, freq:1500, modalPartials:6, modalDecay:0.5, modalInharm:0.5, modalBright:0.7, sustain:1, attack:0.001, release:0.4, cutoff:12000, reverb:0.3, reverbSize:0.6, reverbTone:0.65, duration:0.7,
+      _vary:{ freq:0.3, modalInharm:0.4, modalDecay:0.3, modalBright:0.2, modalPartials:0.3, reverb:0.3 } } },
+  { name: "Electric / zap",  patch: { wave:2, freq:400, ringMod:0.6, ringFreq:1200, noise:0.3, sweep:0.2, attack:0, decay:0.15, sustain:0.1, release:0.1, cutoff:9000, reso:0.3, bitcrush:8, drive:0.3, duration:0.35,
+      _vary:{ freq:0.35, ringFreq:0.5, ringMod:0.3, noise:0.3, decay:0.35, bitcrush:0.4, sweep:0.5, cutoff:0.2 } } },
+  { name: "Spark / crackle", patch: { wave:15, particleRate:50, particleTone:0.85, particleDecay:0.15, particleSpread:0.8, ringMod:0.2, ringFreq:900, sustain:1, attack:0.01, release:0.2, filterMode:1, cutoff:1500, duration:0.5,
+      _vary:{ particleRate:0.5, particleTone:0.2, particleDecay:0.4, particleSpread:0.3, ringMod:0.4, ringFreq:0.5, duration:0.4 } } },
+  { name: "Whoosh / swing",  patch: { wave:20, whooshTone:0.6, whooshSweep:0.6, whooshBody:0.4, whooshPeak:0.45, sustain:1, attack:0.001, release:0.05, reverb:0.12, duration:0.4,
+      _vary:{ whooshTone:0.4, whooshSweep:0.4, whooshBody:0.4, whooshPeak:0.4, reverb:0.4, duration:0.3 } } },
+  { name: "Water / bubble",  patch: { wave:14, freq:220, bubbleRate:12, bubbleRise:0.6, bubbleSpread:0.5, bubbleDecay:0.5, sustain:1, attack:0.01, release:0.2, cutoff:5000, reverb:0.15, duration:0.6,
+      _vary:{ freq:0.4, bubbleRate:0.5, bubbleRise:0.3, bubbleSpread:0.3, bubbleDecay:0.3, duration:0.3 } } },
+  { name: "Magic / sparkle", patch: { wave:10, freq:880, modalPartials:5, modalDecay:0.5, modalInharm:0.3, modalBright:0.7, repeat:4, rate:14, arpStep:4, sustain:1, attack:0.001, release:0.4, cutoff:11000, reverb:0.35, reverbSize:0.7, duration:0.8,
+      _vary:{ freq:0.3, modalInharm:0.3, arpStep:0.5, rate:0.3, repeat:0.3, reverb:0.3 } } },
+  { name: "Monster / growl", patch: { wave:13, freq:100, formantVowel:0.6, formantSize:1.5, formantQ:0.4, formantBreath:0.3, drive:0.35, sustain:1, attack:0.02, decay:0.1, release:0.2, duration:0.6,
+      _vary:{ freq:0.3, formantVowel:0.5, formantSize:0.25, formantBreath:0.4, formantQ:0.3, drive:0.3, duration:0.3 } } },
 ];
 const archByName = (name) => ARCHETYPES.find((a) => a.name === name);
 
@@ -2822,7 +3107,7 @@ const archByName = (name) => ARCHETYPES.find((a) => a.name === name);
 // "Generic" = no styling (full modern engine). Uses Math.random (fine — this is generation,
 // not the deterministic render() path).
 const NES_PW = [0.125, 0.25, 0.5, 0.75];    // the NES pulse channel's four duty cycles
-const tonal = (g) => (g.noise || 0) < 0.6;   // leave a noise-based sound (explosion/hit) on its noise
+const tonal = (g) => (g.noise || 0) < 0.6 && (g.wave || 0) <= 7;   // only re-voice a basic-oscillator tone — leave noise-based (explosion) AND engine (impact/particle/modal/…) waves alone
 function retro(g) { g.reverb = 0; g.delay = 0; g.unison = 1; g.driveOS = 1; return g; }  // strip effects no chip had
 const STYLES = [
   { name: "Generic", fn: null },   // full modern engine, no console flavor
@@ -2864,26 +3149,6 @@ function foundryGenerate(type, styleName) {
   }
   return out;
 }
-// Non-default params only (same rule as encodePatch / a preset patch is a diff from defaults).
-function patchDiff(genome) {
-  const d = {};
-  for (const p of PARAMS) { const k = p[0]; const v = (k in genome) ? genome[k] : p[5]; if (v !== p[5]) d[k] = v; }
-  return d;
-}
-// Trim float noise from jitter/step math (e.g. 0.30000000000000004 -> 0.3) without lying about ints.
-function foundryNum(v) { return String(Number(Number(v).toFixed(6))); }
-function presetEntry(name, genome) {
-  const body = Object.entries(patchDiff(genome)).map(([k, v]) => k + ":" + foundryNum(v)).join(", ");
-  return JSON.stringify(name) + ": { " + body + " },";
-}
-// The copy/paste deliverable: PRESETS entries + a PRESET_CATEGORIES line for presets.js.
-function buildPresetBlock(keepers) {
-  const entries = keepers.map((k) => "  " + presetEntry(k.name, k.genome)).join("\n");
-  return "// CrunchySFX Foundry — procedural + hand-curated (no AI). Paste inside the NEW = { … }\n" +
-         "// object in new_presets.js; it auto-files these under the \"My Sounds\" section.\n" +
-         entries + "\n";
-}
-
 const foundryModal = document.createElement("div");
 foundryModal.className = "modal";
 foundryModal.hidden = true;
@@ -2891,7 +3156,7 @@ foundryModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head">' +
       '<h2>⚒ Foundry</h2>' +
-      '<span class="hint">Generate → ▶ audition → ＋ Keep the ones you like → export as presets. All procedural + your ear — no AI.</span>' +
+      '<span class="hint">Generate → ▶ audition → ✎ Edit Sound loads it into the editor to tweak &amp; export.' + (isDesktop ? ' Or ＋ Keep several and save them to My Presets.' : '') + ' All procedural + your ear — no AI.</span>' +
       '<button id="fndClose">✕ Close</button>' +
     '</div>' +
     '<div class="foundry-gen">' +
@@ -2911,24 +3176,23 @@ foundryModal.innerHTML =
       STYLES.map((s, i) => '<label class="fnd-style"><input type="radio" name="fndstyle" value="' + s.name + '"' + (i === 0 ? ' checked' : '') + '><span>' + s.name + '</span></label>').join('') +
     '</div>' +
     '<div id="fndGrid" class="breed-grid"></div>' +
-    '<div class="foundry-keep">' +
-      '<div class="foundry-keep-head"><span>Kept</span> <span id="fndKeepN" class="hint"></span></div>' +
-      '<div id="fndKeepList" class="fnd-keep-list"></div>' +
-      '<textarea id="fndOut" class="fnd-out" spellcheck="false" hidden></textarea>' +
-    '</div>' +
-    '<div class="modal-foot">' +
-      '<button id="fndCopy" class="primary">📋 Copy preset block</button>' +
-      (isDesktop ? '<button id="fndSaveMy">★ Save kept to My Presets</button>' : '') +
-      '<button id="fndClear">Clear kept</button>' +
-      '<span id="fndMsg" class="hint"></span>' +
-    '</div>' +
+    (isDesktop ?
+      '<div class="foundry-keep">' +
+        '<div class="foundry-keep-head"><span>Kept</span> <span id="fndKeepN" class="hint"></span></div>' +
+        '<div id="fndKeepList" class="fnd-keep-list"></div>' +
+      '</div>' +
+      '<div class="modal-foot">' +
+        '<button id="fndSaveMy" class="primary">★ Save kept to My Presets</button>' +
+        '<button id="fndClear">Clear kept</button>' +
+        '<span id="fndMsg" class="hint"></span>' +
+      '</div>'
+      : '') +
   '</div>';
 document.body.appendChild(foundryModal);
 const fndGrid = foundryModal.querySelector("#fndGrid");
 const fndKeepList = foundryModal.querySelector("#fndKeepList");
 const fndCount = foundryModal.querySelector("#fndCount");
 const fndKeepN = foundryModal.querySelector("#fndKeepN");
-const fndOut = foundryModal.querySelector("#fndOut");
 const fndMsg = foundryModal.querySelector("#fndMsg");
 
 function foundryPlay(genome) { const r = withState(genome, () => render()); playBuffer(r.L, r.R); }
@@ -2947,17 +3211,22 @@ function renderFoundryGrid() {
     cell.appendChild(cv);
     const bar = document.createElement("div");
     bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-keepbtn">＋ Keep</button><span class="breed-tag">#' + (i + 1) + '</span>';
+    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-editbtn">✎ Edit Sound</button>' +
+      (isDesktop ? '<button class="fnd-keepbtn">＋ Keep</button>' : '') +
+      '<span class="breed-tag">#' + (i + 1) + '</span>';
     cell.appendChild(bar);
     fndGrid.appendChild(cell);
     drawMini(cv, L, R);
     bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); foundryPlay(g); });
-    bar.querySelector(".fnd-keepbtn").addEventListener("click", (e) => { e.stopPropagation(); foundryAddKeep(g); });
+    bar.querySelector(".fnd-editbtn").addEventListener("click", (e) => { e.stopPropagation(); applyPreset(g, "Foundry"); foundryModal.hidden = true; });   // adopt into the editor
+    const keepBtn = bar.querySelector(".fnd-keepbtn");
+    if (keepBtn) keepBtn.addEventListener("click", (e) => { e.stopPropagation(); foundryAddKeep(g); });
     cell.addEventListener("click", () => foundryPlay(g));   // click tile = audition
   });
   fndCount.textContent = foundryCands.length ? foundryCands.length + " candidates — click a tile to hear it" : "";
 }
 function renderFoundryKeep() {
+  if (!fndKeepList) return;   // web build has no Kept section
   fndKeepList.innerHTML = "";
   if (!foundryKeep.length) {
     fndKeepList.innerHTML = '<div class="mp-empty">Nothing kept yet — hit ＋ Keep on the candidates you like.</div>';
@@ -2981,7 +3250,6 @@ function renderFoundryKeep() {
     });
   }
   fndKeepN.textContent = foundryKeep.length ? "(" + foundryKeep.length + ")" : "";
-  if (!fndOut.hidden) fndOut.value = buildPresetBlock(foundryKeep);   // keep the shown block fresh
 }
 function openFoundry() {
   if (!foundryCands.length) foundryCands = foundryGenerate("any", fndStyleVal());   // start with usable sounds, not chaos
@@ -2997,21 +3265,11 @@ const fndStyleVal = () => (fndStyles.querySelector('input[name="fndstyle"]:check
 foundryModal.querySelector("#fndGen").addEventListener("click", () => { foundryCands = foundryGenerate(fndType.value, fndStyleVal()); renderFoundryGrid(); });
 foundryModal.querySelector("#fndMutate").addEventListener("click", () => { foundryCands = foundryGenerate("mutate", fndStyleVal()); renderFoundryGrid(); });
 fndStyles.addEventListener("change", () => { foundryCands = foundryGenerate(fndType.value, fndStyleVal()); renderFoundryGrid(); });   // flip a console, hear it immediately
-foundryModal.querySelector("#fndClear").addEventListener("click", () => { foundryKeep = []; fndOut.hidden = true; renderFoundryKeep(); fndMsg.textContent = ""; });
+const fndClearBtn = foundryModal.querySelector("#fndClear");
+if (fndClearBtn) fndClearBtn.addEventListener("click", () => { foundryKeep = []; renderFoundryKeep(); if (fndMsg) fndMsg.textContent = ""; });
 foundryModal.querySelector("#fndClose").addEventListener("click", () => { foundryModal.hidden = true; });
 foundryModal.addEventListener("click", (e) => { if (e.target === foundryModal) foundryModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !foundryModal.hidden) foundryModal.hidden = true; });
-foundryModal.querySelector("#fndCopy").addEventListener("click", async () => {
-  if (!foundryKeep.length) { fndMsg.textContent = "Keep at least one sound first."; return; }
-  const block = buildPresetBlock(foundryKeep);
-  try {
-    await navigator.clipboard.writeText(block);   // undefined on file:// -> caught
-    fndMsg.textContent = "✓ Copied " + foundryKeep.length + " preset" + (foundryKeep.length === 1 ? "" : "s") + " to clipboard.";
-  } catch (e) {
-    fndOut.hidden = false; fndOut.value = block; fndOut.focus(); fndOut.select();   // fallback: manual copy
-    fndMsg.textContent = "Clipboard blocked — select the text below and copy.";
-  }
-});
 if (isDesktop) {
   const saveMy = foundryModal.querySelector("#fndSaveMy");
   if (saveMy) saveMy.addEventListener("click", () => {
@@ -3025,10 +3283,13 @@ if (isDesktop) {
 
 if (isDesktop) {
   mpPanel.hidden = false;
+  userCatsBox.hidden = false;   // enable custom categories (premium organizer)
   document.getElementById("mpSave").addEventListener("click", saveCurrentUserPreset);
   document.getElementById("mpExportAll").addEventListener("click", batchExportUserPresets);
   loadUserPresets();
-  renderMyPresets();
+  loadUserCats();
+  ucInitDrag();
+  renderMyPresets();   // also renders the custom categories
 
   // Live preview of the batch-filename template (shows what the first saved preset resolves to).
   const nameTplInput = document.getElementById("mpNameTpl");
