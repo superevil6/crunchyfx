@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.crunchysfx.app</id>
+  <name>CrunchySFX</name>
+  <summary>A from-scratch sound effect generator</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+
+  <developer id="com.crunchysfx">
+    <name>Alex Cassells</name>
+  </developer>
+
+  <description>
+    <p>
+      CrunchySFX is a from-scratch sound-effect generator in the sfxr/bfxr tradition, but far beyond
+      classic chiptune: 15+ hand-written synthesis engines (subtractive, FM &amp; 4-operator FM,
+      Karplus-Strong pluck, modal/bell resonators, granular, a formant vocal model with text-to-speech,
+      additive pads, impact/whoosh/particle foley, and a draw-your-own wavetable), 600+ presets,
+      one-click WAV export, procedural breeding, and a Foundry that generates and re-voices sounds on
+      retro console chips.
+    </p>
+    <p>
+      Every sound is synthesized — no sample libraries, no AI models, no cloud. Sounds you create are
+      public domain (CC0 1.0): use them for anything, commercial or not, with no attribution, forever.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.crunchysfx.app.desktop</launchable>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+
+  <content_rating type="oars-1.1"/>
+
+  <url type="homepage">https://crunchysfx.com/</url>
+
+  <releases>
+    <release version="1.0.0" date="2026-07-19"/>
+  </releases>
+</component>

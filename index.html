@@ -3346,7 +3346,7 @@ if (isDesktop) {
   steamBtn.id = "steambtn";
   steamBtn.className = "primary";
   steamBtn.textContent = "🎮 Get the Desktop app";
-  steamBtn.title = "See the desktop-app features — coming soon to Steam";
+  steamBtn.title = "Get the desktop app on itch.io";
 
   const steamModal = document.createElement("div");
   steamModal.className = "modal";
@@ -3355,7 +3355,7 @@ if (isDesktop) {
     '<div class="modal-box steam-box">' +
       '<div class="modal-head">' +
         '<h2>🎮 CrunchySFX Desktop</h2>' +
-        '<span class="steam-badge">Coming soon</span>' +
+        '<span class="steam-badge">Available now</span>' +
         '<span class="hint">The web version stays free — the desktop app adds a pro workflow.</span>' +
         '<button id="steamClose">✕ Close</button>' +
       '</div>' +
@@ -3370,15 +3370,17 @@ if (isDesktop) {
         '<p class="steam-note">Everything you make in the free web version is CC0 and yours to keep. The desktop app is about workflow, not locking up your sounds.</p>' +
       '</div>' +
       '<div class="modal-foot">' +
-        '<button class="primary" id="steamSoon" disabled>Coming soon to Steam</button>' +
-        '<span class="hint">Wishlist link coming soon.</span>' +
+        '<button class="primary" id="steamGet">Get it on itch.io ↗</button>' +
+        '<span class="hint">One-time purchase on itch.io. Coming to Steam later too.</span>' +
       '</div>' +
     '</div>';
   document.body.appendChild(steamModal);
 
+  const ITCH_URL = "https://sevi66.itch.io/crunchysfx"; 
   const openSteam = () => { steamModal.hidden = false; };
   const closeSteam = () => { steamModal.hidden = true; };
   steamBtn.addEventListener("click", openSteam);
+  steamModal.querySelector("#steamGet").addEventListener("click", () => window.open(ITCH_URL, "_blank", "noopener"));
   steamModal.querySelector("#steamClose").addEventListener("click", closeSteam);
   steamModal.addEventListener("click", (e) => { if (e.target === steamModal) closeSteam(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !steamModal.hidden) closeSteam(); });

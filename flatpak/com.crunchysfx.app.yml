@@ -1,0 +1,68 @@
+# CrunchySFX — Flatpak manifest (cross-distro PAID Linux build).
+#
+# Why Flatpak: its runtime brokers the host GL/Mesa/NVIDIA drivers correctly, which is exactly what
+# fixes the WebKitGTK "EGL_BAD_PARAMETER / blank white page" bug that the CI AppImage hits on
+# bleeding-edge distros (CachyOS/Arch, Steam Deck). Deliver the resulting single .flatpak file via
+# itch — it's purchase-gated like any download.
+#
+# ── BUILD (produces one distributable file) ───────────────────────────────────────────────────
+#   # one-time (Arch/CachyOS): sudo pacman -S flatpak flatpak-builder
+#   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+#   flatpak install -y --user flathub org.gnome.Platform//46 org.gnome.Sdk//46
+#
+#   # copy your Tauri-built .deb next to this manifest as `crunchysfx.deb`:
+#   cp src-tauri/target/release/bundle/deb/*.deb flatpak/crunchysfx.deb
+#
+#   cd flatpak
+#   flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo build-dir com.crunchysfx.app.yml
+#   flatpak build-bundle repo CrunchySFX-1.0.0.flatpak com.crunchysfx.app
+#
+# ── TEST ──────────────────────────────────────────────────────────────────────────────────────
+#   flatpak-builder --run build-dir com.crunchysfx.app.yml crunchysfx      # run straight from the build
+#   # or install the bundle: flatpak install --user ./CrunchySFX-1.0.0.flatpak && flatpak run com.crunchysfx.app
+#
+# ── WHAT THE BUYER DOES ───────────────────────────────────────────────────────────────────────
+#   flatpak install --user ./CrunchySFX-1.0.0.flatpak     # first run pulls org.gnome.Platform//46 from flathub
+#   flatpak run com.crunchysfx.app
+
+id: com.crunchysfx.app
+runtime: org.gnome.Platform
+runtime-version: '46'          # GNOME 46 ships the webkit2gtk-4.1 that Tauri v2 links against
+sdk: org.gnome.Sdk
+command: crunchysfx
+
+finish-args:
+  - --socket=wayland           # native Wayland…
+  - --socket=fallback-x11      # …or XWayland/X11
+  - --share=ipc                # required with X11 (shared memory)
+  - --device=dri               # GPU access — the Flatpak GL brokering that fixes the EGL/blank-page bug
+  - --socket=pulseaudio        # audio OUT (playback) + audio IN (the mic Record feature)
+  # File save / WAV / batch export use xdg-desktop-portal (native dialogs), so no broad filesystem
+  # access is needed. `xdg-download` is opened rw as a sensible default sink for exported sounds.
+  # If a Save/Export can't write in the sandbox, broaden this (e.g. `--filesystem=home`) AND check the
+  # Tauri fs scope in src-tauri/capabilities/default.json maps to the chosen path.
+  - --filesystem=xdg-download:rw
+  # The app is fully offline — deliberately NO --share=network (a nice trust signal for a tool).
+
+modules:
+  - name: crunchysfx
+    buildsystem: simple
+    sources:
+      - type: file
+        path: crunchysfx.deb                        # your Tauri .deb, copied here (see header)
+      - type: file
+        path: com.crunchysfx.app.metainfo.xml
+    build-commands:
+      # unpack the .deb (its data tarball may be .gz / .xz / .zst depending on dpkg)
+      - ar -x crunchysfx.deb
+      - 'for f in data.tar.*; do tar -xf "$f"; done'
+      # binary — installed under a stable name regardless of what the .deb called it
+      - install -Dm755 usr/bin/* /app/bin/crunchysfx
+      # .desktop — renamed to the app-id, with Icon/Exec pointed at the app-id/command
+      - 'install -Dm644 "$(find usr/share/applications -name "*.desktop" | head -1)" /app/share/applications/com.crunchysfx.app.desktop'
+      - "sed -i 's/^Icon=.*/Icon=com.crunchysfx.app/' /app/share/applications/com.crunchysfx.app.desktop"
+      - "sed -i 's/^Exec=.*/Exec=crunchysfx/'          /app/share/applications/com.crunchysfx.app.desktop"
+      # icons — renamed to the app-id at every size the .deb provides
+      - 'for d in usr/share/icons/hicolor/*/apps; do s=$(basename "$(dirname "$d")"); i=$(find "$d" -name "*.png" | head -1); [ -n "$i" ] && install -Dm644 "$i" "/app/share/icons/hicolor/$s/apps/com.crunchysfx.app.png"; done'
+      # AppStream metainfo (well-formed bundle; used by software centers)
+      - install -Dm644 com.crunchysfx.app.metainfo.xml /app/share/metainfo/com.crunchysfx.app.metainfo.xml
