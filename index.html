@@ -90,6 +90,10 @@
 </div>
 
 <div class="scoperow">
+  <div class="scope-modes">
+    <button class="scope-mode active" data-mode="wave" title="Waveform — amplitude over time">〜 Wave</button>
+    <button class="scope-mode" data-mode="xy" title="XY / Lissajous — left channel vs right channel">◇ XY</button>
+  </div>
   <canvas id="scope" width="2320" height="90"></canvas>
 </div>
 
@@ -182,6 +186,12 @@ const PARAMS = [
   ["grainSpray",  "Grain spray", 0, 1, 0.01, 0, "",   "Granular"],
   ["grainScan",   "Grain scan",  0, 2, 0.01, 1, "x",  "Granular"],
   ["grainSpread", "Grain spread",0, 1, 0.01, 0, "",   "Granular"],
+  // Wave Morph (wave "custom"): blend the drawn Wave A into a second drawn Wave B. `morph` is the
+  // A→B blend at the start; `morphSweep` (±) is how far the blend travels over the sound's duration
+  // (+ toward B, − toward A). Both default 0 → pure Wave A, so existing custom-wave patches are
+  // byte-identical. Only apply when wave is "custom".
+  ["morph",       "Morph A→B",  0, 1, 0.01, 0, "",     "Wave morph"],
+  ["morphSweep",  "Morph sweep",-1, 1, 0.01, 0, "",    "Wave morph"],
   // Formant / vocal (wave "formant"): a buzz source through 3 tuned resonators = vowels / voices /
   // creatures. Ignored unless wave is "formant", so defaults don't affect existing presets.
   ["formantVowel","Vowel",      0, 1, 0.01, 0, "",     "Formant"],
@@ -304,6 +314,7 @@ for (const p of PARAMS) state[p[0]] = p[5];
 // Custom drawn single-cycle waveform (wave "custom"). Stored IN the patch as a compact base64
 // int8 string so it travels with presets / share-links / history (empty = default sine).
 state.customWave = "";
+state.customWaveB = "";   // Wave Morph: second drawn wave, blended into A by morph/morphSweep (empty = sine)
 // Text for the "speech" waveform — also stored in the patch (travels with presets/share/history).
 state.speechText = "";
 
@@ -434,12 +445,19 @@ function render() {
   // Custom drawn wave (wave 12): band-limit the drawing to this note's highest frequency (up-sweep
   // pushes it higher) so it can't alias, into the module-level table waveform() reads. Read via the
   // normal unison path, so detune/width/vibrato all work. customTable is cleared otherwise.
-  let customTable = null;
+  let customTable = null, customTableB = null;
   if (waveType === 12) {
     const drawn = b64ToCustomWave(state.customWave) || CUSTOM_DEFAULT_DRAWN;
     const swMul = state.sweep > 0 ? Math.pow(2, state.sweep * 4) : 1;
     const fMax = Math.min(20000, Math.max(1, baseFreq * swMul));
-    customTable = buildCustomTable(drawn, Math.floor(22050 / fMax));
+    const maxH = Math.floor(22050 / fMax);
+    customTable = buildCustomTable(drawn, maxH);
+    // Wave Morph: build Wave B too when engaged (morph start > 0, or a sweep). Band-limited the same
+    // way, so the two tables share length and blend cleanly. Off by default → no extra FFT cost.
+    if (state.morph > 0 || state.morphSweep !== 0) {
+      const drawnB = b64ToCustomWave(state.customWaveB) || CUSTOM_DEFAULT_DRAWN;
+      customTableB = buildCustomTable(drawnB, maxH);
+    }
   }
   // Formant / vocal (wave "formant"): a buzz (band-limited saw) through 3 parallel resonant
   // bandpasses tuned to vowel formants → "ahh/ooo/eee", voices, creatures, robots. Formant freqs
@@ -651,13 +669,17 @@ function render() {
       y /= fmCarr.length;
       oscL = y; oscR = y;                             // mono, centered
     } else {
+      // Wave-Morph blend factor at this sample: A→B start (morph) plus a sweep over the sound's
+      // duration. Same for every unison voice, so compute once. Only non-zero when Wave B is built.
+      let morphB = 0;
+      if (customTableB) morphB = Math.min(1, Math.max(0, state.morph + state.morphSweep * (n > 1 ? i / (n - 1) : 0)));
       // sum unison voices into L/R
       for (let v = 0; v < V; v++) {
         const dt = (fOsc * ratios[v]) / SR;
         let ph = phases[v] + dt;
         if (ph >= 1) ph -= 1;
         phases[v] = ph;
-        const w = waveform(waveType, ph, dt, duty, customTable);
+        const w = waveform(waveType, ph, dt, duty, customTable, customTableB, morphB);
         oscL += w * panL[v];
         oscR += w * panR[v];
       }
@@ -821,7 +843,10 @@ function render() {
     const ct = Math.round(state.convType);
     let irL = null, irR = null;
     if (ct >= 4) {                                          // "Custom IR": convolve with the user-loaded space (if any)
-      if (customIR) { irL = customIR.L; irR = customIR.R; }
+      if (customIR) {
+        if (state.convTone >= 0.999) { irL = customIR.L; irR = customIR.R; }   // verbatim (bright) — use as-is
+        else { const t = toneIR(customIR.L, customIR.R, state.convTone); irL = t.L; irR = t.R; }   // Conv tone darkens it
+      }
     } else {                                                // built-in synthesized spaces (Room/Hall/Plate/Spring)
       irL = makeIR(ct, state.convSize, state.convTone, 0x1234abcd);
       irR = makeIR(ct, state.convSize, state.convTone, 0x9e3779b9);
@@ -935,6 +960,7 @@ function restoreEdit(entry) {
   restoringHistory = true;
   for (const p of PARAMS) state[p[0]] = entry.s[p[0]];
   state.customWave = entry.s.customWave || "";
+  state.customWaveB = entry.s.customWaveB || "";
   state.speechText = entry.s.speechText || "";
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
   customIR = "ir" in entry ? entry.ir : customIR;
@@ -965,11 +991,12 @@ document.addEventListener("keydown", (e) => {
 function withState(snap, fn) {
   const backup = {};
   for (const p of PARAMS) backup[p[0]] = state[p[0]];
-  backup.customWave = state.customWave; backup.speechText = state.speechText;
+  backup.customWave = state.customWave; backup.customWaveB = state.customWaveB; backup.speechText = state.speechText;
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
   state.customWave = "customWave" in snap ? snap.customWave : "";
+  state.customWaveB = "customWaveB" in snap ? snap.customWaveB : "";
   state.speechText = "speechText" in snap ? snap.speechText : "";
-  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; state.speechText = backup.speechText; }
+  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; state.customWaveB = backup.customWaveB; state.speechText = backup.speechText; }
 }
 
 // ---------- WAV export (16-bit stereo PCM) ----------
@@ -1166,13 +1193,14 @@ function snapshotState() {
   const s = {};
   for (const p of PARAMS) s[p[0]] = state[p[0]];
   if (state.customWave) s.customWave = state.customWave;   // carry the drawn wave with the snapshot
+  if (state.customWaveB) s.customWaveB = state.customWaveB; // …and the Wave-Morph second wave
   if (state.speechText) s.speechText = state.speechText;   // …and the speech text
   const rp = riffGetPatch(); if (rp) s.riff = rp;          // …and the riff (for preset / My Presets save)
   return s;
 }
 function sameState(a, b) {
   for (const p of PARAMS) if (a[p[0]] !== b[p[0]]) return false;
-  return (a.customWave || "") === (b.customWave || "") && (a.speechText || "") === (b.speechText || "");
+  return (a.customWave || "") === (b.customWave || "") && (a.customWaveB || "") === (b.customWaveB || "") && (a.speechText || "") === (b.speechText || "");
 }
 function thumbPeaks(L) {
   const N = 96, out = new Float32Array(N), step = L.length / N;
@@ -1285,7 +1313,11 @@ renderHistory();
 // ---------- Scope drawing ----------
 const scope = document.getElementById("scope");
 const sctx = scope.getContext("2d");
+let scopeMode = "wave";                 // "wave" (amplitude/time) or "xy" (Lissajous L-vs-R)
+let lastScopeL = null, lastScopeR = null;   // remember the last buffer so a mode switch can redraw it
 function drawScope(L, R) {
+  lastScopeL = L; lastScopeR = R;
+  if (scopeMode === "xy") return drawScopeXY(L, R);
   const w = scope.width, h = scope.height;
   sctx.clearRect(0, 0, w, h);
   sctx.strokeStyle = "#322c40";
@@ -1306,6 +1338,29 @@ function drawScope(L, R) {
   };
   trace(R, "#45d0ff", 0.55);   // right channel, faint blue
   trace(L, "#ff7a45", 1);      // left channel, accent
+}
+// XY / Lissajous: plot the path of (L,R) over time — left drives X, right drives Y. A mono sound
+// (L==R) draws a 45° line; stereo width (unison pan / detune / granular spread / reverb) opens it into
+// a figure. Normalized to fill the square; strided + low-alpha for the classic phosphor-glow look.
+function drawScopeXY(L, R) {
+  const w = scope.width, h = scope.height, cx = w / 2, cy = h / 2, rad = Math.min(w, h) / 2 - 6;
+  sctx.clearRect(0, 0, w, h);
+  sctx.strokeStyle = "#322c40"; sctx.lineWidth = 1;
+  sctx.beginPath();
+  sctx.moveTo(cx, cy - rad); sctx.lineTo(cx, cy + rad);   // Y axis
+  sctx.moveTo(cx - rad, cy); sctx.lineTo(cx + rad, cy);   // X axis
+  sctx.stroke();
+  let peak = 1e-6;
+  for (let i = 0; i < L.length; i++) { const a = Math.abs(L[i]); if (a > peak) peak = a; const b = Math.abs(R[i]); if (b > peak) peak = b; }
+  const sc = rad / peak, N = L.length, stride = Math.max(1, Math.floor(N / 6000));
+  sctx.strokeStyle = "#ff7a45"; sctx.lineWidth = 1.2; sctx.globalAlpha = 0.5;
+  sctx.beginPath();
+  let started = false;
+  for (let i = 0; i < N; i += stride) {
+    const x = cx + L[i] * sc, y = cy - R[i] * sc;
+    started ? sctx.lineTo(x, y) : (sctx.moveTo(x, y), started = true);
+  }
+  sctx.stroke(); sctx.globalAlpha = 1;
 }
 
 // Overlay a warning when the current sound has no audible output.
@@ -1508,25 +1563,45 @@ cwPanel.className = "panel";
 cwPanel.dataset.group = "Custom wave";
 cwPanel.innerHTML =
   '<h2>Custom wave</h2>' +
+  '<div class="cw-ab"><span>Editing</span>' +
+    '<button class="cw-slot active" data-slot="A">Wave A</button>' +
+    '<button class="cw-slot" data-slot="B">Wave B</button>' +
+    '<span class="cw-ab-hint">Wave Morph blends A→B</span>' +
+  '</div>' +
   '<canvas id="customCanvas" class="cw-canvas" width="560" height="220"></canvas>' +
   '<div class="cw-btns">' +
     '<button data-shape="sine">Sine</button><button data-shape="saw">Saw</button>' +
     '<button data-shape="square">Square</button><button data-shape="triangle">Tri</button>' +
     '<button data-shape="random">Random</button><button data-shape="clear">Clear</button>' +
   '</div>' +
-  '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback).</div>';
+  '<div class="cw-img"><button class="cw-img-btn" type="button">🖼 From image…</button>' +
+    '<span class="cw-img-hint">traces an image into this wave</span></div>' +
+  '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback). Draw a 2nd wave on B and use the Wave-morph panel to blend/sweep A→B.</div>';
 // place the draw editor among the other wave-specific panels (before "Mix"), not at the very end
 const mixPanel = panels.querySelector('[data-group="Mix"]');
 if (mixPanel) panels.insertBefore(cwPanel, mixPanel); else panels.appendChild(cwPanel);
 const cwCanvas = document.getElementById("customCanvas");
 const cwCtx = cwCanvas.getContext("2d");
 
+let cwSlot = "A";   // which drawing the canvas edits: "A" → state.customWave, "B" → state.customWaveB
+const cwKey = (s) => (s === "B" ? "customWaveB" : "customWave");
 function drawCustomCanvas() {
   const w = cwCanvas.width, h = cwCanvas.height, ctx = cwCtx;
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();   // center axis
-  ctx.strokeStyle = "#ff7a45"; ctx.lineWidth = 2;
+  // ghost the OTHER wave (dim) so you can see both A and B while morphing
+  const other = b64ToCustomWave(state[cwKey(cwSlot === "A" ? "B" : "A")]);
+  if (other && other.length === CUSTOM_N) {
+    ctx.strokeStyle = "rgba(255,122,69,0.22)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < CUSTOM_N; i++) {
+      const x = i / (CUSTOM_N - 1) * w, y = h / 2 - other[i] * (h / 2 - 3);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#ff7a45"; ctx.lineWidth = 2;   // active wave (bright)
   ctx.beginPath();
   for (let i = 0; i < CUSTOM_N; i++) {
     const x = i / (CUSTOM_N - 1) * w, y = h / 2 - customDraw[i] * (h / 2 - 3);
@@ -1535,15 +1610,25 @@ function drawCustomCanvas() {
   ctx.stroke();
 }
 function syncCustomCanvas() {   // called by syncUI: reload the editor from state (preset/share/history)
-  const d = b64ToCustomWave(state.customWave);
+  const d = b64ToCustomWave(state[cwKey(cwSlot)]);
   customDraw.set(d && d.length === CUSTOM_N ? d : CUSTOM_DEFAULT_DRAWN);
   drawCustomCanvas();
 }
 function commitCustomWave(replay) {
-  state.customWave = customWaveToB64(customDraw);
+  state[cwKey(cwSlot)] = customWaveToB64(customDraw);   // write to whichever wave is active
   drawCustomCanvas();
   if (replay) play("Custom wave");
 }
+function cwSwitchSlot(slot) {   // save the current drawing, switch the canvas to the other wave
+  if (slot === cwSlot) return;
+  state[cwKey(cwSlot)] = customWaveToB64(customDraw);   // keep edits to the slot we're leaving
+  cwSlot = slot;
+  const d = b64ToCustomWave(state[cwKey(cwSlot)]);
+  customDraw.set(d && d.length === CUSTOM_N ? d : CUSTOM_DEFAULT_DRAWN);
+  cwPanel.querySelectorAll(".cw-slot").forEach((b) => b.classList.toggle("active", b.dataset.slot === cwSlot));
+  drawCustomCanvas();
+}
+cwPanel.querySelectorAll(".cw-slot").forEach((b) => b.addEventListener("click", () => { selectCustomWave(); cwSwitchSlot(b.dataset.slot); }));
 function selectCustomWave() {   // switch to the "custom" engine + light its button
   state.wave = 12;
   syncWaveButtons();
@@ -1589,6 +1674,141 @@ const cwEnd = () => { if (cwDrawing) { cwDrawing = false; commitCustomWave(true)
 cwCanvas.addEventListener("pointerup", cwEnd);
 cwCanvas.addEventListener("pointercancel", cwEnd);
 drawCustomCanvas();
+
+// ---------- Image → waveform ----------
+// Trace a picture into the single-cycle wave: squash it to 256×H, then per column take the
+// luminance-weighted centroid of the "ink" (auto-detected: dark ink on a light image, else bright)
+// → that vertical position becomes the amplitude at that x. Draw a curve / drop a silhouette and hear
+// its shape. Accepts an <img> or a <canvas> (so it's unit-testable). Writes into the active A/B slot.
+function imageToWave(src) {
+  const W = CUSTOM_N, H = 128;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const cx = c.getContext("2d");
+  cx.fillStyle = "#fff"; cx.fillRect(0, 0, W, H);        // white bg → transparent PNGs read as empty
+  cx.drawImage(src, 0, 0, W, H);                          // squash to 256×128
+  const px = cx.getImageData(0, 0, W, H).data;
+  const lum = new Float32Array(W * H);
+  let mean = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const o = (y * W + x) * 4, l = (0.299 * px[o] + 0.587 * px[o + 1] + 0.114 * px[o + 2]) / 255;
+    lum[y * W + x] = l; mean += l;
+  }
+  mean /= W * H;
+  const inkDark = mean > 0.5;                             // light image → ink is dark; dark image → ink is bright
+  const wave = new Float32Array(W);
+  let lastY = (H - 1) / 2;
+  for (let x = 0; x < W; x++) {
+    let sw = 0, sy = 0;
+    for (let y = 0; y < H; y++) {
+      const wgt = inkDark ? 1 - lum[y * W + x] : lum[y * W + x];
+      if (wgt > 0.15) { sw += wgt; sy += wgt * y; }       // ignore faint background
+    }
+    const cy = sw > 1e-4 ? sy / sw : lastY;               // empty column → hold last position
+    lastY = cy;
+    wave[x] = 1 - 2 * (cy / (H - 1));                      // top → +1, bottom → −1
+  }
+  const t = wave.slice();                                 // light smoothing (tame single-pixel jitter)
+  for (let i = 0; i < W; i++) wave[i] = (t[(i - 1 + W) % W] + t[i] * 2 + t[(i + 1) % W]) / 4;
+  let m = 0; for (let i = 0; i < W; i++) m += wave[i]; m /= W;   // center (remove DC)
+  let peak = 1e-6; for (let i = 0; i < W; i++) { wave[i] -= m; const a = Math.abs(wave[i]); if (a > peak) peak = a; }
+  for (let i = 0; i < W; i++) wave[i] /= peak;            // normalize to ±1
+  return wave;
+}
+const cwImgInput = document.createElement("input");
+cwImgInput.type = "file"; cwImgInput.accept = "image/*"; cwImgInput.style.display = "none";
+cwPanel.appendChild(cwImgInput);
+cwPanel.querySelector(".cw-img-btn").addEventListener("click", () => cwImgInput.click());
+cwImgInput.addEventListener("change", () => {
+  const file = cwImgInput.files[0]; cwImgInput.value = "";
+  if (!file) return;
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    try { customDraw.set(imageToWave(img)); } catch (e) { alert("Could not read that image: " + e.message); return; }
+    selectCustomWave();
+    commitCustomWave(true);                               // → active A/B slot + play
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); alert("Could not load that image file."); };
+  img.src = url;
+});
+
+// ---------- My Waveforms library (DESKTOP premium) ----------
+// A persistent palette of your drawn single-cycle waves, independent of any sound: save the current
+// drawing, recall it into the editor with one click, rename, delete. Desktop-only like My Presets (the
+// store lives on the user's disk). Each entry is just the 256-sample cycle as base64 (~344 chars), tiny.
+// Lives inside the Custom-wave panel, so it only shows on the custom engine (contextual, like the panel).
+const MW_KEY = "crunchyfx.mywaves.v1";
+let myWaves = [];        // [{ id, name, wave: base64 }]
+let mwSeq = 0;
+let mwList = null;       // the tile container (stays null on web → every fn below no-ops)
+function saveMyWaves() { try { localStorage.setItem(MW_KEY, JSON.stringify({ seq: mwSeq, items: myWaves })); } catch (e) { /* best-effort (quota) */ } }
+function loadMyWaves() {
+  try {
+    const d = JSON.parse(localStorage.getItem(MW_KEY) || "null");
+    if (d && Array.isArray(d.items)) {
+      myWaves = d.items.filter((w) => w && typeof w.wave === "string");
+      mwSeq = d.seq || myWaves.reduce((m, w) => Math.max(m, w.id || 0), 0);
+    }
+  } catch (e) { /* best-effort */ }
+}
+function drawWaveThumb(cv, drawn) {   // mini oscilloscope of one cycle
+  const w = cv.width, h = cv.height, ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  ctx.strokeStyle = "#ff7a45"; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < drawn.length; i++) {
+    const x = i / (drawn.length - 1) * w, y = h / 2 - drawn[i] * (h / 2 - 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+function renderMyWaves() {
+  if (!mwList) return;
+  mwList.innerHTML = "";
+  if (!myWaves.length) { mwList.innerHTML = '<div class="mw-empty">No saved waves yet — draw one and hit “Save wave”.</div>'; return; }
+  for (const wv of myWaves) {
+    const decoded = b64ToCustomWave(wv.wave);
+    const drawn = decoded && decoded.length === CUSTOM_N ? decoded : CUSTOM_DEFAULT_DRAWN;
+    const tile = document.createElement("div");
+    tile.className = "mw-tile";
+    tile.innerHTML =
+      '<canvas class="mw-thumb" width="72" height="40" title="Load this wave into the editor"></canvas>' +
+      '<div class="mw-row"><input class="mw-name" spellcheck="false"><button class="mw-del" title="Delete">✕</button></div>';
+    drawWaveThumb(tile.querySelector(".mw-thumb"), drawn);
+    tile.querySelector(".mw-thumb").addEventListener("click", () => {
+      customDraw.set(drawn);
+      selectCustomWave();          // switch to the custom engine + light its button
+      commitCustomWave(true);      // customDraw → state.customWave, redraw, play
+    });
+    const nm = tile.querySelector(".mw-name");
+    nm.value = wv.name;
+    nm.addEventListener("change", () => { wv.name = nm.value.trim() || wv.name; nm.value = wv.name; saveMyWaves(); });
+    nm.addEventListener("keydown", (e) => { if (e.key === "Enter") nm.blur(); });
+    tile.querySelector(".mw-del").addEventListener("click", () => { myWaves = myWaves.filter((x) => x.id !== wv.id); saveMyWaves(); renderMyWaves(); });
+    mwList.appendChild(tile);
+  }
+}
+function saveCurrentWave() {
+  myWaves.unshift({ id: ++mwSeq, name: "Wave " + mwSeq, wave: customWaveToB64(customDraw) });
+  saveMyWaves();
+  renderMyWaves();
+  const first = mwList && mwList.querySelector(".mw-name");   // focus the new tile's name to rename
+  if (first) { first.focus(); first.select(); }
+}
+if (window.__TAURI__) {   // desktop-only: build the Save button + tile strip into the Custom-wave panel
+  const mwWrap = document.createElement("div");
+  mwWrap.className = "mw-wrap";
+  mwWrap.innerHTML =
+    '<div class="mw-head"><span>★ My Waveforms</span><button class="mw-save" title="Save the current drawing to your library">＋ Save wave</button></div>' +
+    '<div class="mw-list" id="mwList"></div>';
+  cwPanel.appendChild(mwWrap);
+  mwList = mwWrap.querySelector("#mwList");
+  mwWrap.querySelector(".mw-save").addEventListener("click", saveCurrentWave);
+  loadMyWaves();
+  renderMyWaves();
+}
 
 // ---------- Speech text box ----------
 // Injected into the auto-built Speech panel (which already holds the rate/size sliders). Typing
@@ -1644,7 +1864,7 @@ if (spacePanel) {
   spacePanel.appendChild(irRow);
   const irHint = document.createElement("div");
   irHint.className = "hint";
-  irHint.textContent = "Custom IR: convolve the sound with a real recorded space (.wav). Loading one selects the “Custom IR” space; free IR packs abound online, or capture your own with Record.";
+  irHint.textContent = "Custom IR: convolve the sound with a real recorded space (.wav). Loading one selects “Custom IR”; Conv tone darkens it, Conv reverb sets the mix. Free IR packs abound online, or capture your own with Record.";
   spacePanel.appendChild(irHint);
   irBtn.addEventListener("click", () => irFile.click());
   irFile.addEventListener("change", () => {
@@ -1658,6 +1878,7 @@ if (spacePanel) {
         customIR = prepareIR(l, r, 4);                                          // trim ≤4 s + normalize
         customIR.name = file.name;
         state.convType = 4;                             // select Custom IR
+        state.convTone = 1;                             // play the IR verbatim by default (Conv tone darkens from here)
         if (state.convMix <= 0) state.convMix = 0.6;    // make it audible immediately
         updateIRUI(); syncUI();                         // reflect convType/convMix into the Space controls
         play("IR: " + file.name.replace(/\.[^.]+$/, ""));
@@ -1688,6 +1909,7 @@ const PANEL_WAVES = {
   "Modal": [10],
   "Granular": [11],
   "Custom wave": [12],
+  "Wave morph": [12],
   "Formant": [13],
   "Bubble": [14],
   "Particle": [15],
@@ -1804,7 +2026,7 @@ function applyPreset(obj, label) {
   // reset to defaults first, then overlay (ignore any _vary metadata)
   const keepWave = state.wave;
   for (const p of PARAMS) state[p[0]] = p[5];
-  state.customWave = ""; state.speechText = "";   // reset drawn-wave + speech text (overlaid below if present)
+  state.customWave = ""; state.customWaveB = ""; state.speechText = "";   // reset drawn waves + speech text (overlaid below if present)
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
@@ -1899,6 +2121,23 @@ const PREFS_KEY = "crunchyfx.prefs.v1";     // localStorage namespace matches th
 let prefs = { promptPresetSave: false, tourSeen: false, checkUpdates: true, collapsed: {} };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown; checkUpdates (desktop): look for a newer version on launch; collapsed: per-hero-section fold state
 try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "null"); if (p && typeof p === "object") Object.assign(prefs, p); } catch (e) { /* best-effort */ }
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* best-effort */ } }
+
+// Scope display mode — Waveform (amplitude/time) vs XY / Lissajous (L-vs-R). Persisted in prefs.
+// XY reshapes the thin scope strip into a centered square (via the .scoperow.xy class + a square canvas
+// resolution), then redraws the current sound so the switch is immediate.
+const scoperow = document.querySelector(".scoperow");
+function setScopeMode(m) {
+  scopeMode = m === "xy" ? "xy" : "wave";
+  prefs.scopeMode = scopeMode; savePrefs();
+  const xy = scopeMode === "xy";
+  scoperow.classList.toggle("xy", xy);
+  scope.width = xy ? 680 : 2320;
+  scope.height = xy ? 680 : 90;
+  document.querySelectorAll(".scope-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === scopeMode));
+  if (lastScopeL) drawScope(lastScopeL, lastScopeR);   // repaint the current sound in the new view
+}
+document.querySelectorAll(".scope-mode").forEach((b) => b.addEventListener("click", () => setScopeMode(b.dataset.mode)));
+setScopeMode(prefs.scopeMode === "xy" ? "xy" : "wave");   // apply the persisted mode (sets canvas dims before first draw)
 
 // Make the three hero sections (Quick Shape / Engine / Console) collapsible — click the header to
 // fold; the state persists in prefs. Guards the header's own controls (engine lock, console ✕ clean)
@@ -2578,6 +2817,7 @@ function encodePatch(nameOverride) {
   const diff = {};
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
   if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
+  if (state.customWaveB) diff.customWaveB = state.customWaveB;   // …and the Wave-Morph second wave
   if (state.speechText) diff.speechText = state.speechText;   // …and speech text
   const rp = riffGetPatch(); if (rp) diff.riff = rp;          // …and the riff, so a shared link plays the melody
   const payload = { v: 1, s: diff };
@@ -2701,7 +2941,7 @@ const BREED_SKIP = new Set(["wave", "duration", "gain"]);
 const BREED_AMT = 0.22;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; if (state.speechText) g.speechText = state.speechText; return g; }
+function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; if (state.customWaveB) g.customWaveB = state.customWaveB; if (state.speechText) g.speechText = state.speechText; return g; }
 function mutateGenome(src, amount) {
   const g = {};
   for (const p of PARAMS) {

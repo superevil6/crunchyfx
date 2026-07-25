@@ -77,7 +77,9 @@ function polyBlep(t, dt) {
 
 // waveform: phase in [0,1), dt = freq/SR (needed for band-limiting).
 // duty is the pulse-wave width (0.05..0.95); ignored by the other shapes.
-function waveform(type, phase, dt, duty, ct) {
+// ct = custom wavetable (case 12). ctB + mb = Wave-Morph: a second table and the A→B blend
+// factor 0..1 at this sample (mb 0 / ctB null → pure A, so old callers are unaffected).
+function waveform(type, phase, dt, duty, ct, ctB, mb) {
   switch (type) {
     case 0: return Math.sin(2 * Math.PI * phase);            // sine (inherently band-limited)
     case 1: {                                                // square (band-limited)
@@ -119,8 +121,11 @@ function waveform(type, phase, dt, duty, ct) {
     }
     case 12: {                                               // custom drawn wave (band-limited table)
       const T = ct; if (!T) return 0;
-      const x = phase * T.length, i0 = Math.floor(x) % T.length, i1 = (i0 + 1) % T.length, fr = x - Math.floor(x);
-      return T[i0] * (1 - fr) + T[i1] * fr;
+      const N = T.length, x = phase * N, i0 = Math.floor(x) % N, i1 = (i0 + 1) % N, fr = x - Math.floor(x);
+      const a = T[i0] * (1 - fr) + T[i1] * fr;
+      if (!ctB || !mb) return a;                             // no Wave-Morph → pure A
+      const b = ctB[i0] * (1 - fr) + ctB[i1] * fr;           // (A and B tables share length)
+      return a + (b - a) * mb;                               // blend A→B by mb
     }
     default: return 0;
   }
@@ -229,6 +234,28 @@ function prepareIR(inL, inR, maxSec) {
     if (fade && i >= len - fade) g *= (len - i) / fade;
     L[i] *= g; R[i] *= g;
   }
+  return { L, R };
+}
+
+// Apply the convolution "tone" control to a loaded IR — the SAME dark→bright one-pole-LP blend makeIR
+// uses on the synthesized spaces: tone=1 = verbatim/brightest, tone→0 = progressively lowpassed/darker.
+// Both channels are filtered then renormalized to unit AVERAGE-channel energy by ONE factor, so tone
+// changes timbre (not level) and keeps stereo balance — matching the built-in spaces. Fresh {L,R};
+// cheap enough to call per render (offline). Callers skip this when tone≈1 (verbatim → use the IR as-is).
+function toneIR(inL, inR, tone) {
+  const len = inL.length;
+  const L = new Float32Array(len), R = new Float32Array(len);
+  const cutoff = 200 + tone * 12000;
+  const a = Math.exp(-2 * Math.PI * cutoff / SR);
+  let lpL = 0, lpR = 0, e = 0;
+  for (let i = 0; i < len; i++) {
+    lpL = a * lpL + (1 - a) * inL[i]; const vL = lpL + (inL[i] - lpL) * tone;
+    lpR = a * lpR + (1 - a) * inR[i]; const vR = lpR + (inR[i] - lpR) * tone;
+    L[i] = vL; R[i] = vR; e += vL * vL + vR * vR;
+  }
+  e /= 2;
+  const norm = e > 0 ? 1 / Math.sqrt(e) : 1;
+  for (let i = 0; i < len; i++) { L[i] *= norm; R[i] *= norm; }
   return { L, R };
 }
 
