@@ -270,7 +270,7 @@ const PARAMS = [
   // Convolution reverb (synthesized IRs). convMix 0 = off, so existing presets are unchanged
   // and it costs nothing (the FFT only runs when convMix > 0).
   ["convMix",    "Conv reverb",0, 1, 0.01, 0, "",    "Space"],
-  ["convType",   "Conv space", 0, 3, 1, 0, "", "Space", "enum", ["Room", "Hall", "Plate", "Spring"]],
+  ["convType",   "Conv space", 0, 4, 1, 0, "", "Space", "enum", ["Room", "Hall", "Plate", "Spring", "Custom IR"]],
   ["convSize",   "Conv size",  0.1, 3, 0.01, 1.0, "s", "Space"],
   ["convTone",   "Conv tone",  0, 1, 0.01, 0.5, "",  "Space"],
   ["delay",      "Delay mix",  0, 1, 0.01, 0, "",     "Space"],
@@ -309,6 +309,7 @@ state.speechText = "";
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
+let customIR = null;      // user-loaded impulse response {L,R,name} at SR — used by the "Custom IR" conv space
 let sampleName = "";      // filename of the loaded sample (for the UI)
 let seqLabel = "Sound";   // label of the sound currently in the editor (for Sequence chips)
 
@@ -818,11 +819,18 @@ function render() {
   // Tail truncated at n like the delay/Freeverb stages. FFT only runs when engaged (convMix > 0).
   if (state.convMix > 0) {
     const ct = Math.round(state.convType);
-    const irL = makeIR(ct, state.convSize, state.convTone, 0x1234abcd);
-    const irR = makeIR(ct, state.convSize, state.convTone, 0x9e3779b9);
-    const wetL = convolveFFT(L, irL), wetR = convolveFFT(R, irR);
-    const mix = state.convMix, dryG = 1 - mix, wetG = mix * CONV_MAKEUP;
-    for (let i = 0; i < n; i++) { L[i] = L[i] * dryG + wetL[i] * wetG; R[i] = R[i] * dryG + wetR[i] * wetG; }
+    let irL = null, irR = null;
+    if (ct >= 4) {                                          // "Custom IR": convolve with the user-loaded space (if any)
+      if (customIR) { irL = customIR.L; irR = customIR.R; }
+    } else {                                                // built-in synthesized spaces (Room/Hall/Plate/Spring)
+      irL = makeIR(ct, state.convSize, state.convTone, 0x1234abcd);
+      irR = makeIR(ct, state.convSize, state.convTone, 0x9e3779b9);
+    }
+    if (irL) {                                              // (Custom IR selected but none loaded → skip, stays dry)
+      const wetL = convolveFFT(L, irL), wetR = convolveFFT(R, irR);
+      const mix = state.convMix, dryG = 1 - mix, wetG = mix * CONV_MAKEUP;
+      for (let i = 0; i < n; i++) { L[i] = L[i] * dryG + wetL[i] * wetG; R[i] = R[i] * dryG + wetR[i] * wetG; }
+    }
   }
 
   // master transient shaper (punch up / soften attacks) — before normalize since it moves peaks
@@ -916,9 +924,9 @@ function commitHistory() {
   if (restoringHistory) return;
   const snap = snapshotState();
   const cur = editHistory[histPos];
-  if (cur && sameState(cur.s, snap) && cur.buf === sampleBuf && cur.norm === normalizeOut) return;   // nothing new
+  if (cur && sameState(cur.s, snap) && cur.buf === sampleBuf && cur.ir === customIR && cur.norm === normalizeOut) return;   // nothing new
   editHistory = editHistory.slice(0, histPos + 1);          // drop any redo branch
-  editHistory.push({ s: snap, buf: sampleBuf, name: sampleName, norm: normalizeOut, label: seqLabel });
+  editHistory.push({ s: snap, buf: sampleBuf, name: sampleName, ir: customIR, norm: normalizeOut, label: seqLabel });
   if (editHistory.length > EDIT_HIST_MAX) editHistory.shift();
   histPos = editHistory.length - 1;
   updateUndoRedoUI();
@@ -929,7 +937,8 @@ function restoreEdit(entry) {
   state.customWave = entry.s.customWave || "";
   state.speechText = entry.s.speechText || "";
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
-  updateSampleUI(); updateNormBtn(); syncUI();
+  customIR = "ir" in entry ? entry.ir : customIR;
+  updateSampleUI(); updateIRUI(); updateNormBtn(); syncUI();
   const { L, R, rawPeak } = render();                        // re-render/play WITHOUT addHistory or re-commit
   drawScope(L, R);
   if (rawPeak <= AUDIBLE_FLOOR) markScopeSilent();
@@ -1149,11 +1158,16 @@ let histSeq = 0;
 const HIST_MAX = 50;
 const HIST_KEY = "crunchyfx.history.v1";   // storage key — history persists across sessions
 
+// Riff persistence hooks — wired up by the riff module below (no-ops until then, so any early
+// snapshot/apply call is safe). The riff (pattern + BPM) travels with the patch like customWave.
+let riffGetPatch = () => null;   // -> { p:[midi|null…], bpm } or null when the riff is empty
+let riffSetPatch = () => {};     // (patch.riff | undefined) -> load it into the riff, or clear
 function snapshotState() {
   const s = {};
   for (const p of PARAMS) s[p[0]] = state[p[0]];
   if (state.customWave) s.customWave = state.customWave;   // carry the drawn wave with the snapshot
   if (state.speechText) s.speechText = state.speechText;   // …and the speech text
+  const rp = riffGetPatch(); if (rp) s.riff = rp;          // …and the riff (for preset / My Presets save)
   return s;
 }
 function sameState(a, b) {
@@ -1609,6 +1623,61 @@ if (speechPanel) {
 }
 function syncSpeechInput() { if (speechInput) speechInput.value = state.speechText; }
 
+// ---------- Load-your-own-IR (the "Custom IR" convolution space) ----------
+// The convolution engine convolves the sound with an impulse response; "Custom IR" swaps the
+// synthesized space (Room/Hall/Plate/Spring) for a real .wav you load — a recorded room, a spring
+// tank, a cabinet, or something you captured with the Record button. The IR buffer lives in the module
+// global `customIR` (like sampleBuf): it's audio data, NOT a PARAM, so it does NOT travel in share
+// links / presets (too large) — it's a loaded resource for the session (and it rides undo history).
+const spacePanel = panels.querySelector('[data-group="Space"]');
+let irNameEl = null;
+if (spacePanel) {
+  const irRow = document.createElement("div");
+  irRow.className = "irrow";
+  const irBtn = document.createElement("button");
+  irBtn.type = "button"; irBtn.className = "ir-load"; irBtn.textContent = "📂 Load IR…";
+  irNameEl = document.createElement("span");
+  irNameEl.className = "ir-name";
+  const irFile = document.createElement("input");
+  irFile.type = "file"; irFile.accept = "audio/*,.wav"; irFile.style.display = "none";
+  irRow.appendChild(irBtn); irRow.appendChild(irNameEl); irRow.appendChild(irFile);
+  spacePanel.appendChild(irRow);
+  const irHint = document.createElement("div");
+  irHint.className = "hint";
+  irHint.textContent = "Custom IR: convolve the sound with a real recorded space (.wav). Loading one selects the “Custom IR” space; free IR packs abound online, or capture your own with Record.";
+  spacePanel.appendChild(irHint);
+  irBtn.addEventListener("click", () => irFile.click());
+  irFile.addEventListener("change", () => {
+    const file = irFile.files[0]; irFile.value = "";
+    if (!file) return;
+    file.arrayBuffer()
+      .then((buf) => new OfflineAudioContext(1, 1, SR).decodeAudioData(buf))   // decodes + resamples to SR
+      .then((audio) => {
+        const l = audio.getChannelData(0);
+        const r = audio.numberOfChannels >= 2 ? audio.getChannelData(1) : l;   // keep stereo IRs stereo
+        customIR = prepareIR(l, r, 4);                                          // trim ≤4 s + normalize
+        customIR.name = file.name;
+        state.convType = 4;                             // select Custom IR
+        if (state.convMix <= 0) state.convMix = 0.6;    // make it audible immediately
+        updateIRUI(); syncUI();                         // reflect convType/convMix into the Space controls
+        play("IR: " + file.name.replace(/\.[^.]+$/, ""));
+      })
+      .catch((e) => alert("Could not read that IR file: " + e.message));
+  });
+  irNameEl.addEventListener("click", () => {            // click the filename to clear the IR
+    if (!customIR) return;
+    customIR = null;
+    if (Math.round(state.convType) >= 4) state.convType = 0;   // fall back to Room
+    updateIRUI(); syncUI();
+    play();
+  });
+}
+function updateIRUI() {
+  if (!irNameEl) return;
+  irNameEl.textContent = customIR ? "♪ " + customIR.name + "  (✕ clear)" : "";
+  irNameEl.style.cursor = customIR ? "pointer" : "";
+}
+
 // ---------- Contextual panels ----------
 // Wave-specific panels are hidden unless their waveform is selected, so the editor only ever shows
 // controls that do something. Universal panels (Oscillator, Mix, Filter, …) are always visible.
@@ -1739,6 +1808,7 @@ function applyPreset(obj, label) {
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
+  riffSetPatch(obj.riff);                  // load this patch's riff, or clear it (reset-then-overlay)
   syncUI();
   play(label || "Preset");
 }
@@ -2482,6 +2552,23 @@ makeCollapsible(riffPanel, riffPanel.querySelector(".riff-head"), "instrument",
   (open) => { if (open) renderRiff(); else riffStop(); });
 renderRiff();
 
+// Wire the persistence hooks (declared up near snapshotState) now that the riff state + UI exist,
+// so a riff saves with the sound (preset / My Presets / share link) and comes back on load.
+riffGetPatch = () => (riffPattern.some((x) => x != null) ? { p: riffPattern.slice(), bpm: riffBpm } : null);
+riffSetPatch = (r) => {
+  if (r && Array.isArray(r.p) && r.p.length) {
+    riffN = r.p.length;
+    riffPattern = r.p.map((x) => (x == null ? null : x | 0));
+    riffBpm = Math.max(40, Math.min(300, (+r.bpm) || 140));
+  } else {
+    riffPattern = new Array(riffN).fill(null);   // no riff in this patch → clear
+  }
+  riffSel = 0; riffStop();
+  const bpmIn = riffPanel.querySelector("#riffBpmIn"); if (bpmIn) bpmIn.value = riffBpm;
+  const nIn = riffPanel.querySelector("#riffNIn"); if (nIn) nIn.value = String(riffN);
+  renderRiff();
+};
+
 // ---------- Shareable links ----------
 // Pack the current sound into the URL so it can be shared or bookmarked. Like a
 // preset, we store only the params that differ from their defaults, JSON'd and
@@ -2492,6 +2579,7 @@ function encodePatch(nameOverride) {
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
   if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
   if (state.speechText) diff.speechText = state.speechText;   // …and speech text
+  const rp = riffGetPatch(); if (rp) diff.riff = rp;          // …and the riff, so a shared link plays the melody
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
   // Carry the sound's display name so the recipient sees "Laser Zap" not "Shared", and the edge

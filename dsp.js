@@ -209,6 +209,29 @@ function makeIR(type, size, tone, seed) {
   return ir;
 }
 
+// Prepare a user-loaded impulse response for the convolution engine's "Custom IR" space: trim to
+// maxSec (with a short declick fade only if we actually cut the tail), then normalize to unit
+// AVERAGE-channel energy with ONE factor for both channels — so a stereo IR keeps its natural L/R
+// balance/width while a mono IR matches makeIR's per-channel loudness (wet level stays comparable to
+// the built-in synthesized spaces, so convMix behaves the same across all of them). Returns {L,R} at SR.
+function prepareIR(inL, inR, maxSec) {
+  const maxLen = Math.max(4, Math.floor((maxSec || 4) * SR));
+  const trimmed = inL.length > maxLen;
+  const len = Math.min(inL.length, maxLen);
+  const L = new Float32Array(len), R = new Float32Array(len);
+  let e = 0;
+  for (let i = 0; i < len; i++) { L[i] = inL[i] || 0; R[i] = inR[i] || 0; e += L[i] * L[i] + R[i] * R[i]; }
+  e /= 2;                                                          // average per-channel energy
+  const norm = e > 0 ? 1 / Math.sqrt(e) : 1;
+  const fade = trimmed ? Math.min(len, Math.floor(0.02 * SR)) : 0; // 20 ms fade only when we cut the tail
+  for (let i = 0; i < len; i++) {
+    let g = norm;
+    if (fade && i >= len - fade) g *= (len - i) / fade;
+    L[i] *= g; R[i] *= g;
+  }
+  return { L, R };
+}
+
 // ---------- Granular synthesis ----------
 // A cloud of short Hann-windowed grains overlap-added from a source buffer. Grains need random
 // access, so we build the whole stereo output up front (before render's per-sample chain), then
