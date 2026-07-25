@@ -1139,18 +1139,268 @@ window.PRESETS = {
   "Plane Flyby": { wave:20, whooshTone:0.35, whooshSweep:0.3, whooshBody:0.2, whooshPeak:0.5, noise:0.45, boom:0.5, boomFreq:55, boomDrop:0.3, boomDecay:0.5, sustain:1, attack:0.25, release:0.9, cutoff:2400, reso:0.2, drive:0.35, reverb:0.35, reverbSize:0.8, reverbTone:0.3, width:0.85, duration:2.4 },
   "Train": { wave:0, freq:80, noise:0.85, repeat:8, rate:3.6, boom:0.55, boomFreq:65, boomDrop:0.4, boomDecay:0.18, attack:0.006, decay:0.14, sustain:0.12, release:0.1, cutoff:1500, reso:0.35, filtEnv:-0.3, drive:0.4, reverb:0.2, reverbSize:0.6, width:0.5, duration:2.2 },
   "Chainsaw": { wave:2, freq:135, sweep:0.06, ringMod:0.68, ringFreq:82, vibDepth:0.14, vibRate:26, noise:0.15, attack:0.02, decay:0.3, sustain:0.9, release:0.15, cutoff:3200, reso:0.5, drive:0.75, driveOS:2, bitcrush:7, width:0.45, duration:1.6 },
+
+  // ---- Depth pass: bring every category to at least 15 ----
+  // The engine-showcase categories (granular / particle / bubble / additive / formant / speech)
+  // were seeded with just 6–9 demos each when their engine shipped. These fill them out so every
+  // section of the browser is worth opening; each one is a different USE of its engine, not a
+  // jittered copy of its neighbours.
+
+  // Bells / Mallets — the one gap was the orchestral tubular bell (long, low, hollow).
+  "Tubular Bell": { wave:10, freq:262, modalPartials:8, modalInharm:0.55, modalDecay:2.8, modalBright:0.55, attack:0.002, hold:0.008, decay:0.1, sustain:1, release:0.8, cutoff:13000, reso:0.1, width:0.6, reverb:0.35, reverbSize:0.8, duration:2.0,
+            _vary:{ freq:0.15, modalInharm:0.2, modalDecay:0.2 } },
+
+  // Granular / Texture (wave 11). Grain size + density set the texture; SCAN is the expressive
+  // one — 0 freezes the source (drone), 1 plays it naturally, >1 races through it.
+  "Grain Storm": { wave:11, freq:440, grainSize:18, grainDensity:75, grainSpray:0.8, grainScan:1.6, grainSpread:0.9, attack:0.02, hold:0.01, decay:0.1, sustain:1, release:0.3, cutoff:13000, reso:0.15, drive:0.25, width:0.8, duration:1.8,
+            _vary:{ grainSize:0.4, grainDensity:0.25, grainScan:0.3 } },
+  "Frozen Choir": { wave:11, freq:330, grainSize:140, grainDensity:35, grainSpray:0.05, grainScan:0, grainSpread:0.6, attack:0.15, hold:0.02, decay:0.1, sustain:1, release:0.6, cutoff:12000, reso:0.1, convMix:0.4, convType:1, convSize:2.4, convTone:0.45, width:0.75, duration:2.0,
+            _vary:{ grainSize:0.25, grainSpread:0.25, convSize:0.2 } },
+  "Glitch Rain": { wave:11, freq:660, grainSize:12, grainDensity:60, grainSpray:0.9, grainScan:0.9, grainSpread:0.5, attack:0.005, hold:0.005, decay:0.1, sustain:1, release:0.2, cutoff:14000, reso:0.15, bitcrush:8, width:0.7, duration:1.5,
+            _vary:{ grainSize:0.4, grainSpray:0.2, bitcrush:0.25 } },
+  "Warped Tape": { wave:11, freq:220, grainSize:90, grainDensity:18, grainSpray:0.35, grainScan:0.15, grainSpread:0.3, attack:0.03, hold:0.01, decay:0.1, sustain:1, release:0.4, cutoff:8000, reso:0.2, downsample:3, drive:0.2, width:0.5, duration:2.0,
+            _vary:{ grainScan:0.5, downsample:0.3, grainSize:0.3 } },
+  "Cloud Bloom": { wave:11, freq:523, grainSize:80, grainDensity:50, grainSpray:0.4, grainScan:0.5, grainSpread:0.85, attack:0.5, hold:0.02, decay:0.1, sustain:1, release:0.7, cutoff:15000, reso:0.1, reverb:0.5, reverbSize:0.8, width:0.85, duration:2.0,
+            _vary:{ grainDensity:0.25, attack:0.3, reverb:0.2 } },
+  "Micro Stutter": { wave:11, freq:392, grainSize:8, grainDensity:30, grainSpray:0.2, grainScan:1.0, grainSpread:0.15, attack:0.002, hold:0.004, decay:0.08, sustain:1, release:0.15, cutoff:12000, reso:0.25, width:0.35, duration:1.2,
+            _vary:{ grainSize:0.4, grainDensity:0.3 } },
+  "Whispering Grains": { wave:11, freq:880, grainSize:45, grainDensity:22, grainSpray:0.55, grainScan:0.7, grainSpread:0.7, filterMode:1, cutoff:900, reso:0.15, attack:0.08, hold:0.01, decay:0.1, sustain:1, release:0.5, gain:0.6, width:0.75, duration:2.0,
+            _vary:{ grainSpray:0.25, grainSpread:0.25 } },
+  "Dust Devil": { wave:11, freq:294, grainSize:30, grainDensity:55, grainSpray:0.7, grainScan:1.8, grainSpread:0.9, attack:0.1, hold:0.02, decay:0.1, sustain:1, release:0.5, cutoff:11000, reso:0.15, phaserMix:0.45, phaserRate:0.3, phaserDepth:0.7, width:0.85, duration:2.0,
+            _vary:{ grainScan:0.25, phaserRate:0.35 } },
+  "Grain Riser": { wave:11, freq:349, grainSize:40, grainDensity:45, grainSpray:0.45, grainScan:1.1, grainSpread:0.6, attack:0.9, hold:0.02, decay:0.15, sustain:0.9, release:0.25, filterMode:0, cutoff:500, reso:0.4, filtEnv:0.85, width:0.7, reverb:0.3, reverbSize:0.7, duration:2.0,
+            _vary:{ cutoff:0.25, filtEnv:0.15, grainDensity:0.25 } },
+
+  // Voice / Vocal (wave 13, formant). formantSize MULTIPLIES the formants: >1 = smaller/brighter
+  // tract (pixie), <1 = bigger/deeper (monster). Breath is the whisper mix.
+  "Nasal Ee": { wave:13, freq:230, formantVowel:0.3, formantSize:1.05, formantQ:0.95, formantBreath:0.05, vibDepth:0.08, vibRate:5.5, attack:0.02, hold:0.01, decay:0.1, sustain:1, release:0.25, cutoff:13000, reso:0.1, width:0.4, duration:1.2,
+            _vary:{ formantVowel:0.25, formantQ:0.15, freq:0.15 } },
+  "Throat Sing": { wave:13, freq:90, formantVowel:0.9, formantSize:0.8, formantQ:0.9, formantBreath:0.05, formantLfoRate:0.6, formantLfoDepth:0.35, drive:0.2, attack:0.08, hold:0.02, decay:0.1, sustain:1, release:0.5, cutoff:8000, reso:0.15, reverb:0.35, reverbSize:0.8, width:0.5, duration:2.0,
+            _vary:{ formantVowel:0.2, formantSize:0.12, drive:0.3 } },
+  "Whisper Breath": { wave:13, freq:180, formantVowel:0.45, formantSize:1.05, formantQ:0.62, formantBreath:0.72, formantLfoRate:1.1, formantLfoDepth:0.4, attack:0.12, hold:0.02, decay:0.15, sustain:1, release:0.4, cutoff:9000, reso:0.15, gain:0.6, width:0.65, reverb:0.18, duration:1.6,
+            _vary:{ formantVowel:0.3, formantBreath:0.12, freq:0.2 } },
+  "Chant Loop": { wave:13, freq:130, formantVowel:0.85, formantSize:0.95, formantQ:0.7, formantBreath:0.08, formantLfoRate:0.8, formantLfoDepth:0.3, repeat:4, rate:2, attack:0.05, hold:0.02, decay:0.2, sustain:0.08, release:0.15, cutoff:9000, reso:0.1, reverb:0.4, reverbSize:0.85, width:0.55, duration:2.0,
+            _vary:{ rate:0.2, formantVowel:0.25 } },
+  "Yawn Stretch": { wave:13, freq:170, formantVowel:0.1, formantSize:1.0, formantQ:0.5, formantBreath:0.35, sweep:-0.18, formantLfoRate:0.5, formantLfoDepth:0.8, attack:0.2, hold:0.02, decay:0.2, sustain:1, release:0.5, cutoff:9000, reso:0.12, width:0.5, duration:2.0,
+            _vary:{ sweep:0.25, formantLfoDepth:0.2 } },
+  "Baby Coo": { wave:13, freq:400, formantVowel:0.7, formantSize:1.5, formantQ:0.55, formantBreath:0.2, formantLfoRate:2.2, formantLfoDepth:0.55, vibDepth:0.12, vibRate:6, sweep:0.12, attack:0.04, hold:0.01, decay:0.1, sustain:1, release:0.25, cutoff:13000, reso:0.1, width:0.45, duration:1.0,
+            _vary:{ freq:0.18, formantSize:0.12, formantLfoRate:0.3 } },
+
+  // Water / Liquid (wave 14, Minnaert bubbles). freq = bubble SIZE (low = big/glooping),
+  // rate = how many per second (drip → stream → boil), rise = the "bloop" chirp.
+  "Cave Drip": { wave:14, freq:900, bubbleRate:1.2, bubbleRise:0.65, bubbleSpread:0.4, bubbleDecay:0.6, attack:0.001, hold:0.004, decay:0.1, sustain:1, release:0.4, cutoff:12000, reso:0.1, reverb:0.55, reverbSize:0.9, reverbTone:0.4, width:0.6, duration:2.0,
+            _vary:{ freq:0.2, bubbleSpread:0.3, reverb:0.2 } },
+  "Big Splash": { wave:14, freq:420, bubbleRate:35, bubbleRise:0.6, bubbleSpread:0.8, bubbleDecay:0.4, noise:0.5, attack:0.004, hold:0.006, decay:0.35, sustain:0.3, release:0.35, cutoff:9000, reso:0.15, width:0.75, reverb:0.25, reverbSize:0.6, duration:0.9,
+            _vary:{ freq:0.2, noise:0.15, bubbleRate:0.25 } },
+  "Fizzy Soda": { wave:14, freq:1400, bubbleRate:55, bubbleRise:0.4, bubbleSpread:0.6, bubbleDecay:0.12, attack:0.03, hold:0.01, decay:0.1, sustain:1, release:0.3, cutoff:16000, reso:0.1, width:0.65, duration:1.6,
+            _vary:{ bubbleRate:0.25, freq:0.15 } },
+  "Gulp Swallow": { wave:14, freq:320, bubbleRate:3, bubbleRise:0.9, bubbleSpread:0.25, bubbleDecay:0.5, attack:0.002, hold:0.005, decay:0.1, sustain:1, release:0.15, cutoff:2600, reso:0.25, width:0.4, duration:0.5,
+            _vary:{ freq:0.2, bubbleRise:0.15 } },
+  "Water Swirl": { wave:14, freq:450, bubbleRate:25, bubbleRise:0.45, bubbleSpread:0.7, bubbleDecay:0.3, attack:0.04, hold:0.01, decay:0.1, sustain:1, release:0.35, cutoff:10000, reso:0.15, phaserMix:0.45, phaserRate:0.5, phaserDepth:0.7, width:0.8, duration:1.8,
+            _vary:{ bubbleRate:0.25, phaserRate:0.3 } },
+  "Sewer Drip": { wave:14, freq:600, bubbleRate:2.5, bubbleRise:0.55, bubbleSpread:0.35, bubbleDecay:0.55, attack:0.002, hold:0.005, decay:0.1, sustain:1, release:0.3, cutoff:3200, reso:0.2, convMix:0.4, convType:0, convSize:1.4, convTone:0.3, width:0.55, duration:2.0,
+            _vary:{ freq:0.2, convSize:0.25 } },
+  "Geyser Burst": { wave:14, freq:260, bubbleRate:60, bubbleRise:0.75, bubbleSpread:0.85, bubbleDecay:0.3, noise:0.55, sweep:0.2, attack:0.02, hold:0.01, decay:0.4, sustain:0.55, release:0.5, cutoff:8000, reso:0.2, drive:0.3, width:0.8, reverb:0.3, reverbSize:0.7, duration:1.8,
+            _vary:{ noise:0.15, sweep:0.3, bubbleRate:0.2 } },
+
+  // Crackle / Particle (wave 15). rate = events/sec, spread skews their amplitudes — high spread
+  // is what gives you the occasional loud POP among the quiet hiss.
+  "Popcorn": { wave:15, particleRate:12, particleTone:0.45, particleDecay:0.25, particleSpread:0.9, attack:0.002, hold:0.005, decay:0.1, sustain:1, release:0.25, cutoff:11000, reso:0.15, width:0.7, duration:2.0,
+            _vary:{ particleRate:0.35, particleTone:0.2, particleSpread:0.15 } },
+  "Bubble Wrap": { wave:15, particleRate:9, particleTone:0.7, particleDecay:0.08, particleSpread:0.95, attack:0.001, hold:0.004, decay:0.08, sustain:1, release:0.15, cutoff:14000, reso:0.2, width:0.6, duration:1.6,
+            _vary:{ particleRate:0.4, particleTone:0.15 } },
+  "Radio Interference": { wave:15, particleRate:60, particleTone:0.88, particleDecay:0.1, particleSpread:0.5, attack:0.01, hold:0.008, decay:0.1, sustain:1, release:0.2, cutoff:15000, reso:0.15, bitcrush:7, downsample:2, width:0.5, duration:1.8,
+            _vary:{ particleRate:0.3, bitcrush:0.25 } },
+  "Distant Fireworks": { wave:15, particleRate:20, particleTone:0.55, particleDecay:0.22, particleSpread:0.9, boom:0.35, boomFreq:60, boomDrop:0.7, boomDecay:0.4, attack:0.02, hold:0.01, decay:0.3, sustain:0.7, release:0.6, cutoff:7000, reso:0.15, width:0.85, reverb:0.55, reverbSize:0.9, reverbTone:0.35, duration:2.0,
+            _vary:{ particleRate:0.3, reverb:0.15, boomFreq:0.15 } },
+  "Leaf Litter": { wave:15, particleRate:80, particleTone:0.6, particleDecay:0.1, particleSpread:0.7, filterMode:1, cutoff:1400, reso:0.12, attack:0.04, hold:0.01, decay:0.1, sustain:1, release:0.25, gain:0.62, width:0.7, duration:1.4,
+            _vary:{ particleRate:0.3, particleSpread:0.2 } },
+  "Sparkler": { wave:15, particleRate:110, particleTone:0.95, particleDecay:0.05, particleSpread:0.8, attack:0.02, hold:0.008, decay:0.1, sustain:1, release:0.2, cutoff:16000, reso:0.1, width:0.75, duration:1.6,
+            _vary:{ particleRate:0.25, particleTone:0.1 } },
+  "Hail on Metal": { wave:15, particleRate:40, particleTone:0.8, particleDecay:0.18, particleSpread:0.65, filterMode:4, cutoff:3800, reso:0.6, attack:0.005, hold:0.006, decay:0.1, sustain:1, release:0.25, width:0.7, reverb:0.2, reverbSize:0.5, duration:1.8,
+            _vary:{ particleRate:0.3, cutoff:0.2, reso:0.2 } },
+
+  // Pads / Drones (wave 16, additive). Each partial has its own slow amplitude drift, so DRIFT +
+  // DRIFT RATE are what keep a long tone alive rather than static.
+  "Dark Ambient Bed": { wave:16, freq:82, addPartials:18, addTilt:0.25, addDrift:0.8, addDriftRate:0.06, addDetune:0.55, attack:0.5, hold:0.02, decay:0.1, sustain:1, release:0.8, cutoff:3200, reso:0.15, convMix:0.4, convType:1, convSize:2.8, convTone:0.3, width:0.8, duration:2.0,
+            _vary:{ addDrift:0.2, cutoff:0.25, convSize:0.2 } },
+  "Cold Vacuum": { wave:16, freq:55, addPartials:10, addTilt:0.15, addDrift:0.35, addDriftRate:0.04, addDetune:0.3, attack:0.6, hold:0.02, decay:0.1, sustain:1, release:0.9, cutoff:2400, reso:0.1, reverb:0.6, reverbSize:0.95, reverbTone:0.25, width:0.7, duration:2.0,
+            _vary:{ freq:0.15, addDrift:0.25, reverb:0.15 } },
+  "Solar Wind": { wave:16, freq:300, addPartials:30, addTilt:0.75, addDrift:1.0, addDriftRate:0.5, addDetune:0.8, attack:0.35, hold:0.02, decay:0.1, sustain:1, release:0.7, cutoff:16000, reso:0.1, phaserMix:0.5, phaserRate:0.2, phaserDepth:0.8, width:0.9, duration:2.0,
+            _vary:{ addDriftRate:0.3, phaserRate:0.35, addDetune:0.2 } },
+  "Monastery Drone": { wave:16, freq:110, addPartials:14, addTilt:0.45, addDrift:0.5, addDriftRate:0.1, addDetune:0.45, attack:0.4, hold:0.02, decay:0.1, sustain:1, release:0.8, cutoff:9000, reso:0.1, chorusMix:0.35, chorusRate:0.4, chorusDepth:0.4, convMix:0.45, convType:1, convSize:3.0, convTone:0.4, width:0.8, duration:2.0,
+            _vary:{ freq:0.12, convSize:0.15, chorusRate:0.3 } },
+  "Neon Hum": { wave:16, freq:160, addPartials:6, addTilt:0.5, addDrift:0.15, addDriftRate:0.05, addDetune:0.2, attack:0.2, hold:0.02, decay:0.1, sustain:1, release:0.4, cutoff:8000, reso:0.2, bitcrush:12, chorusMix:0.3, chorusRate:0.9, chorusDepth:0.3, width:0.5, duration:1.8,
+            _vary:{ freq:0.15, bitcrush:0.2, addDrift:0.4 } },
+  "Dream Bell Pad": { wave:16, freq:660, addPartials:22, addTilt:0.85, addDrift:0.8, addDriftRate:0.3, addDetune:0.6, attack:0.3, hold:0.02, decay:0.1, sustain:1, release:0.9, cutoff:16000, reso:0.1, convMix:0.4, convType:2, convSize:2.2, convTone:0.7, width:0.85, duration:2.0,
+            _vary:{ freq:0.15, addDrift:0.2, convSize:0.25 } },
+
+  // Speech / Vox (wave 17). The G2P is rule-based, so irregular spelling can misfire — these use
+  // phrases that read cleanly. Pitch = freq, speechSize scales the tract (deep ↔ chipmunk).
+  "Player One": { wave:17, speechText:"player one", freq:150, speechRate:1, speechSize:1.05, sustain:1, cutoff:16000, reverb:0.15, duration:1.1 },
+  "Insert Coin": { wave:17, speechText:"insert coin", freq:140, speechRate:1, speechSize:1, sustain:1, cutoff:16000, duration:1.2 },
+  "Mission Failed": { wave:17, speechText:"mission failed", freq:110, speechRate:0.85, speechSize:0.85, sustain:1, cutoff:12000, drive:0.15, reverb:0.2, duration:1.6 },
+  "Access Denied": { wave:17, speechText:"access denied", freq:125, speechRate:1, speechSize:0.95, sustain:1, cutoff:14000, ringMod:0.1, ringFreq:60, bitcrush:7, duration:1.5 },
+  "Ready Set Go": { wave:17, speechText:"ready set go", freq:160, speechRate:1.05, speechSize:1.1, sustain:1, cutoff:16000, duration:1.4 },
+  "Nice Work": { wave:17, speechText:"nice work", freq:175, speechRate:1, speechSize:1.15, sustain:1, cutoff:16000, reverb:0.2, duration:1.1 },
+  "Self Destruct": { wave:17, speechText:"self destruct", freq:105, speechRate:0.9, speechSize:0.8, sustain:1, cutoff:11000, drive:0.2, reverb:0.25, duration:1.6 },
+
+  // Footsteps / Movement — the two non-step movement sounds: a slide and a wade.
+  "Ice Skid": { wave:20, whooshTone:0.75, whooshSweep:0.55, whooshBody:0.8, whooshPeak:0.6, sustain:1, attack:0.02, hold:0.01, decay:0.2, release:0.3, cutoff:12000, reso:0.35, width:0.7, reverb:0.2, reverbSize:0.5, duration:0.9,
+            _vary:{ whooshTone:0.15, whooshBody:0.2, whooshPeak:0.25 } },
+  "Water Wade": { wave:14, freq:340, bubbleRate:18, bubbleRise:0.4, bubbleSpread:0.75, bubbleDecay:0.35, noise:0.4, attack:0.03, hold:0.01, decay:0.2, sustain:1, release:0.3, cutoff:5000, reso:0.2, width:0.6, duration:1.2,
+            _vary:{ bubbleRate:0.3, noise:0.2 } },
+
+  // Doors / Containers — the remaining five: soft wood, metal, keys, a vault, a trapdoor.
+  "Cabinet Close": { wave:19, impactTone:0.4, impactDecay:0.16, impactPunch:0.7, impactGrit:0.25, boom:0.3, boomFreq:105, boomDrop:0.4, boomDecay:0.1, attack:0.002, decay:0.06, sustain:0, release:0.1, cutoff:4000, reso:0.15, drive:0.2, width:0.4, reverb:0.14, duration:0.4,
+            _vary:{ impactTone:0.2, boomFreq:0.15 } },
+  "Metal Locker": { wave:10, freq:280, modalPartials:12, modalInharm:0.9, modalDecay:0.55, modalBright:0.7, noise:0.3, attack:0.001, hold:0.004, decay:0.1, sustain:1, release:0.3, cutoff:12000, reso:0.15, drive:0.25, width:0.55, reverb:0.22, reverbSize:0.55, duration:0.9,
+            _vary:{ freq:0.2, modalInharm:0.15, modalDecay:0.25 } },
+  "Key Jingle": { wave:10, freq:1400, modalPartials:8, modalInharm:0.95, modalDecay:0.14, modalBright:0.9, repeat:5, rate:16, attack:0.001, hold:0.002, decay:0.03, sustain:0.03, release:0.05, cutoff:16000, reso:0.1, width:0.6, reverb:0.16, duration:0.8,
+            _vary:{ freq:0.2, rate:0.3, modalInharm:0.1 } },
+  "Vault Door": { wave:2, freq:52, sweep:0.06, vibDepth:0.16, vibRate:4, noise:0.22, subOsc:0.55, boom:0.4, boomFreq:45, boomDrop:0.5, boomDecay:0.6, attack:0.2, decay:0.6, sustain:0.65, release:0.6, filterMode:2, cutoff:420, reso:0.78, drive:0.55, driveOS:2, bitcrush:8, downsample:3, width:0.55, reverb:0.45, reverbSize:0.9, reverbTone:0.28, duration:2.0,
+            _vary:{ freq:0.15, cutoff:0.2, drive:0.2 } },
+  "Trapdoor Creak": { wave:2, freq:230, sweep:0.5, vibDepth:0.4, vibRate:12, noise:0.18, attack:0.02, decay:0.3, sustain:0.4, release:0.25, filterMode:2, cutoff:1500, reso:0.7, drive:0.35, bitcrush:9, downsample:2, width:0.45, reverb:0.2, duration:0.8,
+            _vary:{ freq:0.2, sweep:0.25, vibRate:0.3 } },
+
+  // Reverse / Risers — more of the flip, plus the two staples a trailer needs (down/uplifter).
+  "Reverse Piano": { wave:18, freq:262, fmAlgo:1, fmRatio2:1, fmRatio3:14, fmRatio4:1, fmIndex:0.4, fmFeedback:0.1, attack:0.002, hold:0.004, decay:0.9, sustain:0.15, release:0.5, cutoff:15000, reso:0.1, reverse:1, width:0.6, reverb:0.25, duration:1.6,
+            _vary:{ freq:0.15, fmIndex:0.25, decay:0.2 } },
+  "Reverse Snare": { wave:19, impactTone:0.7, impactDecay:0.4, impactPunch:0.8, impactGrit:0.35, noise:0.55, attack:0.001, decay:0.35, sustain:0, release:0.3, cutoff:9000, reso:0.25, drive:0.25, reverse:1, width:0.6, reverb:0.2, duration:0.8,
+            _vary:{ impactTone:0.2, noise:0.2, decay:0.25 } },
+  "Reverse Laser": { wave:2, freq:900, sweep:-0.45, attack:0.001, decay:0.35, sustain:0, release:0.25, cutoff:7000, reso:0.45, drive:0.2, reverse:1, width:0.5, delay:0.2, delayTime:0.09, delayFb:0.25, duration:0.9,
+            _vary:{ freq:0.2, sweep:0.25, reso:0.2 } },
+  "Reverse Gong": { wave:10, freq:120, modalPartials:14, modalInharm:1.0, modalDecay:2.6, modalBright:0.4, attack:0.002, hold:0.006, decay:0.1, sustain:1, release:0.7, cutoff:9000, reso:0.1, drive:0.2, reverse:1, width:0.7, reverb:0.4, reverbSize:0.85, reverbTone:0.3, duration:2.0,
+            _vary:{ freq:0.18, modalDecay:0.2, modalBright:0.2 } },
+  "Downlifter": { wave:2, freq:600, sweep:-0.7, unison:4, detune:22, noise:0.3, attack:0.02, decay:0.8, sustain:0.4, release:0.4, filterMode:0, cutoff:9000, reso:0.35, filtEnv:-0.7, drive:0.25, width:0.75, reverb:0.35, reverbSize:0.75, duration:1.8,
+            _vary:{ freq:0.2, sweep:0.15, filtEnv:0.2 } },
+  "Braam Riser": { wave:18, freq:110, fmAlgo:4, fmRatio2:1, fmRatio3:1, fmRatio4:2, fmIndex:0.55, fmFeedback:0.25, sweep:0.1, attack:0.7, hold:0.02, decay:0.3, sustain:0.9, release:0.35, cutoff:1400, reso:0.3, filtEnv:0.75, drive:0.35, width:0.8, reverb:0.4, reverbSize:0.85, duration:2.0,
+            _vary:{ fmIndex:0.25, cutoff:0.25, filtEnv:0.2 } },
+  "Portal Inhale": { wave:11, freq:440, grainSize:55, grainDensity:48, grainSpray:0.5, grainScan:1.3, grainSpread:0.8, attack:0.03, hold:0.01, decay:0.6, sustain:0.5, release:0.4, cutoff:12000, reso:0.2, reverse:1, convMix:0.35, convType:2, convSize:1.8, convTone:0.55, width:0.85, duration:1.8,
+            _vary:{ grainScan:0.3, grainSpread:0.2, convSize:0.25 } },
+
+  // ---- FM / Digital, part 2: PLAYABLE patches (for the keyboard + riff sequencer) ----
+  // Written to be played at pitch rather than fired once: no ring mod and no boom layer (both are
+  // FIXED-frequency, so they stop tracking the note and turn a melody into mud), cutoff kept high
+  // so the top octaves stay bright, and decays sized so consecutive riff steps ring into each
+  // other musically instead of smearing. Every one is the FM 4op engine (wave 18) unless noted.
+  "Tine Keys": { wave:18, freq:220, fmAlgo:2, fmRatio2:14, fmRatio3:1, fmRatio4:1, fmIndex:0.28, fmFeedback:0.05, attack:0.002, hold:0.004, decay:0.9, sustain:0.25, release:0.35, cutoff:15000, reso:0.1, chorusMix:0.25, chorusRate:0.8, chorusDepth:0.3, width:0.5, duration:1.4,
+            _vary:{ fmRatio2:0.3, fmIndex:0.3, decay:0.2 } },
+  "FM Marimba": { wave:18, freq:392, fmAlgo:0, fmRatio2:4, fmRatio3:1, fmRatio4:1, fmIndex:0.3, fmFeedback:0, attack:0.001, hold:0.003, decay:0.35, sustain:0, release:0.2, cutoff:14000, reso:0.1, reverb:0.12, duration:0.7,
+            _vary:{ fmRatio2:0.25, fmIndex:0.3, decay:0.25 } },
+  "FM Xylophone": { wave:18, freq:784, fmAlgo:0, fmRatio2:5.5, fmRatio3:1, fmRatio4:1, fmIndex:0.35, fmFeedback:0, attack:0.001, hold:0.002, decay:0.22, sustain:0, release:0.14, cutoff:16000, reso:0.1, reverb:0.14, duration:0.6,
+            _vary:{ fmRatio2:0.25, fmIndex:0.3 } },
+  "Crystal Mallet": { wave:18, freq:660, fmAlgo:3, fmRatio2:3.5, fmRatio3:7, fmRatio4:11, fmIndex:0.45, fmFeedback:0, attack:0.001, hold:0.003, decay:1.0, sustain:0, release:0.6, cutoff:16000, reso:0.1, reverb:0.3, reverbSize:0.65, width:0.6, duration:1.4,
+            _vary:{ fmRatio3:0.25, fmIndex:0.25, reverb:0.25 } },
+  "FM Clav": { wave:18, freq:330, fmAlgo:0, fmRatio2:3, fmRatio3:1, fmRatio4:1, fmIndex:0.55, fmFeedback:0.4, attack:0.001, hold:0.002, decay:0.22, sustain:0.1, release:0.12, cutoff:12000, reso:0.25, drive:0.2, duration:0.5,
+            _vary:{ fmIndex:0.25, fmFeedback:0.3, decay:0.25 } },
+  "Steel Drum": { wave:18, freq:440, fmAlgo:1, fmRatio2:2, fmRatio3:1, fmRatio4:3, fmIndex:0.4, fmFeedback:0.1, attack:0.002, hold:0.004, decay:0.5, sustain:0.15, release:0.35, cutoff:14000, reso:0.1, reverb:0.22, reverbSize:0.55, width:0.5, duration:1.0,
+            _vary:{ fmIndex:0.25, fmRatio4:0.25, decay:0.2 } },
+  "FM Harp": { wave:18, freq:523, fmAlgo:3, fmRatio2:2, fmRatio3:3, fmRatio4:4, fmIndex:0.3, fmFeedback:0, attack:0.001, hold:0.003, decay:0.7, sustain:0, release:0.5, cutoff:15000, reso:0.1, reverb:0.25, reverbSize:0.6, width:0.55, duration:1.2,
+            _vary:{ fmIndex:0.3, decay:0.25 } },
+  "Bell Lead": { wave:18, freq:587, fmAlgo:4, fmRatio2:2, fmRatio3:1, fmRatio4:4, fmIndex:0.35, fmFeedback:0.15, vibDepth:0.05, vibRate:5.5, attack:0.008, hold:0.004, decay:0.3, sustain:0.55, release:0.3, cutoff:15000, reso:0.1, delay:0.22, delayTime:0.16, delayFb:0.3, pingpong:1, width:0.6, duration:1.2,
+            _vary:{ fmIndex:0.25, delayTime:0.2, vibRate:0.25 } },
+  "Digital Flute": { wave:18, freq:660, fmAlgo:2, fmRatio2:1, fmRatio3:2, fmRatio4:1, fmIndex:0.17, fmFeedback:0, noise:0.09, vibDepth:0.09, vibRate:5.5, attack:0.07, hold:0.01, decay:0.2, sustain:1, release:0.25, cutoff:14000, reso:0.1, reverb:0.24, reverbSize:0.5, width:0.55, duration:1.2,
+            _vary:{ fmIndex:0.4, noise:0.3, vibRate:0.25 } },
+  "Rubber Bass": { wave:18, freq:65, fmAlgo:0, fmRatio2:1, fmRatio3:2, fmRatio4:1, fmIndex:0.45, fmFeedback:0.25, attack:0.003, hold:0.004, decay:0.3, sustain:0.5, release:0.18, cutoff:2600, reso:0.35, filtEnv:0.45, drive:0.25, duration:0.8,
+            _vary:{ fmIndex:0.25, cutoff:0.25, filtEnv:0.2 } },
+  "Digital Choir": { wave:18, freq:330, fmAlgo:5, fmRatio2:2, fmRatio3:3, fmRatio4:4, fmIndex:0.3, fmFeedback:0, attack:0.09, hold:0.01, decay:0.25, sustain:1, release:0.5, cutoff:12000, reso:0.1, chorusMix:0.5, chorusRate:0.7, chorusDepth:0.5, reverb:0.35, reverbSize:0.75, width:0.7, duration:1.6,
+            _vary:{ fmIndex:0.3, chorusRate:0.3, reverb:0.2 } },
+  // The one rhythmic patch here: each key press fires a rising 6-note run, so a riff of these
+  // stacks arpeggios. sustain stays tiny — with `repeat` it is the floor BETWEEN shots.
+  "Chip Arp": { wave:18, freq:440, fmAlgo:0, fmRatio2:2, fmRatio3:1, fmRatio4:1, fmIndex:0.4, fmFeedback:0.1, repeat:6, rate:12, arpStep:4, attack:0.001, hold:0.002, decay:0.035, sustain:0.02, release:0.03, cutoff:13000, reso:0.15, bitcrush:10, width:0.5, duration:0.9,
+            _vary:{ rate:0.2, arpStep:0.4, fmIndex:0.25 } },
+
+  // ---- Footsteps / movement ----
+  // The most-used sfx in a game, and the library only had one generic "Footstep". A step is a
+  // short broadband transient whose SURFACE is the texture: hard surfaces = Impact (crack + a
+  // small hollow boom for the board/ground resonance), loose surfaces = particle (many tiny
+  // grains), wet = bubble, metal grate = an inharmonic modal ring. Each is deliberately short
+  // and dry so it sits under a game mix; the _vary maps make them good Variation-pack seeds.
+  "Wood Step": { wave:19, impactTone:0.45, impactDecay:0.14, impactPunch:0.85, impactGrit:0.25, boom:0.32, boomFreq:115, boomDrop:0.35, boomDecay:0.08, attack:0.001, decay:0.06, sustain:0, release:0.07, cutoff:4800, reso:0.15, drive:0.2, width:0.35, reverb:0.1, duration:0.26,
+            _vary:{ impactTone:0.18, impactDecay:0.3, boomFreq:0.12, cutoff:0.15 } },
+  "Stone Step": { wave:19, impactTone:0.62, impactDecay:0.12, impactPunch:0.9, impactGrit:0.3, boom:0.24, boomFreq:95, boomDrop:0.4, boomDecay:0.07, attack:0.001, decay:0.05, sustain:0, release:0.07, cutoff:7500, reso:0.12, drive:0.22, width:0.35, reverb:0.18, reverbSize:0.5, duration:0.3,
+            _vary:{ impactTone:0.15, impactGrit:0.3, cutoff:0.15, reverb:0.3 } },
+  "Grass Step": { wave:15, particleRate:130, particleTone:0.72, particleDecay:0.1, particleSpread:0.6, filterMode:1, cutoff:1100, reso:0.15, attack:0.003, hold:0.004, decay:0.05, sustain:1, release:0.05, gain:0.6, width:0.4, duration:0.22,
+            _vary:{ particleRate:0.25, particleTone:0.15, particleSpread:0.3 } },
+  "Snow Step": { wave:15, particleRate:170, particleTone:0.5, particleDecay:0.08, particleSpread:0.7, attack:0.002, hold:0.005, decay:0.06, sustain:1, release:0.06, cutoff:6500, reso:0.15, drive:0.25, width:0.4, duration:0.28,
+            _vary:{ particleRate:0.22, particleTone:0.18, drive:0.3 } },
+  "Sand Step": { wave:15, particleRate:150, particleTone:0.62, particleDecay:0.06, particleSpread:0.5, filterMode:1, cutoff:850, reso:0.12, attack:0.004, hold:0.004, decay:0.07, sustain:1, release:0.07, gain:0.62, width:0.35, duration:0.3,
+            _vary:{ particleRate:0.25, particleTone:0.15 } },
+  "Mud Step": { wave:15, particleRate:55, particleTone:0.14, particleDecay:0.35, particleSpread:0.6, attack:0.003, hold:0.005, decay:0.1, sustain:1, release:0.1, cutoff:850, reso:0.38, drive:0.3, width:0.4, duration:0.36,
+            _vary:{ particleRate:0.3, particleDecay:0.25, cutoff:0.2 } },
+  "Puddle Step": { wave:14, freq:520, bubbleRate:26, bubbleRise:0.55, bubbleSpread:0.6, bubbleDecay:0.35, noise:0.35, attack:0.002, hold:0.004, decay:0.08, sustain:1, release:0.1, cutoff:5200, reso:0.2, width:0.5, duration:0.4,
+            _vary:{ freq:0.2, bubbleRate:0.3, noise:0.15 } },
+  "Metal Grate Step": { wave:10, freq:380, modalPartials:9, modalInharm:0.85, modalDecay:0.35, modalBright:0.7, noise:0.25, attack:0.001, hold:0.004, decay:0.08, sustain:1, release:0.15, cutoff:11000, reso:0.12, drive:0.2, width:0.5, reverb:0.15, reverbSize:0.45, duration:0.5,
+            _vary:{ freq:0.18, modalInharm:0.15, modalDecay:0.3 } },
+  "Ladder Rung": { wave:19, impactTone:0.72, impactDecay:0.09, impactPunch:0.9, impactGrit:0.2, boom:0.18, boomFreq:130, boomDrop:0.3, boomDecay:0.06, attack:0.001, decay:0.04, sustain:0, release:0.06, cutoff:9000, reso:0.15, width:0.3, reverb:0.12, duration:0.2,
+            _vary:{ impactTone:0.15, cutoff:0.15 } },
+  "Heavy Landing": { wave:19, impactTone:0.3, impactDecay:0.35, impactPunch:0.95, impactGrit:0.5, boom:0.75, boomFreq:58, boomDrop:0.8, boomDecay:0.35, attack:0.001, decay:0.12, sustain:0, release:0.3, cutoff:3800, reso:0.2, drive:0.4, transient:0.3, width:0.55, reverb:0.28, reverbSize:0.65, duration:0.8,
+            _vary:{ impactTone:0.2, boomFreq:0.12, drive:0.25, reverb:0.25 } },
+  "Armor Step": { wave:10, freq:900, modalPartials:10, modalInharm:0.95, modalDecay:0.1, modalBright:0.85, repeat:3, rate:14, attack:0.001, hold:0.003, decay:0.03, sustain:0.03, release:0.05, cutoff:14000, reso:0.1, width:0.55, reverb:0.14, duration:0.5,
+            _vary:{ freq:0.18, rate:0.25, modalInharm:0.12 } },
+  "Sprint Cadence": { wave:19, impactTone:0.45, impactDecay:0.12, impactPunch:0.85, impactGrit:0.35, repeat:6, rate:5.5, boom:0.3, boomFreq:100, boomDrop:0.4, boomDecay:0.08, attack:0.001, decay:0.05, sustain:0.04, release:0.06, cutoff:5500, reso:0.15, drive:0.22, width:0.4, reverb:0.14, duration:1.4,
+            _vary:{ rate:0.2, impactTone:0.18, cutoff:0.15 } },
+  "Cloth Rustle": { wave:15, particleRate:45, particleTone:0.86, particleDecay:0.1, particleSpread:0.7, filterMode:1, cutoff:2400, reso:0.12, attack:0.02, hold:0.005, decay:0.12, sustain:1, release:0.12, gain:0.5, width:0.6, duration:0.5,
+            _vary:{ particleRate:0.35, particleTone:0.12, particleSpread:0.3 } },
+
+  // ---- Doors / containers ----
+  // Creaks are stick-slip friction: a low saw with heavy vibrato through a resonant BANDPASS
+  // (the notch-less band is what makes it "wooden"), plus bitcrush/downsample for the dry
+  // rasp. Slams/latches are Impact; the sci-fi door is the whoosh engine with a servo ring.
+  "Wooden Door Open": { wave:2, freq:140, sweep:0.25, vibDepth:0.35, vibRate:9, noise:0.15, attack:0.05, decay:0.4, sustain:0.55, release:0.35, filterMode:2, cutoff:900, reso:0.72, drive:0.35, bitcrush:9, downsample:3, width:0.4, reverb:0.22, reverbSize:0.55, reverbTone:0.4, duration:1.6,
+            _vary:{ freq:0.2, vibRate:0.3, cutoff:0.2, sweep:0.3 } },
+  "Door Slam": { wave:19, impactTone:0.35, impactDecay:0.3, impactPunch:0.95, impactGrit:0.5, boom:0.7, boomFreq:70, boomDrop:0.7, boomDecay:0.28, attack:0.001, decay:0.1, sustain:0, release:0.25, cutoff:4200, reso:0.2, drive:0.4, width:0.5, reverb:0.3, reverbSize:0.7, duration:0.9,
+            _vary:{ impactTone:0.2, boomFreq:0.15, reverb:0.25 } },
+  "Latch Click": { wave:19, impactTone:0.85, impactDecay:0.05, impactPunch:0.95, impactGrit:0.15, attack:0.001, decay:0.03, sustain:0, release:0.04, cutoff:12000, reso:0.15, width:0.3, reverb:0.08, duration:0.12,
+            _vary:{ impactTone:0.12, cutoff:0.15 } },
+  "Chest Open": { wave:2, freq:190, sweep:0.4, vibDepth:0.25, vibRate:7, noise:0.12, attack:0.04, decay:0.35, sustain:0.5, release:0.4, filterMode:2, cutoff:1200, reso:0.62, drive:0.3, bitcrush:10, downsample:2, width:0.45, reverb:0.3, reverbSize:0.6, reverbTone:0.55, duration:1.2,
+            _vary:{ freq:0.2, sweep:0.25, vibRate:0.3 } },
+  "Drawer Slide": { wave:15, particleRate:100, particleTone:0.35, particleDecay:0.15, particleSpread:0.4, attack:0.03, hold:0.006, decay:0.12, sustain:1, release:0.12, cutoff:2200, reso:0.25, drive:0.2, width:0.4, duration:0.6,
+            _vary:{ particleRate:0.25, cutoff:0.2 } },
+  "Heavy Gate": { wave:2, freq:70, sweep:0.08, vibDepth:0.2, vibRate:5, noise:0.2, subOsc:0.4, attack:0.15, decay:0.5, sustain:0.7, release:0.5, filterMode:2, cutoff:520, reso:0.75, drive:0.5, driveOS:2, bitcrush:8, downsample:3, width:0.5, reverb:0.4, reverbSize:0.85, reverbTone:0.3, duration:2.0,
+            _vary:{ freq:0.18, vibRate:0.3, cutoff:0.2, drive:0.25 } },
+  "Sliding Door": { wave:20, whooshTone:0.4, whooshSweep:0.35, whooshBody:0.75, whooshPeak:0.5, ringMod:0.2, ringFreq:120, sustain:1, attack:0.05, hold:0.01, decay:0.15, release:0.25, cutoff:5000, reso:0.25, width:0.6, reverb:0.2, reverbSize:0.5, duration:0.9,
+            _vary:{ whooshTone:0.2, whooshBody:0.2, ringFreq:0.3 } },
+  "Elevator Ding": { wave:10, freq:1046, modalPartials:4, modalInharm:0.08, modalDecay:1.4, modalBright:0.55, attack:0.001, hold:0.004, decay:0.1, sustain:1, release:0.5, cutoff:13000, reso:0.1, width:0.4, reverb:0.28, reverbSize:0.55, duration:1.8,
+            _vary:{ freq:0.1, modalDecay:0.25, reverb:0.25 } },
+  "Safe Tumbler": { wave:19, impactTone:0.8, impactDecay:0.06, impactPunch:0.9, impactGrit:0.2, repeat:6, rate:7, attack:0.001, decay:0.03, sustain:0.04, release:0.05, cutoff:11000, reso:0.15, width:0.35, reverb:0.1, duration:1.2,
+            _vary:{ rate:0.3, impactTone:0.12 } },
+  "Lock Bolt": { wave:19, impactTone:0.6, impactDecay:0.1, impactPunch:0.95, impactGrit:0.4, repeat:2, rate:7, boom:0.28, boomFreq:120, boomDrop:0.35, boomDecay:0.07, attack:0.001, decay:0.03, sustain:0.02, release:0.05, cutoff:8000, reso:0.2, drive:0.25, width:0.4, reverb:0.15, duration:0.5,
+            _vary:{ rate:0.25, impactTone:0.15 } },
+
+  // ---- Reverse / risers ----
+  // Showcases the Master `reverse` transform: write the sound so it DECAYS normally, then flip
+  // it — the tail swells forward into the transient (reverse cymbal / suck-in whoosh). Risers
+  // are the forward-facing half of the same job: a long attack + rising filter/pitch.
+  "Reverse Cymbal": { wave:10, freq:420, modalPartials:16, modalInharm:1.0, modalDecay:2.2, modalBright:0.9, noise:0.25, attack:0.001, hold:0.005, decay:0.1, sustain:1, release:0.5, cutoff:16000, reso:0.1, reverse:1, width:0.7, reverb:0.25, reverbSize:0.6, duration:2.0,
+            _vary:{ freq:0.2, modalDecay:0.2, modalBright:0.15 } },
+  "Reverse Bell": { wave:10, freq:494, modalPartials:7, modalInharm:0.7, modalDecay:1.6, modalBright:0.6, attack:0.001, hold:0.005, decay:0.1, sustain:1, release:0.4, cutoff:12000, reso:0.1, reverse:1, width:0.6, reverb:0.3, reverbSize:0.7, duration:1.8,
+            _vary:{ freq:0.18, modalInharm:0.2, modalDecay:0.25 } },
+  "Suction Whoosh": { wave:20, whooshTone:0.55, whooshSweep:0.75, whooshBody:0.4, whooshPeak:0.3, sustain:1, attack:0.01, hold:0.01, decay:0.15, release:0.3, cutoff:8000, reso:0.2, reverse:1, width:0.75, reverb:0.2, reverbSize:0.55, duration:1.0,
+            _vary:{ whooshTone:0.2, whooshSweep:0.2, whooshPeak:0.3 } },
+  "Riser Swell": { wave:0, freq:200, noise:0.8, noiseColor:0.3, sweep:0.4, attack:1.4, hold:0.02, decay:0.2, sustain:0.9, release:0.25, filterMode:2, cutoff:600, reso:0.55, filtEnv:0.9, drive:0.25, width:0.7, reverb:0.4, reverbSize:0.8, reverbTone:0.5, duration:2.0,
+            _vary:{ cutoff:0.25, filtEnv:0.15, noiseColor:0.3 } },
+  "Reverse Vocal": { wave:13, freq:220, formantVowel:0.35, formantSize:1.1, formantQ:0.6, formantBreath:0.2, formantLfoRate:1.4, formantLfoDepth:0.5, attack:0.02, hold:0.01, decay:0.35, sustain:1, release:0.4, cutoff:9000, reso:0.15, reverse:1, width:0.6, reverb:0.35, reverbSize:0.7, duration:1.4,
+            _vary:{ freq:0.18, formantVowel:0.3, formantSize:0.15 } },
+  "Backwards Splash": { wave:14, freq:600, bubbleRate:30, bubbleRise:0.7, bubbleSpread:0.7, bubbleDecay:0.5, noise:0.3, attack:0.002, hold:0.005, decay:0.12, sustain:1, release:0.15, cutoff:7000, reso:0.15, reverse:1, width:0.65, reverb:0.25, reverbSize:0.6, duration:1.0,
+            _vary:{ freq:0.2, bubbleRate:0.3, bubbleRise:0.2 } },
+  "Rewind Tape": { wave:2, freq:300, sweep:0.5, repeat:8, rate:18, arpStep:2, attack:0.001, decay:0.04, sustain:0.05, release:0.04, cutoff:5000, reso:0.35, drive:0.35, bitcrush:6, downsample:6, width:0.45, duration:1.2,
+            _vary:{ freq:0.2, rate:0.25, arpStep:0.5, downsample:0.3 } },
+  "Reverse Impact": { wave:19, impactTone:0.5, impactDecay:0.6, impactPunch:0.9, impactGrit:0.4, boom:0.6, boomFreq:65, boomDrop:0.6, boomDecay:0.5, attack:0.001, decay:0.5, sustain:0, release:0.6, cutoff:6000, reso:0.2, drive:0.35, reverse:1, width:0.65, reverb:0.4, reverbSize:0.8, duration:1.6,
+            _vary:{ impactTone:0.2, boomFreq:0.15, reverb:0.2 } },
 };
 
 window.PRESET_CATEGORIES = [
-  ["Bells / Mallets", ["Bell", "Church Bell", "Hand Bell", "Wind Chime", "Kalimba", "Music Box Note", "Glass Ping", "Marimba", "Vibraphone", "Metal Clang", "Gong", "Triangle Ting", "Cathedral Bell", "Spring Chime"]],
-  ["Granular / Texture", ["Grain Cloud", "Shimmer Wash", "Time Freeze", "Stutter Glitch", "Granular Drone", "Pixie Dust"]],
-  ["Voice / Vocal", ["Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone", "Vowel Talk", "Wah Voice"]],
-  ["Water / Liquid", ["Bubble Drop", "Droplet Plink", "Bubbling Stream", "Boiling Pot", "Underwater", "Pouring Water", "Lava Bloop", "Sci-Fi Bloop"]],
-  ["Crackle / Particle", ["Crackling Fire", "Heavy Rain", "Frying Sizzle", "Geiger Counter", "Electric Sparks", "Gravel Steps", "Crowd Applause", "Static Hiss"]],
+  ["Bells / Mallets", ["Bell", "Church Bell", "Hand Bell", "Wind Chime", "Kalimba", "Music Box Note", "Glass Ping", "Marimba", "Vibraphone", "Metal Clang", "Gong", "Triangle Ting", "Cathedral Bell", "Spring Chime", "Tubular Bell"]],
+  ["Granular / Texture", ["Grain Cloud", "Shimmer Wash", "Time Freeze", "Stutter Glitch", "Granular Drone", "Pixie Dust", "Grain Storm", "Frozen Choir", "Glitch Rain", "Warped Tape", "Cloud Bloom", "Micro Stutter", "Whispering Grains", "Dust Devil", "Grain Riser"]],
+  ["Voice / Vocal", ["Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone", "Vowel Talk", "Wah Voice", "Nasal Ee", "Throat Sing", "Whisper Breath", "Chant Loop", "Yawn Stretch", "Baby Coo"]],
+  ["Water / Liquid", ["Bubble Drop", "Droplet Plink", "Bubbling Stream", "Boiling Pot", "Underwater", "Pouring Water", "Lava Bloop", "Sci-Fi Bloop", "Cave Drip", "Big Splash", "Fizzy Soda", "Gulp Swallow", "Water Swirl", "Sewer Drip", "Geyser Burst"]],
+  ["Crackle / Particle", ["Crackling Fire", "Heavy Rain", "Frying Sizzle", "Geiger Counter", "Electric Sparks", "Gravel Steps", "Crowd Applause", "Static Hiss", "Popcorn", "Bubble Wrap", "Radio Interference", "Distant Fireworks", "Leaf Litter", "Sparkler", "Hail on Metal"]],
   ["Drums / Percussion", ["Analog Kick", "Classic Kick", "Punch Kick", "Snare", "Tight Snare", "Rimshot", "Clap", "Closed Hat", "Open Hat", "Low Tom", "High Tom", "Crash Cymbal", "Ride Cymbal", "Cowbell", "Woodblock", "Shaker"]],
-  ["Pads / Drones", ["Warm Pad", "Choir Aah", "Sci-Fi Drone", "Glass Pad", "Deep Drone", "Shimmer Pad", "Power Hum", "Angelic Wash", "Phaser Pad"]],
-  ["Speech / Vox", ["Say Hello", "Game Over Voice", "Warning", "Robot Yes", "Robot No", "Level Up Vox", "System Ready", "Monster Speak"]],
-  ["FM / Digital", ["FM Piano", "FM Bell", "FM Bass", "Metallic Clang", "Glassy Keys", "Digital Brass", "FM Growl", "Additive Organ", "Chorus Keys"]],
+  ["Pads / Drones", ["Warm Pad", "Choir Aah", "Sci-Fi Drone", "Glass Pad", "Deep Drone", "Shimmer Pad", "Power Hum", "Angelic Wash", "Phaser Pad", "Dark Ambient Bed", "Cold Vacuum", "Solar Wind", "Monastery Drone", "Neon Hum", "Dream Bell Pad"]],
+  ["Speech / Vox", ["Say Hello", "Game Over Voice", "Warning", "Robot Yes", "Robot No", "Level Up Vox", "System Ready", "Monster Speak", "Player One", "Insert Coin", "Mission Failed", "Access Denied", "Ready Set Go", "Nice Work", "Self Destruct"]],
+  ["FM / Digital", ["FM Piano", "FM Bell", "FM Bass", "Metallic Clang", "Glassy Keys", "Digital Brass", "FM Growl", "Additive Organ", "Chorus Keys", "Tine Keys", "FM Marimba", "FM Xylophone", "Crystal Mallet", "FM Clav", "Steel Drum", "FM Harp", "Bell Lead", "Digital Flute", "Rubber Bass", "Digital Choir", "Chip Arp"]],
   ["Magic", ["Teleport", "Magic Sparkle", "Cure", "Poison", "Fireball Cast", "Frost Bolt", "Lightning Strike", "Arcane Blast", "Holy Smite", "Dark Curse", "Mana Charge", "Magic Missile", "Wind Slash", "Magic Fizzle", "Ice", "Healing Aura", "Curse Whoosh", "Shield Cast", "Enchant", "Summon Portal", "Hex Bolt", "Fireball Cast 2", "Teleport 2", "Magic Sparkle 2", "Arcane Sigil", "Arcane Shimmer", "Fae Glyph", "Wyrd Bloom", "Arcane Weave", "Arcane Rune", "Mystic Whorl", "Ethereal Aura", "Radiant Aura", "Astral Aura", "Wyrd Spark", "Ethereal Rune", "Celestial Bloom", "Runic Chime", "Glimmer Whorl", "Arcane Chime", "Glimmer Aura", "Prism Surge", "Enchanted Bloom", "Shadow Hymn", "Ethereal Spark", "Shadow Shimmer", "Astral Hymn", "Glimmer Weave", "Fae Bloom", "Astral Chime"]],
   ["UI", ["UI Click", "Confirm", "Cancel", "Error Buzz", "Alarm Siren", "Blip", "Notification", "Menu Open", "Tab Switch", "Unlock", "UI Click 2", "Confirm 2", "Quick Tone", "Silky Chirp", "Quick Chirp", "Muted Tap", "Soft Tick", "Silky Cue", "Sharp Beep", "Bright Nudge", "Soft Pop", "Sharp Tone", "Crisp Chirp", "Quick Beep", "Crisp Blip"]],
   ["Explosions", ["Fireworks", "Explosion", "Deep Impact", "Cinematic Boom", "Sub Drop Hit", "Meteor Impact", "Glass Shatter", "Grenade Blast", "Distant Boom", "Barrel Burst", "Nuke Rumble", "Explosion 2", "Cinematic Boom 2", "Distant Wallop", "Seismic Detonation", "Massive Blast", "Concussive Wallop", "Cavern Shockwave", "Seismic Shockwave", "Rolling Shockwave", "Deep Boom", "Cavern Wallop", "Concussive Kaboom", "Muffled Wallop", "Thunderous Boom", "Thunderous Wallop"]],
@@ -1164,5 +1414,8 @@ window.PRESET_CATEGORIES = [
   ["Retro / Arcade", ["Coin", "Jump", "Powerup", "Lush Powerup", "Wide Pickup", "Level Up", "Game Over", "Bounce", "Pickup Item", "Extra Life", "Retro Jump", "Game Start", "Coin 2", "Powerup 2", "8-Bit Ding", "Pixel Fanfare", "Retro Ding", "Retro Pickup", "Retro Jingle", "Turbo Bounce", "Pixel Pickup", "Pixel Score", "Arcade Jump", "High Jingle", "8-Bit Fanfare", "Chiptune Bounce", "Arcade Jingle", "Chiptune Ding", "Bonus Bounce"]],
   ["Consoles / Chiptune", ["8-Bit Coin", "8-Bit Jump", "8-Bit Blip", "8-Bit Laser", "8-Bit Powerup", "8-Bit Hit", "8-Bit 1UP", "Pocket Zap", "Pocket Coin", "Pocket Powerup", "Pocket Jump", "Pocket Blip", "Pocket Hit", "Pocket Select", "Super Chime", "Super Coin", "Super Hit", "Super Powerup", "Super Zap", "Super Sparkle", "Super Fanfare", "Mega Shot", "Mega Bass", "Mega Zap", "Mega Punch", "Mega Explosion", "Mega Lead", "Mega Hit", "Turbo Laser", "Turbo Powerup", "Turbo Blip", "Turbo Coin", "Turbo Zap", "Turbo Hit", "Turbo Chime", "Woodgrain Buzz", "Woodgrain Zap", "Woodgrain Boom", "Woodgrain Blip", "Woodgrain Hit", "Woodgrain Jump", "Woodgrain Shot", "SID Bass", "SID Zap", "SID Lead", "SID Coin", "SID Blip", "SID Pluck", "SID Sweep"]],
   ["Sci-Fi & Hazard", ["Laser", "Meteor Descent", "Comet Whoosh", "Acid Sizzle", "Acid Splash", "Toxic Bubble", "Gas Leak", "Gas Puff", "Steam Vent", "Force Field", "Warp Drive", "Laser Charge", "Teleporter Hum", "Energy Drain", "Scan Complete", "Laser 2", "Warp Drive 2", "Ionized Leak", "Alien Surge", "Warp Field", "Radioactive Scan", "Reactor Surge", "Toxic Surge", "Warp Scan", "Toxic Hum", "Ionized Charge", "Quantum Pulse", "Alien Field", "Ionized Alarm", "Photon Whoosh", "Photon Charge", "Photon Drip", "Ionized Beam", "Photon Surge", "Reactor Beam", "Reactor Charge", "Ping-Pong Pluck"]],
+  ["Footsteps / Movement", ["Wood Step", "Stone Step", "Grass Step", "Snow Step", "Sand Step", "Mud Step", "Puddle Step", "Metal Grate Step", "Ladder Rung", "Heavy Landing", "Armor Step", "Sprint Cadence", "Cloth Rustle", "Ice Skid", "Water Wade"]],
+  ["Doors / Containers", ["Wooden Door Open", "Door Slam", "Latch Click", "Chest Open", "Drawer Slide", "Heavy Gate", "Sliding Door", "Elevator Ding", "Safe Tumbler", "Lock Bolt", "Cabinet Close", "Metal Locker", "Key Jingle", "Vault Door", "Trapdoor Creak"]],
+  ["Reverse / Risers", ["Reverse Cymbal", "Reverse Bell", "Suction Whoosh", "Riser Swell", "Reverse Vocal", "Backwards Splash", "Rewind Tape", "Reverse Impact", "Reverse Piano", "Reverse Snare", "Reverse Laser", "Reverse Gong", "Downlifter", "Braam Riser", "Portal Inhale"]],
   ["Cartoon / Misc", ["Cartoon Boing", "Slide Whistle Up", "Slide Whistle Down", "Fart", "Burp", "Slime Splat", "Squeaky Toy", "Bubble Blorp", "Mud Squelch", "Bubble Pop", "Boing Spring", "Squish Pop", "Rubber Stretch", "Pop Cork", "Fart 2", "Squishy Plop", "Goofy Plop", "Silly Blorp", "Goofy Splat", "Zany Squish", "Silly Wobble", "Zany Wobble", "Bouncy Pop", "Squishy Boing", "Zany Splat", "Loony Wobble", "Slippery Sproing", "Wobbly Plop", "Bouncy Sproing", "Silly Boing", "Loony Squeak"]],
 ];

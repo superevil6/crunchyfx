@@ -30,10 +30,14 @@
 <header>
   <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
+  <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true">🗂 Presets</button>
   <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings">⚙</button>
 </header>
 
 <div class="controls">
+  <!-- Two clusters: the left (create/generate) and right (save/share/IO) groups each wrap as a UNIT,
+       so when the row is too narrow the whole right cluster drops to a clean second row. -->
+  <div class="controls-left">
   <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
   <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
   <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
@@ -41,7 +45,6 @@
   <button id="breed" class="accent2">🧬 Breed</button>
   <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets">⚒ Foundry</button>
   <button id="variations" class="accent2" title="Generate a pack of variations of the current sound (footstep 1–8) and export them all">📦 Variations</button>
-  <button id="export">⬇ Export WAV</button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
       <option value="22050">22 kHz</option>
@@ -60,13 +63,17 @@
       <input type="checkbox" id="fmtLoop"> Loop
     </label>
   </span>
-  <span class="spacer"></span>
+  </div>
+  <div class="controls-right">
+  <button id="export" class="export-btn" title="Export the current sound as a WAV">⬇ Export WAV</button>
+  <button id="importwav" title="Import a WAV/audio file to mangle with the tools">📂 Import WAV</button>
   <button id="save">Save preset</button>
   <button id="load">Load preset</button>
-  <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
-  <button id="importwav" title="Import a WAV/audio file to mangle with the tools">📂 Import WAV</button>
   <button id="recordbtn" title="Record from your mic and use it as the waveform (say “boom”, then shape it)">🎤 Record</button>
+  <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
   <span id="samplename" class="hint"></span>
+  <!-- JS injects the desktop IO buttons (Save/Open project, Drag out) or the web "Get the Desktop app" CTA here -->
+  </div>
   <input type="file" id="loadfile" accept="application/json" hidden>
   <input type="file" id="wavfile" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden>
 </div>
@@ -1819,9 +1826,47 @@ presetSearch.addEventListener("keydown", (e) => {
 // ---------- Save / load JSON ----------
 // ---------- User preferences (Settings modal) — persisted across sessions ----------
 const PREFS_KEY = "crunchyfx.prefs.v1";     // localStorage namespace matches the other keys
-let prefs = { promptPresetSave: false, tourSeen: false, checkUpdates: true };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown; checkUpdates (desktop): look for a newer version on launch
+let prefs = { promptPresetSave: false, tourSeen: false, checkUpdates: true, collapsed: {} };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown; checkUpdates (desktop): look for a newer version on launch; collapsed: per-hero-section fold state
 try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "null"); if (p && typeof p === "object") Object.assign(prefs, p); } catch (e) { /* best-effort */ }
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* best-effort */ } }
+
+// Make the three hero sections (Quick Shape / Engine / Console) collapsible — click the header to
+// fold; the state persists in prefs. Guards the header's own controls (engine lock, console ✕ clean)
+// so using them doesn't also toggle the fold.
+function makeCollapsible(section, header, key, onToggle, defaultCollapsed) {
+  if (!section || !header) return;
+  header.classList.add("collapse-head");
+  const stored = prefs.collapsed ? prefs.collapsed[key] : undefined;
+  const collapsed = stored === undefined ? !!defaultCollapsed : !!stored;   // riff defaults folded; heroes default open
+  if (collapsed) section.classList.add("collapsed");
+  if (onToggle) onToggle(!collapsed);
+  header.addEventListener("click", (e) => {
+    if (e.target.closest("input, button, select, label, a")) return;   // a control in the header, not the fold
+    const c = section.classList.toggle("collapsed");
+    (prefs.collapsed = prefs.collapsed || {})[key] = c;
+    savePrefs();
+    if (onToggle) onToggle(!c);
+  });
+}
+makeCollapsible(document.querySelector(".macro"), document.querySelector(".macro-title"), "quickShape");
+makeCollapsible(document.querySelector(".engine"), document.querySelector(".engine .engine-title"), "engine");
+makeCollapsible(document.querySelector(".console"), document.querySelector(".console .engine-title"), "console");
+
+// Focus mode — hide/show the whole preset browser to declutter while editing (header toggle, persisted).
+// Hidden: the browser column is removed and, at the two-column width, the editor reclaims the space.
+const workspaceEl = document.querySelector(".workspace");
+const browseToggle = document.getElementById("browseToggle");
+if (workspaceEl && browseToggle) {
+  const applyBrowse = () => {
+    const hidden = !!prefs.hideBrowser;
+    workspaceEl.classList.toggle("browser-hidden", hidden);
+    browseToggle.classList.toggle("active", !hidden);
+    browseToggle.setAttribute("aria-pressed", String(!hidden));
+    browseToggle.textContent = hidden ? "🗂 Show presets" : "🗂 Presets";
+  };
+  browseToggle.addEventListener("click", () => { prefs.hideBrowser = !prefs.hideBrowser; savePrefs(); applyBrowse(); });
+  applyBrowse();
+}
 
 async function savePreset() {
   // Desktop: add it to the persistent My Presets library — the reliable store there, and what the
@@ -2028,7 +2073,7 @@ function updateNormBtn() {
 normBtn.addEventListener("click", () => { normalizeOut = !normalizeOut; updateNormBtn(); play("Edit"); });
 updateNormBtn();
 const controlsBar = document.querySelector(".controls");
-controlsBar.insertBefore(normBtn, controlsBar.querySelector(".spacer"));
+controlsBar.appendChild(normBtn);   // relocated into the Settings modal right after this (see below)
 
 // ---------- Settings modal (⚙ in the header) ----------
 // Declutters the controls bar: the export-format group and the Normalize toggle move in here.
@@ -2257,7 +2302,6 @@ function kbNoteName(semi) { const m = kbMidi(semi); return NOTE_NAMES[((m % 12) 
 const keyboardEl = document.createElement("div");
 keyboardEl.className = "keyboard";
 keyboardEl.innerHTML =
-  '<button id="riffToggle" class="riff-toggle" title="Sequence this sound into a melody">🎼 Riff</button>' +
   '<div class="kb-oct"><button id="kbDown" title="Octave down (Z)">◀</button>' +
     '<span class="kb-octlabel">Oct <b id="kbOctVal">4</b></span>' +
     '<button id="kbUp" title="Octave up (X)">▶</button></div>' +
@@ -2297,7 +2341,7 @@ function setPitch(semi) {
 function setOctave(o) { kbOctave = Math.max(0, Math.min(8, o)); keyboardEl.querySelector("#kbOctVal").textContent = kbOctave; kbTitles(); }
 keyboardEl.querySelector("#kbDown").addEventListener("click", () => setOctave(kbOctave - 1));
 keyboardEl.querySelector("#kbUp").addEventListener("click", () => setOctave(kbOctave + 1));
-kbKeys.addEventListener("pointerdown", (e) => { const el = e.target.closest("[data-semi]"); if (!el) return; const s = +el.dataset.semi; kbFlash(s, true); if (riffOpen) riffPut(kbMidi(s)); else playNote(s); });
+kbKeys.addEventListener("pointerdown", (e) => { const el = e.target.closest("[data-semi]"); if (!el) return; const s = +el.dataset.semi; kbFlash(s, true); if (riffWrite) riffPut(kbMidi(s)); else playNote(s); });
 kbKeys.addEventListener("pointerup", (e) => { const el = e.target.closest("[data-semi]"); if (el) kbFlash(+el.dataset.semi, false); });
 kbKeys.addEventListener("pointerleave", () => [...kbKeys.children].forEach((el) => el.classList.remove("active")));
 kbKeys.addEventListener("dblclick", (e) => { const el = e.target.closest("[data-semi]"); if (el) setPitch(+el.dataset.semi); });   // double-click = keep this pitch
@@ -2305,9 +2349,10 @@ document.addEventListener("keydown", (e) => {
   const t = e.target && e.target.tagName;
   if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;   // let text fields type normally
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;        // don't clash with shortcuts / avoid key-repeat flood
+  if (riffPanel.classList.contains("collapsed")) return;             // keyboard is folded away → keys inert
   const k = e.key.toLowerCase();
-  // Riff step-entry keys (only while the riff panel is open)
-  if (riffOpen) {
+  // Riff step-entry keys — only in Write mode (the ✎ Write toggle)
+  if (riffWrite) {
     if (e.key === ".") { e.preventDefault(); riffSet(riffSel, null); riffAdvance(1); return; }        // rest
     if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); riffSet(riffSel, null); return; }
     if (e.key === "ArrowLeft") { e.preventDefault(); riffAdvance(-1); return; }
@@ -2317,7 +2362,7 @@ document.addEventListener("keydown", (e) => {
   if (k === "x") { e.preventDefault(); setOctave(kbOctave + 1); return; }
   if (k in KB_SEMI) {
     e.preventDefault(); const s = KB_SEMI[k]; kbFlash(s, true);
-    if (riffOpen) riffPut(kbMidi(s));          // fill the selected step
+    if (riffWrite) riffPut(kbMidi(s));         // Write mode: fill the selected step
     else if (e.shiftKey) setPitch(s);          // keep the pitch
     else playNote(s);                          // audition
   }
@@ -2328,7 +2373,7 @@ document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if (k
 // Each step holds a MIDI note (or a rest). Play/export MIX the sound rendered at each step's pitch
 // into one timeline at a per-step offset (an 8th note at the BPM), so notes ring into each other.
 // Reuses the render + downloadWav pipeline; the whole riff plays as a single buffer.
-let riffN = 8, riffBpm = 140, riffSel = 0, riffOpen = false, riffLoop = false, riffPlaying = false;
+let riffN = 8, riffBpm = 140, riffSel = 0, riffWrite = false, riffLoop = false, riffPlaying = false;   // riffWrite: keyboard fills steps vs auditions
 let riffPattern = new Array(riffN).fill(null);   // per step: MIDI note number, or null = rest
 let riffSrc = null, riffTimers = [];
 const midiToFreq = (m) => Math.max(20, Math.min(4000, 440 * Math.pow(2, (m - 69) / 12)));
@@ -2336,19 +2381,26 @@ const midiName = (m) => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) -
 const riffStepDur = () => 60 / riffBpm / 2;      // one step = an 8th note
 
 const riffPanel = document.createElement("div");
-riffPanel.className = "riff"; riffPanel.hidden = true;
+riffPanel.className = "riff";
 riffPanel.innerHTML =
+  '<div class="riff-head collapse-head">🎹 Keyboard &amp; Riff — play at pitch, sequence a melody</div>' +
+  '<div class="riff-body">' +
   '<div class="riff-ctl">' +
+    '<label class="riff-write" title="On: play the keys to fill riff steps. Off: keys just audition."><input type="checkbox" id="riffWriteIn"> ✎ Write steps</label>' +
     '<label>BPM <input type="number" id="riffBpmIn" min="40" max="300" step="1" value="140"></label>' +
     '<label>Steps <select id="riffNIn"><option>4</option><option selected>8</option><option>16</option></select></label>' +
     '<button id="riffPlayBtn" class="primary">▶ Play</button>' +
     '<label class="riff-loop"><input type="checkbox" id="riffLoopIn"> Loop</label>' +
     '<button id="riffExportBtn">⬇ WAV</button>' +
     '<button id="riffClearBtn">✕ Clear</button>' +
-    '<span class="riff-hint">click a step, then play a key to set its note · <b>.</b> rest · <b>Del</b> clear · <b>←/→</b> move</span>' +
+    '<span class="riff-hint"><b>✎ Write</b> on → play keys to fill the selected step · <b>.</b> rest · <b>Del</b> clear · <b>←/→</b> move</span>' +
   '</div>' +
-  '<div class="riff-grid" id="riffGrid"></div>';
+  '<div class="riff-grid" id="riffGrid"></div>' +
+  '</div>';
 keyboardEl.insertAdjacentElement("afterend", riffPanel);
+// Merge the keyboard INTO this section's body so they read as one "instrument" box.
+const riffBody = riffPanel.querySelector(".riff-body");
+riffBody.insertBefore(keyboardEl, riffBody.firstChild);
 const riffGrid = riffPanel.querySelector("#riffGrid");
 const riffPlayBtn = riffPanel.querySelector("#riffPlayBtn");
 
@@ -2423,12 +2475,11 @@ riffPanel.querySelector("#riffLoopIn").addEventListener("change", (e) => { riffL
 riffPlayBtn.addEventListener("click", () => { if (riffPlaying) riffStop(); else riffPlay(); });
 riffPanel.querySelector("#riffExportBtn").addEventListener("click", riffExport);
 riffPanel.querySelector("#riffClearBtn").addEventListener("click", () => { riffPattern = new Array(riffN).fill(null); riffSel = 0; riffStop(); renderRiff(); });
-document.getElementById("riffToggle").addEventListener("click", () => {
-  riffOpen = !riffOpen;
-  riffPanel.hidden = !riffOpen;
-  document.getElementById("riffToggle").classList.toggle("on", riffOpen);
-  if (riffOpen) renderRiff(); else riffStop();
-});
+// Collapsible bordered section holding the keyboard + riff. Defaults EXPANDED (keyboard stays
+// available); folding hides both and stops playback. Step-entry is the separate ✎ Write toggle.
+riffPanel.querySelector("#riffWriteIn").addEventListener("change", (e) => { riffWrite = e.target.checked; });
+makeCollapsible(riffPanel, riffPanel.querySelector(".riff-head"), "instrument",
+  (open) => { if (open) renderRiff(); else riffStop(); });
 renderRiff();
 
 // ---------- Shareable links ----------
@@ -3627,7 +3678,7 @@ if (isDesktop) {
   projOpen.id = "projOpen"; projOpen.textContent = "📁 Open project";
   projOpen.title = "Load a .crunchysfx project file";
   projOpen.addEventListener("click", openProject);
-  const cbar = document.querySelector(".controls");
+  const cbar = document.querySelector(".controls-right");   // keep desktop IO in the right cluster so it wraps as a unit
   cbar.appendChild(projSave);
   cbar.appendChild(projOpen);
 
@@ -3690,7 +3741,7 @@ if (isDesktop) {
   steamModal.querySelector("#steamClose").addEventListener("click", closeSteam);
   steamModal.addEventListener("click", (e) => { if (e.target === steamModal) closeSteam(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !steamModal.hidden) closeSteam(); });
-  document.querySelector(".controls").appendChild(steamBtn);
+  document.querySelector(".controls-right").appendChild(steamBtn);
 }
 
 // initial draw — or load a shared sound from the URL, if one is present
