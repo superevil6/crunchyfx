@@ -2,13 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    // WebKitGTK's DMABUF renderer paints a blank white page on many modern Linux GPU/driver
-    // stacks (very common in packaged AppImages — e.g. recent Mesa on CachyOS/Arch). Disable it
-    // BEFORE the webview initializes so the app renders reliably. Linux-only; the only cost is a
-    // little GPU-accelerated compositing, with no visible difference for this UI.
-    #[cfg(target_os = "linux")]
-    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-
+    // NOTE (2026-07): do NOT set WEBKIT_DISABLE_DMABUF_RENDERER / WEBKIT_DISABLE_COMPOSITING_MODE
+    // here. They were tried against the "blank white page" seen in the CI AppImage and made it
+    // WORSE — WebKitGTK then aborts with "Could not create default EGL display: EGL_BAD_PARAMETER".
+    // The real cause is the AppImage bundling GL libs too old for new GPUs (e.g. RDNA 4), not the
+    // renderer choice. Built against system libs (or inside a Flatpak) it renders with no env vars.
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init()) // native Save dialog for WAV export
         .plugin(tauri_plugin_fs::init())     // write the chosen file to disk

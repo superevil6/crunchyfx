@@ -3,10 +3,20 @@ name: Desktop build (Windows + Linux)
 # Builds native installers when you push a version tag (e.g. v1.0.0), and can be
 # run on demand from the Actions tab. Produces a DRAFT GitHub Release with the
 # installers attached: Windows .exe (NSIS), Linux .deb and .AppImage.
+#
+# On a TAG push it ALSO uploads the Windows build straight to itch.io via butler, so the paid
+# binaries never sit on a public surface. The GitHub release stays a DRAFT on purpose —
+# NEVER click "Publish release", or the paid installers become free public downloads.
+#
+# LINUX IS PUSHED BY HAND (see ITCH-RELEASE.md §5): the Flatpak is built locally, and the
+# AppImage must be verified on non-bleeding-edge hardware before it's safe to sell.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+
+env:
+  ITCH_TARGET: sevi66/crunchysfx # <itch-user>/<project-slug> — must match your itch page URL
 
 jobs:
   build:
@@ -22,11 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # CrunchySFX is one index.html at the repo root; copy it into ../dist for Tauri.
-      # (build.rs also does this, but doing it here first is belt-and-suspenders.)
+      # The frontend is FOUR sibling files at the repo root — they must all land in ../dist
+      # side by side or the app throws at startup (dsp.js defines the engines, presets.js the
+      # library, styles.css the UI). build.rs copies them too; this is belt-and-suspenders.
       - name: Prepare frontend
         shell: bash
-        run: mkdir -p dist && cp index.html dist/index.html
+        run: mkdir -p dist && cp index.html dsp.js presets.js styles.css dist/
 
       - name: Install Linux webview deps
         if: matrix.platform == 'ubuntu-22.04'
@@ -57,3 +68,80 @@ jobs:
           releaseBody: "Desktop builds of CrunchySFX. Windows installer + Linux .deb/.AppImage attached below."
           releaseDraft: true
           prerelease: false
+
+      # ---- Publish the Windows build straight to itch.io (purchase-gated, never public) ----
+      # Tag pushes only, so a manual "Run workflow" can't accidentally ship to the store.
+      - name: Install butler (itch.io CLI)
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default -OutFile butler.zip
+          Expand-Archive butler.zip -DestinationPath butler-bin
+          "$PWD\butler-bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Push Windows build to itch.io
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::warning::BUTLER_API_KEY secret is not set — skipping the itch.io upload."
+            exit 0
+          fi
+          butler -V
+          # NOTE: glob is UNQUOTED so the shell expands it; quoting would pass a literal '*' to butler.
+          butler push src-tauri/target/release/bundle/nsis/CrunchySFX_*_x64-setup.exe \
+            "$ITCH_TARGET:windows" --userversion "${GITHUB_REF_NAME#v}"
+          butler status "$ITCH_TARGET"
+
+      # ---- Linux: wrap the .deb into a Flatpak, then ship THAT to itch ----
+      # Flatpak (not the AppImage) is the Linux product: its runtime brokers the host GPU drivers,
+      # so it works on bleeding-edge distros (Arch/CachyOS/Steam Deck, RDNA-4-era GPUs) where the
+      # AppImage's bundled GL libs blank-screen. Building here on ubuntu-22.04 (glibc 2.35) is also
+      # REQUIRED — a .deb built on a newer host needs a glibc the GNOME 46 runtime doesn't have.
+      # The .AppImage is still attached to the draft release, but is NOT pushed to itch until it's
+      # been verified on a non-bleeding-edge machine.
+      - name: Install flatpak tooling + runtime
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # ~1.5 GB download; the slowest step in this job.
+          flatpak install -y --user flathub org.gnome.Platform//46 org.gnome.Sdk//46
+
+      - name: Build the Flatpak bundle
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # The manifest takes the .deb as its source — see flatpak/com.crunchysfx.app.yml
+          cp src-tauri/target/release/bundle/deb/*.deb flatpak/crunchysfx.deb
+          cd flatpak
+          # --disable-rofiles-fuse: CI runners can't always use FUSE for the build overlay.
+          flatpak-builder --force-clean --user --disable-rofiles-fuse \
+            --repo=repo build-dir com.crunchysfx.app.yml
+          flatpak build-bundle repo "CrunchySFX-${VERSION}.flatpak" com.crunchysfx.app
+          ls -la ./*.flatpak
+
+      - name: Install butler (itch.io CLI)
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          curl -sL -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip -o butler.zip -d "$HOME/butler-bin"
+          chmod +x "$HOME/butler-bin/butler"
+          echo "$HOME/butler-bin" >> "$GITHUB_PATH"
+
+      - name: Push Linux (Flatpak) to itch.io
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::warning::BUTLER_API_KEY secret is not set — skipping the itch.io upload."
+            exit 0
+          fi
+          butler -V
+          butler push flatpak/CrunchySFX-*.flatpak \
+            "$ITCH_TARGET:linux-flatpak" --userversion "${GITHUB_REF_NAME#v}"
+          butler status "$ITCH_TARGET"

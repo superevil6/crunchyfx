@@ -213,7 +213,12 @@
   .preset-section > summary:hover { color: var(--accent); }
   .preset-section .sec-count { color: var(--muted); font-weight: 400; font-size: 11px; }
   .sec-buttons { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 12px; }
-  .presetbar button { padding: 6px 10px; font-size: 12px; }
+  /* --fam is set per-button from FAMILY_COLORS: a left edge showing the synthesis family. */
+  .presetbar button { padding: 6px 10px; font-size: 12px; border-left: 3px solid var(--fam, var(--line)); }
+  .presetbar button:hover { border-left-color: var(--fam, var(--accent)); }
+  .fam-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 2px; font-size: 11px; color: var(--muted); }
+  .fam-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .fam-key i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
   .presetsearch { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   #presetSearch {
     width: 280px; max-width: 100%;
@@ -378,6 +383,7 @@
   .uc-empty { color: var(--muted); font-size: 12px; font-style: italic; padding: 2px 0 4px; }
   .uc-item { display: inline-flex; align-items: stretch; touch-action: none; }
   .uc-item .uc-item-btn { padding: 6px 10px; font-size: 12px; cursor: grab;
+    border-left: 3px solid var(--fam, var(--line));
     border-top-right-radius: 0; border-bottom-right-radius: 0; }
   .uc-item .uc-item-btn:active { cursor: grabbing; }
   .uc-item .uc-item-rm { padding: 0 6px; font-size: 11px; line-height: 1; color: var(--muted);
@@ -396,6 +402,15 @@
   .uc-menu button:hover { background: var(--panel2); color: var(--accent); }
   .uc-menu .uc-menu-new { color: var(--accent); font-weight: 600; margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; }
   .uc-menu-empty { font-size: 12px; color: var(--muted); padding: 4px 8px; font-style: italic; }
+
+  /* Update-available banner (desktop only) */
+  .update-banner {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 300;
+    display: flex; align-items: center; gap: 12px; max-width: min(680px, 92vw);
+    background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
+    padding: 10px 12px 10px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.55); font-size: 13px;
+  }
+  .update-banner button { padding: 6px 10px; font-size: 12px; }
 
   /* Breeding modal */
   .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);

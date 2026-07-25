@@ -44,6 +44,18 @@ export function soundTitle(s) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // The DESKTOP app's update check fetches this from its own webview origin (tauri://…), so it
+    // is a CROSS-ORIGIN request and needs CORS or the browser blocks it. Also sent no-cache so a
+    // freshly released version is seen immediately rather than after an edge-cache TTL.
+    if (url.pathname === "/version.json") {
+      const r = await env.ASSETS.fetch(request);
+      const h = new Headers(r.headers);
+      h.set("Access-Control-Allow-Origin", "*");
+      h.set("Cache-Control", "no-cache");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
+
     const s = url.searchParams.get("s");
     // Fast path: not a shared-sound link -> serve the static asset unchanged.
     if (!s) return env.ASSETS.fetch(request);

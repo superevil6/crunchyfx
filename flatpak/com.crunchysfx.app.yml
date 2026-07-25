@@ -10,8 +10,13 @@
 #   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 #   flatpak install -y --user flathub org.gnome.Platform//46 org.gnome.Sdk//46
 #
-#   # copy your Tauri-built .deb next to this manifest as `crunchysfx.deb`:
-#   cp src-tauri/target/release/bundle/deb/*.deb flatpak/crunchysfx.deb
+#   # copy the .deb next to this manifest as `crunchysfx.deb`:
+#   ⚠️ USE THE **CI-BUILT** .deb (from the draft GitHub Release), *NOT* a local `cargo tauri build`.
+#      CI builds on ubuntu-22.04 (glibc 2.35), which this runtime (glibc 2.37) satisfies. A .deb built
+#      on CachyOS links glibc 2.39+ and dies inside the sandbox with:
+#         "libc.so.6: version `GLIBC_2.39' not found (required by crunchysfx)"
+#      Rule of thumb: the binary you bundle must be built on an OLDER base than the runtime.
+#   cp ~/Downloads/CrunchySFX_1.0.0_amd64.deb flatpak/crunchysfx.deb
 #
 #   cd flatpak
 #   flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo build-dir com.crunchysfx.app.yml
@@ -42,7 +47,10 @@ finish-args:
   # If a Save/Export can't write in the sandbox, broaden this (e.g. `--filesystem=home`) AND check the
   # Tauri fs scope in src-tauri/capabilities/default.json maps to the chosen path.
   - --filesystem=xdg-download:rw
-  # The app is fully offline — deliberately NO --share=network (a nice trust signal for a tool).
+  # Needed ONLY by the Settings → Updates check, which fetches https://crunchysfx.com/version.json
+  # (a version number, nothing else — no account, no telemetry). All audio is still generated
+  # locally; the app works fully offline if the user turns that check off.
+  - --share=network
 
 modules:
   - name: crunchysfx

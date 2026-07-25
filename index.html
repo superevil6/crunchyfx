@@ -1363,6 +1363,21 @@ const ENGINE_CATS = [
   ["Foley",       [19, 20]],                   // impact, whoosh
   ["Your own",    [9, 12]],                    // sample, custom
 ];
+// Preset colour-coding: one hue per synthesis FAMILY (6 is scannable — 21 engine hues would not
+// be, and most presets cluster in Oscillators anyway). Chosen to read on the dark theme without
+// competing with the orange accent. Used by makePresetButton + the legend + custom-category chips.
+const FAMILY_COLORS = {
+  "Oscillators": "#5aa9e6", // blue
+  "Physical":    "#5ec98a", // green
+  "Voice":       "#b07ce8", // purple
+  "Spectral":    "#e0b341", // amber
+  "Foley":       "#e8657f", // pink
+  "Your own":    "#8b93a7", // slate
+};
+const WAVE_FAMILY = {};     // wave index -> family label
+for (const [label, idxs] of ENGINE_CATS) for (const i of idxs) WAVE_FAMILY[i] = label;
+// A preset omitting `wave` renders as the default (0 = sine) because applyPreset resets first.
+const familyOf = (wave) => WAVE_FAMILY[Math.round(wave || 0)] || "Oscillators";
 function makeEngineBtn(i) {
   const b = document.createElement("button");
   b.className = "engine-btn";
@@ -1717,7 +1732,10 @@ const presetBar = document.getElementById("presets");
 function makePresetButton(name) {
   const b = document.createElement("button");
   b.textContent = name;
-  b.title = "Click for a fresh " + name + "-like variation";
+  const fam = familyOf((PRESETS[name] || {}).wave);   // colour-code by synthesis family
+  b.dataset.fam = fam;
+  b.style.setProperty("--fam", FAMILY_COLORS[fam]);
+  b.title = "Click for a fresh " + name + "-like variation · " + fam;
   b.dataset.pb = name;   // drag source id for custom categories (desktop)
   b.addEventListener("click", () => applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name));
   return b;
@@ -1744,6 +1762,15 @@ sectionDefs.forEach(([cat, names], idx) => {
   presetBar.appendChild(details);
   sections.push({ details, buttons });
 });
+
+// Legend for the preset colour-coding, directly under the search box.
+const famLegend = document.createElement("div");
+famLegend.className = "fam-legend";
+famLegend.title = "Preset colours show which synthesis engine family the sound uses";
+famLegend.innerHTML = ENGINE_CATS
+  .map(([label]) => '<span class="fam-key"><i style="background:' + FAMILY_COLORS[label] + '"></i>' + label + '</span>')
+  .join("");
+document.querySelector(".presetsearch").insertAdjacentElement("afterend", famLegend);
 
 // Live text filter across all sections: hide non-matching buttons, hide empty
 // sections, and auto-open any section with a match. Clearing restores the default
@@ -1777,7 +1804,7 @@ presetSearch.addEventListener("keydown", (e) => {
 // ---------- Save / load JSON ----------
 // ---------- User preferences (Settings modal) — persisted across sessions ----------
 const PREFS_KEY = "crunchyfx.prefs.v1";     // localStorage namespace matches the other keys
-let prefs = { promptPresetSave: false, tourSeen: false };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown
+let prefs = { promptPresetSave: false, tourSeen: false, checkUpdates: true };   // promptPresetSave (desktop): ask where to save the .json; tourSeen: welcome tour shown; checkUpdates (desktop): look for a newer version on launch
 try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "null"); if (p && typeof p === "object") Object.assign(prefs, p); } catch (e) { /* best-effort */ }
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* best-effort */ } }
 
@@ -2013,7 +2040,12 @@ settingsModal.innerHTML =
       (window.__TAURI__ ?
         '<div class="settings-row"><div class="settings-lbl">Prompt on preset save' +
           '<span class="settings-sub">ask where to save the .json when you click Save preset (off = save silently to Downloads)</span></div>' +
-          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefPromptSave"> Prompt</label></div></div>'
+          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefPromptSave"> Prompt</label></div></div>' +
+        // Desktop-only: the web build is always current, so an update check would be meaningless there.
+        '<div class="settings-row"><div class="settings-lbl">Updates' +
+          '<span class="settings-sub">ask crunchysfx.com whether a newer desktop version exists — no account, no telemetry, just a version number</span></div>' +
+          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefCheckUpdates"> On launch</label>' +
+          '<button id="checkUpdatesNow">Check now</button><span class="hint" id="updMsg"></span></div></div>'
         : '') +
     '</div>' +
   '</div>';
@@ -2024,6 +2056,74 @@ const prefPromptSave = settingsModal.querySelector("#prefPromptSave");          
 if (prefPromptSave) {
   prefPromptSave.checked = !!prefs.promptPresetSave;
   prefPromptSave.addEventListener("change", () => { prefs.promptPresetSave = prefPromptSave.checked; savePrefs(); });
+}
+
+// ---------- Update check (DESKTOP only) ----------
+// Deliberately a NOTIFIER, not an auto-updater: it fetches one tiny JSON from our own domain,
+// compares version numbers, and — if we're behind — offers a link to the itch store page. It never
+// downloads or installs a binary. That keeps the paid builds off any public surface (a Tauri
+// auto-updater would need signed installers published somewhere fetchable) and avoids per-platform
+// updater quirks (its Linux support is AppImage-only, and we ship a Flatpak).
+// The web build is always current, so none of this runs there.
+const APP_VERSION = "1.0.0";   // bumped by scripts/release.sh — must match src-tauri/tauri.conf.json
+const UPDATE_URL = "https://crunchysfx.com/version.json";
+
+// "1.0.10" > "1.0.9" — compare numerically per segment, not lexically.
+function versionGreater(a, b) {
+  const pa = String(a).split("."), pb = String(b).split(".");
+  for (let i = 0; i < 3; i++) {
+    const x = parseInt(pa[i], 10) || 0, y = parseInt(pb[i], 10) || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+
+function showUpdateBanner(info) {
+  if (document.getElementById("updBanner")) return;         // only ever one
+  const bar = document.createElement("div");
+  bar.className = "update-banner";
+  bar.id = "updBanner";
+  const msg = document.createElement("span");
+  msg.textContent = "🎉 CrunchySFX " + info.version + " is available" + (info.notes ? " — " + info.notes : "");
+  const get = document.createElement("button");
+  get.className = "primary";
+  get.textContent = "Get the update ↗";
+  get.addEventListener("click", () => window.open(info.url || ITCH_URL_FALLBACK, "_blank", "noopener"));
+  const no = document.createElement("button");
+  no.textContent = "✕";
+  no.title = "Dismiss";
+  no.addEventListener("click", () => bar.remove());
+  bar.appendChild(msg); bar.appendChild(get); bar.appendChild(no);
+  document.body.appendChild(bar);
+}
+const ITCH_URL_FALLBACK = "https://sevi66.itch.io/crunchysfx";
+
+// manual=true → report the outcome in Settings; on launch we stay silent unless there's an update.
+async function checkForUpdates(manual) {
+  const say = (t) => { const el = document.getElementById("updMsg"); if (el) el.textContent = t; };
+  if (manual) say("Checking…");
+  try {
+    const res = await fetch(UPDATE_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const info = await res.json();
+    if (info && typeof info.version === "string" && versionGreater(info.version, APP_VERSION)) {
+      showUpdateBanner(info);
+      say("Update available: " + info.version);
+      return info;
+    }
+    say(manual ? "You're up to date (v" + APP_VERSION + ")." : "");
+  } catch (e) {
+    console.warn("crunchysfx: update check failed —", e);
+    say(manual ? "Couldn't reach crunchysfx.com." : "");
+  }
+  return null;
+}
+
+const prefCheckUpdates = settingsModal.querySelector("#prefCheckUpdates");
+if (prefCheckUpdates) {
+  prefCheckUpdates.checked = prefs.checkUpdates !== false;
+  prefCheckUpdates.addEventListener("change", () => { prefs.checkUpdates = prefCheckUpdates.checked; savePrefs(); });
+  settingsModal.querySelector("#checkUpdatesNow").addEventListener("click", () => checkForUpdates(true));
 }
 document.getElementById("settingsBtn").addEventListener("click", () => { settingsModal.hidden = false; });
 settingsModal.querySelector("#settingsClose").addEventListener("click", () => { settingsModal.hidden = true; });
@@ -2696,8 +2796,8 @@ function saveUserCats() { try { localStorage.setItem(UC_KEY, JSON.stringify({ se
 function ucFindCat(id) { return userCats.find((c) => c.id === id); }
 // Resolve a stored ref to something displayable; null if dangling (preset deleted/renamed away).
 function ucResolve(it) {
-  if (it.t === "b") return PRESETS[it.n] ? { key: ucKey(it), name: it.n, kind: "b", sample: false } : null;
-  if (it.t === "u") { const p = userPresets.find((x) => x.id === it.id); return p ? { key: ucKey(it), name: p.name, kind: "u", sample: !!p.sample } : null; }
+  if (it.t === "b") return PRESETS[it.n] ? { key: ucKey(it), name: it.n, kind: "b", sample: false, fam: familyOf(PRESETS[it.n].wave) } : null;
+  if (it.t === "u") { const p = userPresets.find((x) => x.id === it.id); return p ? { key: ucKey(it), name: p.name, kind: "u", sample: !!p.sample, fam: familyOf((p.state || {}).wave) } : null; }
   return null;
 }
 function ucApply(it) {   // click an item = load it into the editor (+ play)
@@ -2780,6 +2880,7 @@ function renderUserCats() {
         item.dataset.uccat = c.id;
         const btn = document.createElement("button");
         btn.className = "uc-item-btn";
+        btn.style.setProperty("--fam", FAMILY_COLORS[r.fam] || "");   // same engine-family colour-coding
         btn.textContent = (r.kind === "u" ? "★ " : "") + r.name + (r.sample ? " ♪" : "");
         btn.title = r.kind === "u" ? "Your saved sound — click to load" : "Click for a fresh " + r.name + "-like variation";
         btn.addEventListener("click", () => { if (!ucSuppressClick) ucApply(it); });
@@ -3298,6 +3399,7 @@ if (isDesktop) {
   loadUserCats();
   ucInitDrag();
   renderMyPresets();   // also renders the custom categories
+  if (prefs.checkUpdates !== false) checkForUpdates(false);   // silent unless we're behind
 
   // Live preview of the batch-filename template (shows what the first saved preset resolves to).
   const nameTplInput = document.getElementById("mpNameTpl");
