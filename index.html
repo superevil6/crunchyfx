@@ -877,6 +877,7 @@ function playBuffer(L, R) {
   src.buffer = buf;
   src.connect(ctx.destination);
   src.start();
+  return src;   // callers may keep it to stop playback (the riff sequencer does)
 }
 
 // Render the current state, play it, draw it, and log it to history.
@@ -2256,6 +2257,7 @@ function kbNoteName(semi) { const m = kbMidi(semi); return NOTE_NAMES[((m % 12) 
 const keyboardEl = document.createElement("div");
 keyboardEl.className = "keyboard";
 keyboardEl.innerHTML =
+  '<button id="riffToggle" class="riff-toggle" title="Sequence this sound into a melody">🎼 Riff</button>' +
   '<div class="kb-oct"><button id="kbDown" title="Octave down (Z)">◀</button>' +
     '<span class="kb-octlabel">Oct <b id="kbOctVal">4</b></span>' +
     '<button id="kbUp" title="Octave up (X)">▶</button></div>' +
@@ -2279,11 +2281,12 @@ KB_BLACK.forEach((b) => {
 function kbTitles() { [...kbKeys.children].forEach((el) => { el.title = kbNoteName(+el.dataset.semi); }); }
 kbTitles();
 function kbFlash(semi, on) { const el = kbKeys.querySelector('[data-semi="' + semi + '"]'); if (el) el.classList.toggle("active", on); }
-function playNote(semi) {   // audition only — doesn't disturb the editor's freq
-  const snap = snapshotState(); snap.freq = kbFreq(semi);
+function auditionFreq(freq) {   // render+play the current sound at a pitch, without disturbing the editor
+  const snap = snapshotState(); snap.freq = freq;
   const r = withState(snap, () => render());
   playBuffer(r.L, r.R);
 }
+function playNote(semi) { auditionFreq(kbFreq(semi)); }
 // Persist: make this note the sound's ACTUAL pitch — moves the freq slider, commits to history,
 // and travels in the patch (presets/share/export). play() is the "sound changed" chokepoint.
 function setPitch(semi) {
@@ -2294,7 +2297,7 @@ function setPitch(semi) {
 function setOctave(o) { kbOctave = Math.max(0, Math.min(8, o)); keyboardEl.querySelector("#kbOctVal").textContent = kbOctave; kbTitles(); }
 keyboardEl.querySelector("#kbDown").addEventListener("click", () => setOctave(kbOctave - 1));
 keyboardEl.querySelector("#kbUp").addEventListener("click", () => setOctave(kbOctave + 1));
-kbKeys.addEventListener("pointerdown", (e) => { const el = e.target.closest("[data-semi]"); if (!el) return; const s = +el.dataset.semi; playNote(s); kbFlash(s, true); });
+kbKeys.addEventListener("pointerdown", (e) => { const el = e.target.closest("[data-semi]"); if (!el) return; const s = +el.dataset.semi; kbFlash(s, true); if (riffOpen) riffPut(kbMidi(s)); else playNote(s); });
 kbKeys.addEventListener("pointerup", (e) => { const el = e.target.closest("[data-semi]"); if (el) kbFlash(+el.dataset.semi, false); });
 kbKeys.addEventListener("pointerleave", () => [...kbKeys.children].forEach((el) => el.classList.remove("active")));
 kbKeys.addEventListener("dblclick", (e) => { const el = e.target.closest("[data-semi]"); if (el) setPitch(+el.dataset.semi); });   // double-click = keep this pitch
@@ -2303,11 +2306,130 @@ document.addEventListener("keydown", (e) => {
   if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;   // let text fields type normally
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;        // don't clash with shortcuts / avoid key-repeat flood
   const k = e.key.toLowerCase();
+  // Riff step-entry keys (only while the riff panel is open)
+  if (riffOpen) {
+    if (e.key === ".") { e.preventDefault(); riffSet(riffSel, null); riffAdvance(1); return; }        // rest
+    if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); riffSet(riffSel, null); return; }
+    if (e.key === "ArrowLeft") { e.preventDefault(); riffAdvance(-1); return; }
+    if (e.key === "ArrowRight") { e.preventDefault(); riffAdvance(1); return; }
+  }
   if (k === "z") { e.preventDefault(); setOctave(kbOctave - 1); return; }
   if (k === "x") { e.preventDefault(); setOctave(kbOctave + 1); return; }
-  if (k in KB_SEMI) { e.preventDefault(); const s = KB_SEMI[k]; if (e.shiftKey) setPitch(s); else playNote(s); kbFlash(s, true); }   // Shift = keep the pitch
+  if (k in KB_SEMI) {
+    e.preventDefault(); const s = KB_SEMI[k]; kbFlash(s, true);
+    if (riffOpen) riffPut(kbMidi(s));          // fill the selected step
+    else if (e.shiftKey) setPitch(s);          // keep the pitch
+    else playNote(s);                          // audition
+  }
 });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if (k in KB_SEMI) kbFlash(KB_SEMI[k], false); });
+
+// ---------- Riff — a step sequencer that plays the CURRENT sound as a melody ----------
+// Each step holds a MIDI note (or a rest). Play/export MIX the sound rendered at each step's pitch
+// into one timeline at a per-step offset (an 8th note at the BPM), so notes ring into each other.
+// Reuses the render + downloadWav pipeline; the whole riff plays as a single buffer.
+let riffN = 8, riffBpm = 140, riffSel = 0, riffOpen = false, riffLoop = false, riffPlaying = false;
+let riffPattern = new Array(riffN).fill(null);   // per step: MIDI note number, or null = rest
+let riffSrc = null, riffTimers = [];
+const midiToFreq = (m) => Math.max(20, Math.min(4000, 440 * Math.pow(2, (m - 69) / 12)));
+const midiName = (m) => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const riffStepDur = () => 60 / riffBpm / 2;      // one step = an 8th note
+
+const riffPanel = document.createElement("div");
+riffPanel.className = "riff"; riffPanel.hidden = true;
+riffPanel.innerHTML =
+  '<div class="riff-ctl">' +
+    '<label>BPM <input type="number" id="riffBpmIn" min="40" max="300" step="1" value="140"></label>' +
+    '<label>Steps <select id="riffNIn"><option>4</option><option selected>8</option><option>16</option></select></label>' +
+    '<button id="riffPlayBtn" class="primary">▶ Play</button>' +
+    '<label class="riff-loop"><input type="checkbox" id="riffLoopIn"> Loop</label>' +
+    '<button id="riffExportBtn">⬇ WAV</button>' +
+    '<button id="riffClearBtn">✕ Clear</button>' +
+    '<span class="riff-hint">click a step, then play a key to set its note · <b>.</b> rest · <b>Del</b> clear · <b>←/→</b> move</span>' +
+  '</div>' +
+  '<div class="riff-grid" id="riffGrid"></div>';
+keyboardEl.insertAdjacentElement("afterend", riffPanel);
+const riffGrid = riffPanel.querySelector("#riffGrid");
+const riffPlayBtn = riffPanel.querySelector("#riffPlayBtn");
+
+function renderRiff() {
+  riffGrid.innerHTML = "";
+  for (let i = 0; i < riffN; i++) {
+    const c = document.createElement("button");
+    c.className = "riff-cell" + (i === riffSel ? " sel" : "") + (riffPattern[i] == null ? " rest" : "");
+    c.dataset.i = i;
+    c.innerHTML = '<span class="riff-num">' + (i + 1) + '</span>' + (riffPattern[i] == null ? "·" : midiName(riffPattern[i]));
+    riffGrid.appendChild(c);
+  }
+}
+function riffSet(i, midi) { riffPattern[i] = midi; renderRiff(); }
+function riffAdvance(d) { riffSel = (riffSel + d + riffN) % riffN; renderRiff(); }
+function riffPut(midi) { riffPattern[riffSel] = midi; auditionFreq(midiToFreq(midi)); riffAdvance(1); }
+function riffMsg(t) { const h = riffPanel.querySelector(".riff-hint"); if (h) h.textContent = t; }
+
+// Build the whole riff into one mixed stereo buffer (null if empty).
+function buildRiffBuffer() {
+  const active = [];
+  for (let i = 0; i < riffN; i++) if (riffPattern[i] != null) active.push(i);
+  if (!active.length) return null;
+  const stepN = Math.round(riffStepDur() * SR);
+  const cache = {};   // render each distinct pitch once
+  const notes = active.map((i) => {
+    const m = riffPattern[i];
+    if (!cache[m]) { const snap = snapshotState(); snap.freq = midiToFreq(m); cache[m] = withState(snap, () => render()); }
+    return { off: i * stepN, r: cache[m] };
+  });
+  const total = notes.reduce((mx, n) => Math.max(mx, n.off + n.r.L.length), 0);
+  const L = new Float32Array(total), R = new Float32Array(total);
+  for (const n of notes) for (let j = 0; j < n.r.L.length; j++) { L[n.off + j] += n.r.L[j]; R[n.off + j] += n.r.R[j]; }
+  let pk = 0; for (let j = 0; j < total; j++) { pk = Math.max(pk, Math.abs(L[j]), Math.abs(R[j])); }   // tame overlap clipping
+  if (pk > 1) { const g = 0.98 / pk; for (let j = 0; j < total; j++) { L[j] *= g; R[j] *= g; } }
+  return { L, R };
+}
+function riffHighlight(i) { [...riffGrid.children].forEach((c, k) => c.classList.toggle("playing", k === i)); }
+function updateRiffPlayBtn() { riffPlayBtn.textContent = riffPlaying ? "⏹ Stop" : "▶ Play"; }
+function riffStop() {
+  if (riffSrc) { try { riffSrc.stop(); } catch (e) { /* already stopped */ } riffSrc = null; }
+  riffTimers.forEach(clearTimeout); riffTimers = [];
+  riffHighlight(-1); riffPlaying = false; updateRiffPlayBtn();
+}
+function riffPlay() {
+  const built = buildRiffBuffer();
+  if (!built) { riffMsg("Add some notes first — click a step and press a key."); return; }
+  riffStop();
+  drawScope(built.L, built.R);
+  riffSrc = playBuffer(built.L, built.R);
+  const stepMs = riffStepDur() * 1000;
+  for (let i = 0; i < riffN; i++) riffTimers.push(setTimeout(() => riffHighlight(i), i * stepMs));   // playhead
+  const totalMs = (built.L.length / SR) * 1000;
+  riffTimers.push(setTimeout(() => { riffHighlight(-1); if (riffLoop && riffPlaying) riffPlay(); else riffStop(); }, totalMs));
+  riffPlaying = true; updateRiffPlayBtn();
+}
+async function riffExport() {
+  const built = buildRiffBuffer();
+  if (!built) { riffMsg("Nothing to export — add some notes first."); return; }
+  await downloadWav(built.L, built.R, "riff.wav", (seqLabel && seqLabel !== "Sound" ? seqLabel : "riff") + " riff");
+}
+function setRiffSteps(n) {
+  const old = riffPattern; riffN = n; riffPattern = new Array(n).fill(null);
+  for (let i = 0; i < Math.min(old.length, n); i++) riffPattern[i] = old[i];   // preserve on resize
+  riffSel = Math.min(riffSel, n - 1); renderRiff();
+}
+
+riffGrid.addEventListener("click", (e) => { const c = e.target.closest(".riff-cell"); if (c) { riffSel = +c.dataset.i; renderRiff(); } });
+riffPanel.querySelector("#riffBpmIn").addEventListener("change", (e) => { riffBpm = Math.max(40, Math.min(300, +e.target.value || 140)); e.target.value = riffBpm; });
+riffPanel.querySelector("#riffNIn").addEventListener("change", (e) => setRiffSteps(+e.target.value));
+riffPanel.querySelector("#riffLoopIn").addEventListener("change", (e) => { riffLoop = e.target.checked; });
+riffPlayBtn.addEventListener("click", () => { if (riffPlaying) riffStop(); else riffPlay(); });
+riffPanel.querySelector("#riffExportBtn").addEventListener("click", riffExport);
+riffPanel.querySelector("#riffClearBtn").addEventListener("click", () => { riffPattern = new Array(riffN).fill(null); riffSel = 0; riffStop(); renderRiff(); });
+document.getElementById("riffToggle").addEventListener("click", () => {
+  riffOpen = !riffOpen;
+  riffPanel.hidden = !riffOpen;
+  document.getElementById("riffToggle").classList.toggle("on", riffOpen);
+  if (riffOpen) renderRiff(); else riffStop();
+});
+renderRiff();
 
 // ---------- Shareable links ----------
 // Pack the current sound into the URL so it can be shared or bookmarked. Like a
