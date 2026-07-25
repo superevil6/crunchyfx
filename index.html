@@ -286,6 +286,7 @@ const PARAMS = [
   // so existing presets are unchanged and there's no CPU cost until engaged.
   ["transient",  "Transient",  -1, 1, 0.01, 0, "",      "Master"],
   ["limiter",    "Limiter",    0, 1, 0.01, 0, "",        "Master"],
+  ["reverse",    "Reverse",    0, 1, 1, 0, "",           "Master"],
   // Output
   ["gain",       "Gain",       0, 1, 0.01, 0.7, "",     "Output"],
   ["duration",   "Duration",   0.05, 2, 0.01, 0.4, "s", "Output"],
@@ -843,6 +844,19 @@ function render() {
   if (state.limiter > 0) limiterProcess(L, R, state.limiter);
   // final safety clip (a no-op when the limiter is engaged, since it stays under its ceiling)
   for (let i = 0; i < n; i++) { L[i] = Math.max(-1, Math.min(1, L[i])); R[i] = Math.max(-1, Math.min(1, R[i])); }
+  // Reverse (default 0 = off → existing sounds byte-identical). Flip only the AUDIBLE span so
+  // trailing silence stays at the end instead of becoming a leading gap; a reverb tail then swells
+  // forward into the transient (reverse cymbal / whoosh / riser). Short declick at both new ends.
+  if (state.reverse) {
+    let last = n - 1;
+    while (last > 0 && Math.abs(L[last]) < 1e-4 && Math.abs(R[last]) < 1e-4) last--;
+    for (let i = 0, j = last; i < j; i++, j--) {
+      const tl = L[i]; L[i] = L[j]; L[j] = tl;
+      const tr = R[i]; R[i] = R[j]; R[j] = tr;
+    }
+    const dc = Math.min(fade, last >> 1) || 1;
+    for (let i = 0; i < dc; i++) { const k = i / dc; L[i] *= k; R[i] *= k; L[last - i] *= k; R[last - i] *= k; }
+  }
   return { L, R, rawPeak };
 }
 
@@ -2226,6 +2240,74 @@ document.addEventListener("keydown", (e) => {
     play();
   }
 });
+
+// ---------- Play at pitch — a little keyboard (computer keys + on-screen) ----------
+// Auditions the CURRENT sound at different pitches — great for the tonal engines (modal/FM/pluck/
+// formant/additive). Renders via withState so the editor's own freq is never disturbed, and it does
+// NOT commit to history (auditioning, like the breed tiles). Home-row layout à la GarageBand.
+const KB_SEMI = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12 };
+const KB_WHITE = [{ s: 0, k: "A" }, { s: 2, k: "S" }, { s: 4, k: "D" }, { s: 5, k: "F" }, { s: 7, k: "G" }, { s: 9, k: "H" }, { s: 11, k: "J" }, { s: 12, k: "K" }];
+const KB_BLACK = [{ s: 1, k: "W", after: 0 }, { s: 3, k: "E", after: 1 }, { s: 6, k: "T", after: 3 }, { s: 8, k: "Y", after: 4 }, { s: 10, k: "U", after: 5 }];
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+let kbOctave = 4;
+function kbMidi(semi) { return 12 * (kbOctave + 1) + semi; }               // C4 = MIDI 60
+function kbFreq(semi) { return Math.max(20, Math.min(4000, 440 * Math.pow(2, (kbMidi(semi) - 69) / 12))); }
+function kbNoteName(semi) { const m = kbMidi(semi); return NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); }
+const keyboardEl = document.createElement("div");
+keyboardEl.className = "keyboard";
+keyboardEl.innerHTML =
+  '<div class="kb-oct"><button id="kbDown" title="Octave down (Z)">◀</button>' +
+    '<span class="kb-octlabel">Oct <b id="kbOctVal">4</b></span>' +
+    '<button id="kbUp" title="Octave up (X)">▶</button></div>' +
+  '<div class="kb-keys" id="kbKeys"></div>' +
+  '<span class="kb-hint">🎹 Play at pitch — <b>A–K</b> (+ W E T Y U), <b>Z/X</b> octave · <b>double-click</b> or <b>⇧</b>+key to keep a pitch</span>';
+document.querySelector(".scoperow").insertAdjacentElement("afterend", keyboardEl);
+const kbKeys = keyboardEl.querySelector("#kbKeys");
+KB_WHITE.forEach((w) => {
+  const el = document.createElement("button");
+  el.className = "kb-white"; el.dataset.semi = w.s;
+  el.innerHTML = '<span class="kb-lbl">' + w.k + '</span>';
+  kbKeys.appendChild(el);
+});
+KB_BLACK.forEach((b) => {
+  const el = document.createElement("button");
+  el.className = "kb-black"; el.dataset.semi = b.s;
+  el.style.left = ((b.after + 1) * (100 / KB_WHITE.length)) + "%";   // centred on the white-key boundary
+  el.innerHTML = '<span class="kb-lbl">' + b.k + '</span>';
+  kbKeys.appendChild(el);
+});
+function kbTitles() { [...kbKeys.children].forEach((el) => { el.title = kbNoteName(+el.dataset.semi); }); }
+kbTitles();
+function kbFlash(semi, on) { const el = kbKeys.querySelector('[data-semi="' + semi + '"]'); if (el) el.classList.toggle("active", on); }
+function playNote(semi) {   // audition only — doesn't disturb the editor's freq
+  const snap = snapshotState(); snap.freq = kbFreq(semi);
+  const r = withState(snap, () => render());
+  playBuffer(r.L, r.R);
+}
+// Persist: make this note the sound's ACTUAL pitch — moves the freq slider, commits to history,
+// and travels in the patch (presets/share/export). play() is the "sound changed" chokepoint.
+function setPitch(semi) {
+  state.freq = Math.round(kbFreq(semi));   // snap to the freq slider's 1-Hz step so state + UI agree
+  syncUI();               // reflect the new freq on the slider/readout
+  play("Note " + kbNoteName(semi));
+}
+function setOctave(o) { kbOctave = Math.max(0, Math.min(8, o)); keyboardEl.querySelector("#kbOctVal").textContent = kbOctave; kbTitles(); }
+keyboardEl.querySelector("#kbDown").addEventListener("click", () => setOctave(kbOctave - 1));
+keyboardEl.querySelector("#kbUp").addEventListener("click", () => setOctave(kbOctave + 1));
+kbKeys.addEventListener("pointerdown", (e) => { const el = e.target.closest("[data-semi]"); if (!el) return; const s = +el.dataset.semi; playNote(s); kbFlash(s, true); });
+kbKeys.addEventListener("pointerup", (e) => { const el = e.target.closest("[data-semi]"); if (el) kbFlash(+el.dataset.semi, false); });
+kbKeys.addEventListener("pointerleave", () => [...kbKeys.children].forEach((el) => el.classList.remove("active")));
+kbKeys.addEventListener("dblclick", (e) => { const el = e.target.closest("[data-semi]"); if (el) setPitch(+el.dataset.semi); });   // double-click = keep this pitch
+document.addEventListener("keydown", (e) => {
+  const t = e.target && e.target.tagName;
+  if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;   // let text fields type normally
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;        // don't clash with shortcuts / avoid key-repeat flood
+  const k = e.key.toLowerCase();
+  if (k === "z") { e.preventDefault(); setOctave(kbOctave - 1); return; }
+  if (k === "x") { e.preventDefault(); setOctave(kbOctave + 1); return; }
+  if (k in KB_SEMI) { e.preventDefault(); const s = KB_SEMI[k]; if (e.shiftKey) setPitch(s); else playNote(s); kbFlash(s, true); }   // Shift = keep the pitch
+});
+document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if (k in KB_SEMI) kbFlash(KB_SEMI[k], false); });
 
 // ---------- Shareable links ----------
 // Pack the current sound into the URL so it can be shared or bookmarked. Like a

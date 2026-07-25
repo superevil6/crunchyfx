@@ -1144,7 +1144,7 @@ window.PRESETS = {
 window.PRESET_CATEGORIES = [
   ["Bells / Mallets", ["Bell", "Church Bell", "Hand Bell", "Wind Chime", "Kalimba", "Music Box Note", "Glass Ping", "Marimba", "Vibraphone", "Metal Clang", "Gong", "Triangle Ting", "Cathedral Bell", "Spring Chime"]],
   ["Granular / Texture", ["Grain Cloud", "Shimmer Wash", "Time Freeze", "Stutter Glitch", "Granular Drone", "Pixie Dust"]],
-  ["Voice / Vocal", ["Sexy Voice (M)", "Sexy Voice (F)", "Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone", "Vowel Talk", "Wah Voice"]],
+  ["Voice / Vocal", ["Aah Choir", "Robot Voice", "Monster Vowel", "Alien Chatter", "Pixie Voice", "Ghost Wail", "Ooo Drone", "Vowel Talk", "Wah Voice"]],
   ["Water / Liquid", ["Bubble Drop", "Droplet Plink", "Bubbling Stream", "Boiling Pot", "Underwater", "Pouring Water", "Lava Bloop", "Sci-Fi Bloop"]],
   ["Crackle / Particle", ["Crackling Fire", "Heavy Rain", "Frying Sizzle", "Geiger Counter", "Electric Sparks", "Gravel Steps", "Crowd Applause", "Static Hiss"]],
   ["Drums / Percussion", ["Analog Kick", "Classic Kick", "Punch Kick", "Snare", "Tight Snare", "Rimshot", "Clap", "Closed Hat", "Open Hat", "Low Tom", "High Tom", "Crash Cymbal", "Ride Cymbal", "Cowbell", "Woodblock", "Shaker"]],
