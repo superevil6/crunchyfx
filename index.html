@@ -1575,7 +1575,7 @@ cwPanel.innerHTML =
     '<button data-shape="random">Random</button><button data-shape="clear">Clear</button>' +
   '</div>' +
   '<div class="cw-img"><button class="cw-img-btn" type="button">🖼 From image…</button>' +
-    '<span class="cw-img-hint">traces an image into this wave</span></div>' +
+    '<span class="cw-img-hint">traces an image into this wave — or drop one on the canvas</span></div>' +
   '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback). Draw a 2nd wave on B and use the Wave-morph panel to blend/sweep A→B.</div>';
 // place the draw editor among the other wave-specific panels (before "Mix"), not at the very end
 const mixPanel = panels.querySelector('[data-group="Mix"]');
@@ -1714,13 +1714,9 @@ function imageToWave(src) {
   for (let i = 0; i < W; i++) wave[i] /= peak;            // normalize to ±1
   return wave;
 }
-const cwImgInput = document.createElement("input");
-cwImgInput.type = "file"; cwImgInput.accept = "image/*"; cwImgInput.style.display = "none";
-cwPanel.appendChild(cwImgInput);
-cwPanel.querySelector(".cw-img-btn").addEventListener("click", () => cwImgInput.click());
-cwImgInput.addEventListener("change", () => {
-  const file = cwImgInput.files[0]; cwImgInput.value = "";
+function loadImageFile(file) {   // shared by the button AND the canvas drop target
   if (!file) return;
+  if (file.type && !/^image\//.test(file.type)) { alert("Please choose an image file."); return; }
   const url = URL.createObjectURL(file), img = new Image();
   img.onload = () => {
     URL.revokeObjectURL(url);
@@ -1730,6 +1726,22 @@ cwImgInput.addEventListener("change", () => {
   };
   img.onerror = () => { URL.revokeObjectURL(url); alert("Could not load that image file."); };
   img.src = url;
+}
+const cwImgInput = document.createElement("input");
+cwImgInput.type = "file"; cwImgInput.accept = "image/*"; cwImgInput.style.display = "none";
+cwPanel.appendChild(cwImgInput);
+cwPanel.querySelector(".cw-img-btn").addEventListener("click", () => cwImgInput.click());
+cwImgInput.addEventListener("change", () => { loadImageFile(cwImgInput.files[0]); cwImgInput.value = ""; });
+// Drag-drop an image straight onto the canvas (in addition to the button). These are OS→app FILE drags
+// (dragover/drop), distinct from the app's own in-app pointer-drag and drag-OUT (dragstart), so no clash.
+const cwDragOver = (e) => { e.preventDefault(); cwCanvas.classList.add("cw-drop"); };
+cwCanvas.addEventListener("dragenter", cwDragOver);
+cwCanvas.addEventListener("dragover", cwDragOver);
+cwCanvas.addEventListener("dragleave", () => cwCanvas.classList.remove("cw-drop"));
+cwCanvas.addEventListener("drop", (e) => {
+  e.preventDefault(); cwCanvas.classList.remove("cw-drop");
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadImageFile(f);
 });
 
 // ---------- My Waveforms library (DESKTOP premium) ----------
