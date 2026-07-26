@@ -1,5 +1,5 @@
 {
   "version": "1.0.0",
   "url": "https://sevi66.itch.io/crunchysfx",
-  "notes": "Colour-coded presets, update checker, Linux Flatpak build."
+  "notes": "New: load-your-own-IR reverb, a full custom-wave suite (wave library, Wave Morph, XY oscilloscope, image→waveform), and riffs now save with your sounds."
 }
