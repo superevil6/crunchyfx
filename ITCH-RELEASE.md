@@ -178,7 +178,7 @@ just works:
 
 ```sh
 # install (Arch/CachyOS): paru -S butler   —   or the official download:
-curl -L -o /tmp/butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+curl -L -o /tmp/butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
 unzip -o /tmp/butler.zip -d ~/.local/opt/butler && chmod +x ~/.local/opt/butler/butler
 ln -sf ~/.local/opt/butler/butler ~/.local/bin/butler && butler -V   # ~/.local/bin already on PATH
 butler login                         # opens browser for an API key

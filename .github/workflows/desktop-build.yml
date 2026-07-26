@@ -75,8 +75,10 @@ jobs:
         if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default -OutFile butler.zip
-          Expand-Archive butler.zip -DestinationPath butler-bin
+          # butler moved hosts: broth.itch.ovh was RETIRED (now NXDOMAIN) → use broth.itch.zone.
+          # curl.exe (bundled on the runner) retries transient CDN hiccups; Invoke-WebRequest does not.
+          curl.exe -sL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 -o butler.zip https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
+          Expand-Archive -Force butler.zip -DestinationPath butler-bin
           "$PWD\butler-bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Push Windows build to itch.io
@@ -127,7 +129,10 @@ jobs:
       - name: Install butler (itch.io CLI)
         if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
         run: |
-          curl -sL -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          # butler moved hosts: broth.itch.ovh was RETIRED (now NXDOMAIN) → use broth.itch.zone.
+          # --retry-all-errors covers transient CDN hiccups on the new host (Cloudflare R2 mirror).
+          curl -sL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 \
+            -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip -o butler.zip -d "$HOME/butler-bin"
           chmod +x "$HOME/butler-bin/butler"
           echo "$HOME/butler-bin" >> "$GITHUB_PATH"

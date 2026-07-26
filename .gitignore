@@ -1,3 +1,9 @@
+# ── WORKFLOW NOTE FOR CLAUDE ─────────────────────────────────────────────────
+# Do NOT create git commits in this repo. The maintainer handles ALL commits
+# (and pushes/tags/releases) personally. Make and stage edits, but never run
+# `git commit` unless explicitly told to in that message.
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Keep Claude's context/notes out of the repo. Everything else is tracked.
 CLAUDE.md
 .claude/
