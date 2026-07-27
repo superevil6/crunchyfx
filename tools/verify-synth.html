@@ -1,0 +1,142 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CrunchySFX — verify the synth export</title>
+<style>
+  body { background: #14121a; color: #e8e4f0; font: 13px ui-monospace, SFMono-Regular, monospace;
+         margin: 0; padding: 16px; }
+  #banner { padding: 10px 14px; border-radius: 6px; font-weight: bold; margin-bottom: 12px; }
+  .ok { background: #0d3a1e; } .bad { background: #7a1020; }
+  .fail { color: #ff9b9b; } .muted { color: #9a92ad; }
+  pre { white-space: pre-wrap; margin: 0; line-height: 1.5; }
+</style>
+<div id="banner" class="muted">running…</div>
+<pre id="out"></pre>
+
+<!-- The app's real engine sources… -->
+<script src="../presets.js"></script>
+<script src="../dsp.js"></script>
+<script src="../synth.js"></script>
+<!-- …and the exported bundle. It namespaces everything into CrunchySynth, so both engines
+     coexist in one scope and can be compared directly — which is the whole point: this proves
+     the export is faithful without any checked-in golden file to go stale. -->
+<script src="../synth-export/crunchysfx-synth.js"></script>
+
+<script>
+// A throw anywhere below would otherwise leave the banner reading "running…" forever, which is
+// indistinguishable from "still working" in a headless screenshot.
+window.onerror = function (msg, src, line) {
+  const b = document.getElementById("banner");
+  b.className = "bad";
+  b.textContent = "✗ threw: " + msg + " (line " + line + ")";
+  return true;
+};
+(function () {
+  const t0 = Date.now();
+  const out = document.getElementById("out"), banner = document.getElementById("banner");
+  const lines = [];
+  let fails = 0;
+
+  if (typeof CrunchySynth === "undefined") {
+    banner.className = "bad";
+    banner.textContent = "No CrunchySynth — run  python3 tools/export-synth.py  first.";
+    return;
+  }
+
+  const hash = (arr) => {
+    const b = arr instanceof ArrayBuffer ? new Uint8Array(arr)
+                                         : new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    return ("00000000" + h.toString(16)).slice(-8);
+  };
+  const ok = (cond, what, detail) => {
+    if (!cond) fails++;
+    lines.push((cond ? "PASS " : "FAIL ") + what + (detail ? "  — " + detail : ""));
+  };
+
+  // Build patches from the bundle's own defaults, so both engines get byte-identical input and
+  // the only variable under test is the engine code itself.
+  const patchFor = (obj) => {
+    const p = Object.assign({}, CrunchySynth.DEFAULTS);
+    p.customWave = ""; p.customWaveB = ""; p.speechText = "";
+    for (const k in obj) if (k !== "_vary") p[k] = obj[k];
+    return p;
+  };
+
+  const names = Object.keys(window.PRESETS).sort();
+  let mismatched = [];
+  for (const name of names) {
+    const p = patchFor(window.PRESETS[name]);
+    let a, b;
+    try { a = renderPatch(p); } catch (e) { mismatched.push(name + " (app threw: " + e.message + ")"); continue; }
+    try { b = CrunchySynth.render(p); } catch (e) { mismatched.push(name + " (bundle threw: " + e.message + ")"); continue; }
+    if (hash(a.L) !== hash(b.L) || hash(a.R) !== hash(b.R) || a.L.length !== b.L.length) {
+      mismatched.push(name);
+    }
+  }
+  ok(mismatched.length === 0, "all " + names.length + " presets render identically through the export",
+     mismatched.length ? mismatched.slice(0, 8).join(", ") : "");
+
+  // Every waveform, including ones no preset happens to use.
+  const waveRow = CrunchySynth.PARAMS.find((q) => q[0] === "wave");
+  const nWaves = Array.isArray(waveRow && waveRow[9]) ? waveRow[9].length : 24;
+  let waveBad = [];
+  for (let w = 0; w < nWaves; w++) {
+    const p = patchFor({ wave: w, freq: 440, duration: 0.4, decay: 0.2, release: 0.1, cutoff: 8000 });
+    const a = renderPatch(p), b = CrunchySynth.render(p);
+    if (hash(a.L) !== hash(b.L) || hash(a.R) !== hash(b.R)) waveBad.push(w);
+  }
+  ok(waveBad.length === 0, "all " + nWaves + " waveforms match", waveBad.join(", "));
+
+  // The options the app passes: normalize off, and a loaded sample buffer.
+  {
+    const p = patchFor(window.PRESETS["Explosion"]);
+    const a = renderPatch(p, { normalize: false }), b = CrunchySynth.render(p, { normalize: false });
+    ok(hash(a.L) === hash(b.L), "normalize:false matches");
+    const samp = new Float32Array(4096);
+    for (let i = 0; i < samp.length; i++) samp[i] = Math.sin(i * 0.01) * 0.5;
+    const p2 = patchFor({ wave: 17, duration: 0.5 });   // a sample-reading engine
+    const c = renderPatch(p2, { sample: samp }), d = CrunchySynth.render(p2, { sample: samp });
+    ok(hash(c.L) === hash(d.L), "a loaded sample buffer matches");
+  }
+
+  // WAV encoding across every format axis.
+  {
+    const p = patchFor(window.PRESETS["Coin"]);
+    const r = renderPatch(p);
+    const fmts = [{}, { depth: 24 }, { channels: 1 }, { rate: 22050 }, { loop: true }, { title: "Coin" }];
+    let bad = [];
+    for (const f of fmts) {
+      if (hash(encodeWav(r.L, r.R, f)) !== hash(CrunchySynth.encodeWav(r.L, r.R, f))) {
+        bad.push(JSON.stringify(f));
+      }
+    }
+    ok(bad.length === 0, "encodeWav matches across " + fmts.length + " formats", bad.join(" "));
+  }
+
+  // The bundle must publish everything consumers rely on.
+  {
+    const missing = ["VERSION", "BUILT", "SHA256", "SR", "PARAMS", "DEFAULTS", "render", "encodeWav"]
+      .filter((k) => CrunchySynth[k] === undefined);
+    ok(missing.length === 0, "the bundle publishes its whole API", missing.join(", "));
+    ok(Object.keys(CrunchySynth.DEFAULTS).length === CrunchySynth.PARAMS.length,
+       "DEFAULTS covers every parameter",
+       Object.keys(CrunchySynth.DEFAULTS).length + " of " + CrunchySynth.PARAMS.length);
+  }
+
+  // Everything above is synchronous on purpose: a headless `--screenshot` fires at window.load,
+  // so any result behind an await would never make it into the shot. The export's sha256
+  // self-check lives in tools/pull-synth.py instead — fetch() is blocked on file:// anyway.
+  finish();
+
+  function finish() {
+    lines.unshift("export: v" + CrunchySynth.VERSION + " built from " + CrunchySynth.BUILT +
+                  "  sha256 " + String(CrunchySynth.SHA256).slice(0, 12) + "…" +
+                  "  (" + ((Date.now() - t0) / 1000).toFixed(1) + "s)");
+    banner.className = fails ? "bad" : "ok";
+    banner.textContent = fails ? "✗ " + fails + " FAILURE(S) — the export does not match the app"
+                               : "✓ the exported engine matches the app exactly";
+    out.innerHTML = lines.map((l) => l.indexOf("FAIL") === 0 ? '<span class="fail">' + l + "</span>" : l).join("\n");
+  }
+})();
+</script>

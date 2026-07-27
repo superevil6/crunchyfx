@@ -30,6 +30,10 @@ const CUSTOM_N = 256;          // drawn resolution (stored)
 
 const CUSTOM_TABLE_N = 2048;   // playback table resolution (read by waveform())
 
+// The default drawn cycle (a plain sine) used whenever a patch has no custom wave stored.
+const CUSTOM_DEFAULT_DRAWN = new Float32Array(CUSTOM_N);
+for (let i = 0; i < CUSTOM_N; i++) CUSTOM_DEFAULT_DRAWN[i] = Math.sin(2 * Math.PI * i / CUSTOM_N);
+
 function customWaveToB64(buf) {
   const b = new Uint8Array(buf.length);
   for (let i = 0; i < buf.length; i++) b[i] = (Math.round(Math.max(-1, Math.min(1, buf[i])) * 127)) & 0xff;
@@ -132,6 +136,7 @@ function waveform(type, phase, dt, duty, ct, ctB, mb) {
 }
 
 // ---------- Convolution reverb (synthesized IRs) ----------
+const CONV_MAKEUP = 3.0;   // wet gain: unit-energy IR spreads energy over time, so boost to taste
 // Offline rendering has no latency deadline, but direct convolution of a ~2 s signal with a
 // ~2 s IR is ~10^10 ops — too slow. So we convolve via FFT (overlap NOT needed: one shot).
 // In-place iterative radix-2 FFT; re/im length must be a power of two. sign=-1 fwd, +1 inverse.
