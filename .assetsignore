@@ -1,0 +1,39 @@
+# What does NOT get published to crunchysfx.com.
+#
+# `assets.directory: "."` in wrangler.jsonc publishes EVERY tracked file in the repo as a static
+# asset — the Tauri sources, the release script, the desktop and itch notes, the editor config, this
+# Worker's own source. None of it is secret, none of it belongs on the public site either. Added
+# after the same file was written for CrunchyVFX and the omission here became obvious.
+#
+# The site is only: index.html, styles.css, presets.js, dsp.js, synth.js, the icons, og.png — and
+# version.json, which the desktop app's update check FETCHES, so it must never be listed here.
+#
+# LOCAL RUNS NEED flatpak/ CLEANED FIRST. This file filters the asset list AFTER wrangler has walked
+# the directory, so it does not stop the walk: `wrangler dev` here dies on
+#   EACCES: permission denied, scandir 'flatpak/build-dir/var/run/containerd'
+# because a flatpak-builder sandbox left an unreadable directory behind. Workers Builds is unaffected
+# (it clones the repo, and flatpak/build-dir is gitignored) — this only bites local dev and local
+# `wrangler deploy`. Remove flatpak/build-dir + flatpak/repo before running either.
+*.md
+tools/
+scripts/
+src-tauri/
+flatpak/
+dist/
+dist-itch/
+synth-export/
+Screenshots/
+.vscode/
+.github/
+.wrangler/
+wrangler.jsonc
+worker.js
+.assetsignore
+.gitignore
+*.aseprite
+*.crunchyfx
+
+# The Cloudflare PAGES twin of worker.js. Inert on a Workers deploy, so it is dead weight here — but
+# if this project is ever re-created as a Pages project, DELETE this line: Pages needs the file
+# present to run it as a Pages Function.
+functions/

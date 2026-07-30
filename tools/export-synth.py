@@ -28,7 +28,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "synth-export" / "crunchysfx-synth.js"
 
 # Names the bundle publishes. Anything else it defines stays private inside the IIFE.
-EXPORTS = ["render", "encodeWav", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT", "SHA256"]
+EXPORTS = ["render", "encodeWav", "decodePatch", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT",
+           "SHA256"]
 
 # Things that must NOT appear in the engine sources — the whole point of the extraction is that
 # the engine is pure, and each of these would work in the app but break in the export.
@@ -205,6 +206,9 @@ root.CrunchySynth = {
   render: renderPatch,
   // encodeWav(L, R, { rate, depth, channels, loop, title }) -> ArrayBuffer
   encodeWav: encodeWav,
+  // decodePatch(shareLinkString) -> { v, s: <diff against DEFAULTS>, n?, t? }
+  // Lets a consumer accept a CrunchySFX share link as an instrument without copying the codec.
+  decodePatch: decodePatch,
 };
 })(typeof window !== "undefined" ? window : globalThis);
 """ % (dsp.rstrip("\n"), synth.rstrip("\n"), slice_params(html),

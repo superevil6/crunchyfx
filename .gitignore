@@ -32,3 +32,6 @@ dist-itch/
 DISCOVERABILITY.md
 STEAM-AI-DISCLOSURE.md
 todo.md
+
+# Local state from `wrangler dev` (the Cloudflare runtime run locally). Cache and scratch only.
+.wrangler/

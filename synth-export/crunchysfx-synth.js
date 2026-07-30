@@ -1,11 +1,11 @@
 /*! CrunchySFX synthesis engine — GENERATED FILE, DO NOT EDIT.
  *
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
- *  Exposes exactly one global: CrunchySynth { render, encodeWav, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
+ *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (a8c4bbc — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.1.0 (56e16c0 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   546d831dfa8298e6f147865b4bccbcf319e23539e0a34452e8c3a3573ad1661f   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   fe81027a7a2701fb7ba7ade0185d19d0065173cb56cec2435a620a5ad36b615a   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -730,6 +730,24 @@ function reverbProcess(L, R, size, tone, wet) {
       out[i] = dry[i] + wet * mono;
     }
   }
+}
+
+// ── Share-link codec ─────────────────────────────────────────────────────────────────────────
+// decodePatch lives HERE, not in index.html, so the bundle can carry it (see EXPORTS in
+// tools/export-synth.py). A consumer that accepts a CrunchySFX share link needs to decode it, and
+// hand-copying six lines of codec into a sibling repo is exactly the drift that gave CrunchyVFX an
+// SFX_DEFAULTS table with 25 of 106 params. The payload is version-tagged (`v`), so the day this
+// grows a v2 branch, every consumer gets it by re-pulling rather than by remembering to.
+//
+// Returns the raw payload { v, s: <diff against PARAMS defaults>, n?: normalize, t?: title }.
+// Its counterpart encodePatch stays in index.html on purpose: it reads the app's `state` and the
+// current label, so it is not pure and could never be exported.
+function decodePatch(str) {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  const obj = JSON.parse(atob(b64));
+  if (!obj || typeof obj.s !== "object") throw new Error("unrecognized link");
+  return obj;
 }
 // ==== synth.js =============================================================================
 // CrunchySFX — the synthesis core: one patch object in, stereo audio out.
@@ -1578,8 +1596,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.1.0",
-  BUILT: "a8c4bbc-dirty",
-  SHA256: "546d831dfa8298e6f147865b4bccbcf319e23539e0a34452e8c3a3573ad1661f",
+  BUILT: "56e16c0-dirty",
+  SHA256: "fe81027a7a2701fb7ba7ade0185d19d0065173cb56cec2435a620a5ad36b615a",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
@@ -1587,5 +1605,8 @@ root.CrunchySynth = {
   render: renderPatch,
   // encodeWav(L, R, { rate, depth, channels, loop, title }) -> ArrayBuffer
   encodeWav: encodeWav,
+  // decodePatch(shareLinkString) -> { v, s: <diff against DEFAULTS>, n?, t? }
+  // Lets a consumer accept a CrunchySFX share link as an instrument without copying the codec.
+  decodePatch: decodePatch,
 };
 })(typeof window !== "undefined" ? window : globalThis);

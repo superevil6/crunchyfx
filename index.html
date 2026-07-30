@@ -2196,15 +2196,21 @@ function encodePatch(nameOverride) {
   // current label; an explicit empty name omits it. Capped to 60 (matches functions/_middleware.js).
   const name = nameOverride !== undefined ? nameOverride : seqLabel;
   if (typeof name === "string" && name.trim() && name.trim() !== "Sound") payload.t = name.trim().slice(0, 60);
-  return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  // btoa() only accepts code points 0-255, so ANY character above latin1 in the name made this
+  // throw "InvalidCharacterError" and the Share button simply failed — naming a sound "Feu ✨" or
+  // anything Japanese was enough. Escaping every non-ASCII code unit to \uXXXX first makes the JSON
+  // pure ASCII, which btoa always accepts, and JSON.parse restores the original characters on the
+  // far side. Deliberately fixed HERE rather than by switching to a UTF-8 codec: decodePatch() is
+  // vendored into CrunchyVFX and CrunchyBGM, so changing the codec would mean re-exporting the
+  // bundle to both. This form decodes correctly under the old latin1 reader AND a UTF-8 one, so
+  // every existing link keeps working and cross-app links get more robust, not less.
+  const json = JSON.stringify(payload)
+    .replace(/[^\x00-\x7f]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-function decodePatch(str) {
-  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (b64.length % 4) b64 += "=";
-  const obj = JSON.parse(atob(b64));
-  if (!obj || typeof obj.s !== "object") throw new Error("unrecognized link");
-  return obj;
-}
+// decodePatch() now lives in dsp.js — it is pure, and the exported bundle publishes it so a
+// consumer (CrunchyVFX, CrunchyBGM) can accept a share link without hand-copying the codec.
+// It is still a plain global here: dsp.js loads first and classic scripts share one scope.
 // If the URL carries a shared sound, load & play it. Returns true if it did.
 // Reads ?s=… (current, server-visible so the edge function can build a per-sound card)
 // and falls back to #s=… for links shared before the switch.

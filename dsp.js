@@ -715,3 +715,21 @@ function reverbProcess(L, R, size, tone, wet) {
     }
   }
 }
+
+// ── Share-link codec ─────────────────────────────────────────────────────────────────────────
+// decodePatch lives HERE, not in index.html, so the bundle can carry it (see EXPORTS in
+// tools/export-synth.py). A consumer that accepts a CrunchySFX share link needs to decode it, and
+// hand-copying six lines of codec into a sibling repo is exactly the drift that gave CrunchyVFX an
+// SFX_DEFAULTS table with 25 of 106 params. The payload is version-tagged (`v`), so the day this
+// grows a v2 branch, every consumer gets it by re-pulling rather than by remembering to.
+//
+// Returns the raw payload { v, s: <diff against PARAMS defaults>, n?: normalize, t?: title }.
+// Its counterpart encodePatch stays in index.html on purpose: it reads the app's `state` and the
+// current label, so it is not pure and could never be exported.
+function decodePatch(str) {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  const obj = JSON.parse(atob(b64));
+  if (!obj || typeof obj.s !== "object") throw new Error("unrecognized link");
+  return obj;
+}
