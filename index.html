@@ -2236,6 +2236,11 @@ function loadSharedSound(src) {
 // point there instead — the recipient opens the web version, which reads the same ?s=… link.
 // Leave "" until hosting exists (desktop then falls back to the local URL, as before).
 const WEB_BASE_URL = "https://crunchysfx.com/";
+// Sibling apps that vendor decodePatch + the synth engine, so they accept the SAME ?s= patch link.
+// "Send to CrunchyVFX/BGM" opens the sound directly in that app (it reads ?s= on load and imports it),
+// replacing the copy-a-link-then-paste hop. Web only for now — the desktop (Tauri) opener is deferred.
+const VFX_BASE_URL = "https://crunchyvfx.com/";
+const BGM_BASE_URL = "https://crunchybgm.com/";
 
 // Pure URL builder (kept separate so it's unit-testable). On desktop with a hosted base set,
 // links point at the web build; otherwise they use the current page URL (correct for web).
@@ -2265,6 +2270,8 @@ shareModal.innerHTML =
       '<input id="shareUrl" class="share-input" type="text" readonly>' +
     '</div>' +
     '<div class="modal-foot"><button id="shareCopy" class="primary">🔗 Copy link</button>' +
+      '<button id="shareVfx" title="Open this sound in CrunchyVFX to build a matching visual effect">🎆 Send to CrunchyVFX</button>' +
+      '<button id="shareBgm" title="Open this sound in CrunchyBGM to build a track or loop">🎵 Send to CrunchyBGM</button>' +
       '<span id="shareMsg" class="hint"></span></div>' +
   '</div>';
 document.body.appendChild(shareModal);
@@ -2298,6 +2305,17 @@ async function copyShareLink() {
   }
   setTimeout(() => { shareMsg.textContent = ""; }, 2500);
 }
+// Hand the current sound straight to a sibling app: same ?s= patch link, pointed at its domain,
+// opened in a new tab. The sibling reads ?s= on load + renders it via the vendored engine — no
+// copy/paste. Web only for now; the desktop (Tauri) shell opener is deferred.
+function sendSoundTo(baseUrl, appName) {
+  const enc = encodePatch(shareName.value);
+  window.open(baseUrl + "?s=" + enc, "_blank", "noopener");
+  shareMsg.textContent = "↗ Opening " + appName + "…";
+  setTimeout(() => { shareMsg.textContent = ""; }, 2500);
+}
+shareModal.querySelector("#shareVfx").addEventListener("click", () => sendSoundTo(VFX_BASE_URL, "CrunchyVFX"));
+shareModal.querySelector("#shareBgm").addEventListener("click", () => sendSoundTo(BGM_BASE_URL, "CrunchyBGM"));
 shareBtn.addEventListener("click", openShareModal);
 shareName.addEventListener("input", refreshShareUrl);
 shareName.addEventListener("keydown", (e) => { if (e.key === "Enter") copyShareLink(); });
