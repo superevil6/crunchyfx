@@ -536,6 +536,11 @@ function renderPatch(st, opts) {
   // master transient shaper (punch up / soften attacks) — before normalize since it moves peaks
   if (st.transient !== 0) transientShape(L, R, st.transient);
 
+  // Remove any DC the drive stage put back (see dcBlock). BEFORE the peak measurement below, and
+  // for the same reason the transient shaper is: an offset counts toward rawPeak, so a driven
+  // narrow-pulse sound measures louder than it sounds and normalization then pulls it DOWN.
+  dcBlock(L, R);
+
   // measure intrinsic peak (before gain) for loudness normalization + audibility
   let rawPeak = 0;
   for (let i = 0; i < n; i++) {

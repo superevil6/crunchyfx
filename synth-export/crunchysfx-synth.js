@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (56e16c0 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.1.0 (d7b94e7 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   fe81027a7a2701fb7ba7ade0185d19d0065173cb56cec2435a620a5ad36b615a   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   e62d2032676c059ea1fa2c64f434ead9ff0a0abd901774c64c0bf73b4c7ef277   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -611,6 +611,41 @@ function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
 }
 
 // ---------- Master finishing stage ----------
+// DC blocker: a one-pole highpass at ~18 Hz, always on. In place, no gate.
+//
+// WHY IT IS NEEDED, when the oscillator is already DC-centred: it is, and `drive` undoes it. A
+// centred 25%-duty pulse sits at +1.5 for a quarter of the cycle and −0.5 for three quarters — no
+// DC, but amplitude-ASYMMETRIC — and tanh squashes the tall positive spike far harder than the
+// shallow negative one. The mean goes negative, worse the narrower the duty and the harder the
+// drive. Measured on single notes downstream in CrunchyBGM: 50% duty is clean, 25% reads −0.27,
+// and a 15% duty at drive 0.25 reads −0.44. Nearly half of full scale, on one voice.
+//
+// It matters here for two separate reasons:
+//
+//   1. A one-shot with an offset STEPS the signal on and off, so a sound used repeatedly in a game
+//      lays a low-frequency thump under every trigger. In a sequenced context — CrunchyBGM playing
+//      one of these as an instrument — it reads as a constant rumble, which is how it was found.
+//   2. It corrupts loudness normalisation. `rawPeak` in renderPatch is measured across the offset,
+//      so a driven narrow-pulse sound looks louder than it is and gets normalised DOWN. Removing
+//      the offset first makes NORM_TARGET mean what it says.
+//
+// Cold-started on purpose, unlike CrunchyBGM's version of this: a sound effect begins at silence,
+// so there is nothing to prime from and the settling IS the correct behaviour. (BGM's buffer is a
+// seamless loop, so it primes on the tail or its own transient lands on the loop point.) The ~9 ms
+// time constant is well below the shortest attack here and a highpass passes transients anyway, so
+// the click at the front of a percussive sound survives intact.
+function dcBlock(L, R) {
+  const n = L.length;
+  if (!n) return;
+  const a = 1 - 2 * Math.PI * 18 / SR;      // ~18 Hz: below anything audible, above the offset
+  let xl = 0, yl = 0, xr = 0, yr = 0;
+  for (let i = 0; i < n; i++) {
+    const l = L[i], r = R[i];
+    yl = l - xl + a * yl; xl = l; L[i] = yl;
+    yr = r - xr + a * yr; xr = r; R[i] = yr;
+  }
+}
+
 // Transient shaper: emphasize (+) or soften (−) attacks. A fast and a slow envelope follower
 // track the signal; their difference (fast − slow) is positive during an attack, so scaling by
 // it punches up (amount>0) or rounds off (amount<0) transients. In place, gated on amount≠0.
@@ -1288,6 +1323,11 @@ function renderPatch(st, opts) {
   // master transient shaper (punch up / soften attacks) — before normalize since it moves peaks
   if (st.transient !== 0) transientShape(L, R, st.transient);
 
+  // Remove any DC the drive stage put back (see dcBlock). BEFORE the peak measurement below, and
+  // for the same reason the transient shaper is: an offset counts toward rawPeak, so a driven
+  // narrow-pulse sound measures louder than it sounds and normalization then pulls it DOWN.
+  dcBlock(L, R);
+
   // measure intrinsic peak (before gain) for loudness normalization + audibility
   let rawPeak = 0;
   for (let i = 0; i < n; i++) {
@@ -1596,8 +1636,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.1.0",
-  BUILT: "56e16c0-dirty",
-  SHA256: "fe81027a7a2701fb7ba7ade0185d19d0065173cb56cec2435a620a5ad36b615a",
+  BUILT: "d7b94e7-dirty",
+  SHA256: "e62d2032676c059ea1fa2c64f434ead9ff0a0abd901774c64c0bf73b4c7ef277",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

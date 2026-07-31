@@ -2308,14 +2308,19 @@ async function copyShareLink() {
 // Hand the current sound straight to a sibling app: same ?s= patch link, pointed at its domain,
 // opened in a new tab. The sibling reads ?s= on load + renders it via the vendored engine — no
 // copy/paste. Web only for now; the desktop (Tauri) shell opener is deferred.
-function sendSoundTo(baseUrl, appName) {
+function sendSoundTo(baseUrl, appName, target) {
   const enc = encodePatch(shareName.value);
-  window.open(baseUrl + "?s=" + enc, "_blank", "noopener");
+  // A named `target` REUSES an already-open tab (navigates it) instead of piling up new tabs;
+  // "_blank" always opens a fresh one. noopener is dropped for a named target — it severs the
+  // tab link that name-reuse relies on, and these are our own sibling apps (cross-origin, so the
+  // opened page can at most navigate this tab, never read it). Same-browser, best-effort: falls
+  // back to a new tab when none is open. (Reusing NAVIGATES the tab, replacing its current state.)
+  window.open(baseUrl + "?s=" + enc, target || "_blank", target ? "" : "noopener");
   shareMsg.textContent = "↗ Opening " + appName + "…";
   setTimeout(() => { shareMsg.textContent = ""; }, 2500);
 }
 shareModal.querySelector("#shareVfx").addEventListener("click", () => sendSoundTo(VFX_BASE_URL, "CrunchyVFX"));
-shareModal.querySelector("#shareBgm").addEventListener("click", () => sendSoundTo(BGM_BASE_URL, "CrunchyBGM"));
+shareModal.querySelector("#shareBgm").addEventListener("click", () => sendSoundTo(BGM_BASE_URL, "CrunchyBGM", "crunchybgm"));
 shareBtn.addEventListener("click", openShareModal);
 shareName.addEventListener("input", refreshShareUrl);
 shareName.addEventListener("keydown", (e) => { if (e.key === "Enter") copyShareLink(); });
