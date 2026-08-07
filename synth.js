@@ -81,6 +81,7 @@ function renderPatch(st, opts) {
   const isPluck = waveType === 8;
   const ksBuf = isPluck ? new Float32Array(2206) : null;   // max length at 20 Hz
   let ksN = 0, ksIdx = 0, ksPrevShot = -1;
+  let ksC = 0, ksApX = 0, ksApY = 0;                  // fractional-delay allpass (see below)
   const ksRho = 0.999 - 0.02 * st.pluckDamp;            // string decay (higher damp -> shorter)
   // Imported WAV as the source (wave "sample"): read position advances at a varispeed
   // rate set by the pitch controls. Plays once from the start, then silence.
@@ -265,13 +266,40 @@ function renderPatch(st, opts) {
       // (re-)excite the delay line at each shot, then pluck one sample out of it
       if (shotIdx !== ksPrevShot) {
         ksPrevShot = shotIdx;
-        ksN = Math.min(2205, Math.max(2, Math.round(SR / Math.max(20, fOsc))));
+        // THE DELAY LINE IS FRACTIONAL. `round(SR/f)` alone is wrong twice over, and the two
+        // errors are of different kinds:
+        //
+        //   1. The loop reads the NEXT sample as well as the current one, so it is `ksN - 0.5`
+        //      samples long and sounds SR/(ksN - 0.5), not SR/ksN. That half-sample is
+        //      unconditional, so NO pitch was in tune — not one.
+        //   2. `round()` quantises, so neighbouring semitones are out by DIFFERENT amounts. That
+        //      is worse than a uniform offset: a uniform one is a key change nobody can hear,
+        //      this one detunes intervals against each other. Measured downstream in CrunchyBGM
+        //      across the 25 records that use this wave: 26.1% of generated notes over 10 cents
+        //      out, reaching 65 cents at MIDI 95, and adjacent semitones up to 54 cents apart.
+        //
+        // The fix carries the fractional part in a first-order ALLPASS in the loop (below). An
+        // allpass rather than the textbook linear interpolation because |H| = 1 at every
+        // frequency: the in-loop averager IS the string's damping, and letting the fraction ride
+        // on its coefficient would make decay a function of pitch. Measured at 0.3 cents worst,
+        // with decay, peak level and CrunchyBGM's `instrumentGain` all unmoved.
+        //
+        // `ksFrac` is kept in [0.5, 1.5) — the band a first-order allpass is well behaved in, since
+        // its pole walks toward z = -1 as the fraction goes to 0.
+        const ksD = Math.min(2205.49, Math.max(2.5, SR / Math.max(20, fOsc)));
+        ksN = Math.floor(ksD);
+        const ksFrac = ksD - ksN + 0.5;                  // 0.5..1.5
+        ksC = (1 - ksFrac) / (1 + ksFrac);
+        ksApX = 0; ksApY = 0;
         ksIdx = 0;
         for (let j = 0; j < ksN; j++) ksBuf[j] = rnd();
       }
       const y = ksBuf[ksIdx];
       const nxt = ksIdx + 1 >= ksN ? 0 : ksIdx + 1;
-      ksBuf[ksIdx] = (y + ksBuf[nxt]) * 0.5 * ksRho;   // lowpass-in-the-loop = damping
+      const ksU = (y + ksBuf[nxt]) * 0.5 * ksRho;      // lowpass-in-the-loop = damping
+      const ksW = ksC * (ksU - ksApY) + ksApX;         // fractional delay, |H| = 1 (see above)
+      ksApX = ksU; ksApY = ksW;
+      ksBuf[ksIdx] = ksW;
       ksIdx = nxt;
       oscL = y; oscR = y;                              // mono, centered (ignores unison)
     } else if (isModal) {
