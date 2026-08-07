@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (f4422e7 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.1.0 (3d80175 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   cc78d2fb9eff19afc4b843178ae63d86c8ec7b4bc349318c7ebf40ab64c2b578   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   1f73fa2e2bdb170a9269b5e8aa28cccf218d70c12b08761f53e7ce3cae029591   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -998,6 +998,60 @@ function renderPatch(st, opts) {
   const fmPh = [0, 0, 0, 0], fmOut = [0, 0, 0, 0];
   let fmFbPrev = 0, fmPrevShot = -1;
   const fmModDepth = st.fmIndex * 6, fmFbAmt = st.fmFeedback * 5;
+  /*
+   * THE OPERATORS RUN AT 2x AND ARE DECIMATED THROUGH A REAL FILTER.
+   *
+   * They were four bare `Math.sin` phase accumulators at SR with nothing above Nyquist removed, so
+   * every sideband FM puts up there folded back as an inharmonic image. Measured downstream in
+   * CrunchyBGM across the twelve records on this wave: 0.5% fold-over at MIDI 60 and 23% at MIDI
+   * 84, growing ~8.7 dB/octave, against a real four-operator synth (a TX81Z, read from a CC0
+   * library) whose off-grid share is near-flat at 1.5 dB/octave. It is the measured cause of "FM
+   * sounds harsh" — fold-over is inharmonic, which is what harsh sounds like.
+   *
+   * THE DECIMATOR IS THE DESIGN DECISION, NOT THE OVERSAMPLING FACTOR, and the numbers say so:
+   *
+   *     decimator                       gain at 2x   at 4x
+   *     brick wall (the ceiling)          16.7 dB    51.8 dB
+   *     boxcar, i.e. `driveOS`'s method    4.7 dB     7.5 dB
+   *     FIR 63 taps                       14.3 dB    13.2 dB
+   *     FIR 127 taps                      16.5 dB    14.5 dB
+   *     FIR 255 taps                      16.7 dB    18.3 dB
+   *
+   * Three things in that table. **2x is SATURATED at 16.7 dB** — that is its ceiling and not a
+   * filter limitation, so 127 taps reaches all but 0.2 dB of what is available and 255 doubles the
+   * cost for nothing. **Averaging is not a lowpass**: a boxcar's nulls sit at multiples of SR, so
+   * it barely touches the region just above the base Nyquist, which is exactly where the fold-over
+   * is — the 7.5 dB it buys is about what retuning the patches buys. And **a FIXED filter gets
+   * WORSE as the rate rises** (63 taps: 14.3 at 2x, 13.2 at 4x), because the cutoff moves down to
+   * 0.5/O while the transition band does not narrow with it. So 4x is not "more of the same": the
+   * 51.8 dB ceiling there needs a filter far past 255 taps, which is not something to run per
+   * sample. 2x with a proper filter beats 4x with this one.
+   *
+   * Windowed sinc, Blackman, 127 taps, cutoff at the base Nyquist. Causal, so it costs a fixed
+   * ~1.4 ms of group delay on this wave alone; a delay does not change a magnitude spectrum, so
+   * the measured figure holds, and it is far under any onset that matters. The delay line resets
+   * per shot exactly as `fmPh` does, or a note inherits the tail of the one before it.
+   *
+   * `tests/measure-fmalias.mjs` in CrunchyBGM prints all of the above and takes
+   * `--decim=brick|box|fir --taps=N`, so the choice is reproducible rather than remembered.
+   */
+  const FM_OS = 2;
+  const FM_TAPS = 127;
+  const fmH = new Float64Array(FM_TAPS);
+  if (isFM4) {
+    const H = (FM_TAPS - 1) >> 1, fc = 0.5 / FM_OS;
+    let hs = 0;
+    for (let t = 0; t < FM_TAPS; t++) {
+      const m = t - H;
+      const sinc = m === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * m) / (Math.PI * m);
+      const w = 0.42 - 0.5 * Math.cos(2 * Math.PI * t / (FM_TAPS - 1))
+              + 0.08 * Math.cos(4 * Math.PI * t / (FM_TAPS - 1));
+      fmH[t] = sinc * w; hs += fmH[t];
+    }
+    for (let t = 0; t < FM_TAPS; t++) fmH[t] /= hs;
+  }
+  const fmHist = new Float64Array(FM_TAPS);   // oversampled history, newest at fmHistI
+  let fmHistI = 0;
   const fmAlg = FM_ALGOS[Math.round(st.fmAlgo)] || FM_ALGOS[0];
   const fmMods = fmAlg.mods, fmCarr = fmAlg.carriers;
 
@@ -1143,20 +1197,35 @@ function renderPatch(st, opts) {
     } else if (isSpeech) {
       const v = speechBuf[i]; oscL = v; oscR = v;     // prebuilt speech utterance (mono)
     } else if (isFM4) {
-      if (shotIdx !== fmPrevShot) { fmPrevShot = shotIdx; fmPh[0] = fmPh[1] = fmPh[2] = fmPh[3] = 0; fmFbPrev = 0; }
-      let s3 = 0;
-      for (let oi = 3; oi >= 0; oi--) {                // higher ops first (they modulate lower ops)
-        let modIn = oi === 3 ? fmFbAmt * fmFbPrev : 0;
-        const md = fmMods[oi];
-        for (let m = 0; m < md.length; m++) modIn += fmOut[md[m]];
-        const raw = Math.sin(2 * Math.PI * fmPh[oi] + modIn);
-        fmPh[oi] += fOsc * fmRatio[oi] / SR; if (fmPh[oi] >= 1) fmPh[oi] -= 1;
-        if (oi === 3) s3 = raw;
-        fmOut[oi] = fmCarr.indexOf(oi) >= 0 ? raw : raw * fmModDepth;   // carrier = audio; modulator = radians
+      if (shotIdx !== fmPrevShot) {
+        fmPrevShot = shotIdx; fmPh[0] = fmPh[1] = fmPh[2] = fmPh[3] = 0; fmFbPrev = 0;
+        fmHist.fill(0); fmHistI = 0;                  // …and the decimator's tail, or the note
+      }                                               // inherits the end of the previous one
+      // FM_OS operator updates per OUTPUT sample, each pushed into the decimator's history. The
+      // phase increment is per OVERSAMPLED sample, which is the whole point.
+      for (let q = 0; q < FM_OS; q++) {
+        let s3 = 0;
+        for (let oi = 3; oi >= 0; oi--) {              // higher ops first (they modulate lower ops)
+          let modIn = oi === 3 ? fmFbAmt * fmFbPrev : 0;
+          const md = fmMods[oi];
+          for (let m = 0; m < md.length; m++) modIn += fmOut[md[m]];
+          const raw = Math.sin(2 * Math.PI * fmPh[oi] + modIn);
+          fmPh[oi] += fOsc * fmRatio[oi] / (SR * FM_OS); if (fmPh[oi] >= 1) fmPh[oi] -= 1;
+          if (oi === 3) s3 = raw;
+          fmOut[oi] = fmCarr.indexOf(oi) >= 0 ? raw : raw * fmModDepth;  // carrier = audio; modulator = radians
+        }
+        fmFbPrev = s3;
+        let v = 0; for (let c = 0; c < fmCarr.length; c++) v += fmOut[fmCarr[c]];
+        fmHist[fmHistI] = v / fmCarr.length;
+        fmHistI = fmHistI + 1 >= FM_TAPS ? 0 : fmHistI + 1;
       }
-      fmFbPrev = s3;
-      let y = 0; for (let c = 0; c < fmCarr.length; c++) y += fmOut[fmCarr[c]];
-      y /= fmCarr.length;
+      // Polyphase in effect: the filter is evaluated once per OUTPUT sample, not once per
+      // oversampled one, so the cost is FM_TAPS multiply-adds a sample rather than FM_OS times it.
+      let y = 0;
+      for (let t = 0; t < FM_TAPS; t++) {
+        let j = fmHistI - 1 - t; if (j < 0) j += FM_TAPS;
+        y += fmH[t] * fmHist[j];
+      }
       oscL = y; oscR = y;                             // mono, centered
     } else {
       // Wave-Morph blend factor at this sample: A→B start (morph) plus a sweep over the sound's
@@ -1664,8 +1733,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.1.0",
-  BUILT: "f4422e7-dirty",
-  SHA256: "cc78d2fb9eff19afc4b843178ae63d86c8ec7b4bc349318c7ebf40ab64c2b578",
+  BUILT: "3d80175-dirty",
+  SHA256: "1f73fa2e2bdb170a9269b5e8aa28cccf218d70c12b08761f53e7ce3cae029591",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
