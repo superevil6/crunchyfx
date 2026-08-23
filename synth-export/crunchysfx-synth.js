@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (f76c394)
+ *    source   crunchysfx v1.1.0 (bf058a2 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   3268b2fa5e5b1002e42f5339a9733b44a57ccece22ba04b4f6a5d7c1eac718d1   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   1568c4a44da3ede1b1a3f92ed4d083b4451b8e1ee49256b3093665e440df1bef   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -1073,7 +1073,11 @@ function renderPatch(st, opts) {
     const prog = slot > 0 ? Math.min(1, lt / slot) : 0;
 
     const sweepMul = Math.pow(2, sweep * 4 * prog);
-    const vib = st.vibDepth * Math.sin(vibPhase);
+    // Vibrato blooms in over `vibOnset` seconds (per shot, via lt). Default 0 → onset=1 → byte-
+    // identical. A short note otherwise inherits vibrato's first half-cycle as a mean-pitch offset
+    // (sin starts at 0 rising), so it lands sharp; ramping the depth from 0 keeps the onset on pitch.
+    const vibOn = st.vibOnset > 0 ? Math.min(1, lt / st.vibOnset) : 1;
+    const vib = st.vibDepth * Math.sin(vibPhase) * vibOn;
     // arpeggio: each repeat shot steps arpStep semitones (default 0 → ×1, so unchanged)
     const arpMul = st.arpStep ? Math.pow(2, st.arpStep * shotIdx / 12) : 1;
     const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5) * arpMul;
@@ -1582,6 +1586,7 @@ const PARAMS = [
   ["sweep",      "Pitch sweep",-1, 1, 0.01, 0, "",  "Oscillator"],
   ["vibDepth",   "Vibrato",    0, 1, 0.01, 0, "",   "Oscillator"],
   ["vibRate",    "Vib rate",   0, 40, 0.1, 6, "Hz", "Oscillator"],
+  ["vibOnset",   "Vib onset",  0, 1, 0.01, 0, "s",  "Oscillator"],
   ["unison",     "Unison",     1, 7, 1, 1, "v",     "Oscillator"],
   ["detune",     "Detune",     0, 50, 0.5, 12, "ct","Oscillator"],
   // Pulse width + PWM (applies to the pulse wave); pluck damping (Karplus-Strong). These live in
@@ -1733,8 +1738,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.1.0",
-  BUILT: "f76c394",
-  SHA256: "3268b2fa5e5b1002e42f5339a9733b44a57ccece22ba04b4f6a5d7c1eac718d1",
+  BUILT: "bf058a2-dirty",
+  SHA256: "1568c4a44da3ede1b1a3f92ed4d083b4451b8e1ee49256b3093665e440df1bef",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

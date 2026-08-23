@@ -286,7 +286,11 @@ function renderPatch(st, opts) {
     const prog = slot > 0 ? Math.min(1, lt / slot) : 0;
 
     const sweepMul = Math.pow(2, sweep * 4 * prog);
-    const vib = st.vibDepth * Math.sin(vibPhase);
+    // Vibrato blooms in over `vibOnset` seconds (per shot, via lt). Default 0 → onset=1 → byte-
+    // identical. A short note otherwise inherits vibrato's first half-cycle as a mean-pitch offset
+    // (sin starts at 0 rising), so it lands sharp; ramping the depth from 0 keeps the onset on pitch.
+    const vibOn = st.vibOnset > 0 ? Math.min(1, lt / st.vibOnset) : 1;
+    const vib = st.vibDepth * Math.sin(vibPhase) * vibOn;
     // arpeggio: each repeat shot steps arpStep semitones (default 0 → ×1, so unchanged)
     const arpMul = st.arpStep ? Math.pow(2, st.arpStep * shotIdx / 12) : 1;
     const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5) * arpMul;
