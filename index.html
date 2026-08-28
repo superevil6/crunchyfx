@@ -44,7 +44,7 @@
   <button id="rand" class="accent2">🎲 Randomize</button>
   <button id="breed" class="accent2">🧬 Breed</button>
   <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets">⚒ Foundry</button>
-  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound (footstep 1–8) and export them all">📦 Variations</button>
+  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound — or your whole sequence — and export them all">📦 Variations</button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
       <option value="22050">22 kHz</option>
@@ -2495,7 +2495,8 @@ varModal.hidden = true;
 varModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head"><h2>📦 Variation pack</h2>' +
-      '<span class="hint">N takes on the current sound — same character, slightly varied. ▶ hears one · double-click loads it into the editor.</span>' +
+      '<span class="hint">N takes on a sound — or your whole sequence — same character, slightly varied. ▶ hears one · double-click adopts it.</span>' +
+      '<span id="varMode" class="hint" style="color:#ff7a45"></span>' +
       '<button id="varClose">✕ Close</button></div>' +
     '<div class="var-ctl">' +
       '<label>Count <select id="varCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select></label>' +
@@ -2514,30 +2515,58 @@ const varCountEl = varModal.querySelector("#varCount");
 const varAmtEl = varModal.querySelector("#varAmt");
 const varNameEl = varModal.querySelector("#varName");
 const varMsg = varModal.querySelector("#varMsg");
+const varModeEl = varModal.querySelector("#varMode");
+// A "variation item" is a single genome, OR — when a sequence is built — an ARRAY of genomes (the
+// sequence's steps, each jittered), which renders as the concatenated sequence. So the Variations
+// tool operates on a built sequence, not just the last editor sound.
+function renderVariation(item) {
+  if (!Array.isArray(item)) return withState(item, () => render());
+  const parts = item.map((g) => withState(g, () => render()));   // same concat as renderSequenceBuffers
+  const gapN = Math.round(seqGap * SR);
+  const total = parts.reduce((n, r) => n + r.L.length, 0) + gapN * Math.max(0, parts.length - 1);
+  const L = new Float32Array(total), R = new Float32Array(total);
+  let off = 0;
+  parts.forEach((r, i) => { L.set(r.L, off); R.set(r.R, off); off += r.L.length + (i < parts.length - 1 ? gapN : 0); });
+  return { L, R };
+}
 function seedVariations() {
-  const n = +varCountEl.value, amt = +varAmtEl.value, seed = genomeFromState();
-  varGenomes = [seed];                                     // #1 = the original
-  for (let i = 1; i < n; i++) varGenomes.push(breedChild([seed], amt));   // rest = same-engine jitters
+  const n = +varCountEl.value, amt = +varAmtEl.value;
+  if (sequence.length) {                                   // vary the whole SEQUENCE
+    varGenomes = [sequence.map((s) => s.genome)];          // #1 = the sequence exactly as built
+    for (let i = 1; i < n; i++) varGenomes.push(sequence.map((s) => breedChild([s.genome], amt)));   // rest = every step jittered
+  } else {                                                 // vary the single editor sound
+    const seed = genomeFromState();
+    varGenomes = [seed];
+    for (let i = 1; i < n; i++) varGenomes.push(breedChild([seed], amt));   // rest = same-engine jitters
+  }
+  varModeEl.textContent = sequence.length ? "· varying your " + sequence.length + "-step sequence (each file = the whole sequence)" : "";
   renderVarGrid();
 }
 function renderVarGrid() {
   varGrid.innerHTML = "";
-  varGenomes.forEach((g, i) => {
-    const { L, R } = withState(g, () => render());
+  const seq = sequence.length > 0;
+  varGenomes.forEach((item, i) => {
+    const { L, R } = renderVariation(item);
     const cell = document.createElement("div"); cell.className = "breed-cell";
     const cv = document.createElement("canvas"); cv.width = 280; cv.height = 62; cell.appendChild(cv);
     const bar = document.createElement("div"); bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">#' + (i + 1) + (i === 0 ? " · original" : "") + '</span>';
+    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">' + (seq ? "seq " : "#") + (i + 1) + (i === 0 ? " · original" : "") + '</span>';
     cell.appendChild(bar); varGrid.appendChild(cell); drawMini(cv, L, R);
-    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = withState(g, () => render()); playBuffer(r.L, r.R); });
-    cell.addEventListener("dblclick", () => { applyPreset(g, "Variation"); varModal.hidden = true; });
+    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = renderVariation(item); playBuffer(r.L, r.R); });
+    cell.addEventListener("dblclick", () => {
+      if (Array.isArray(item)) {                           // adopt a sequence variant → replace the built sequence
+        sequence = item.map((g, idx) => ({ genome: g, label: (sequence[idx] && sequence[idx].label) || ("Step " + (idx + 1)) }));
+        renderSeq(); varModal.hidden = true; playSequence();
+      } else { applyPreset(item, "Variation"); varModal.hidden = true; }
+    });
   });
 }
 function buildPackFiles() {
-  const base = sanitizeFilename(varNameEl.value || (seqLabel && seqLabel !== "Sound" ? seqLabel : "variation"));
+  const seq = sequence.length > 0;
+  const base = sanitizeFilename(varNameEl.value || (seqLabel && seqLabel !== "Sound" ? seqLabel : (seq ? "sequence" : "variation")));
   const pad = Math.max(2, String(varGenomes.length).length);
-  return varGenomes.map((g, i) => {
-    const { L, R } = withState(g, () => render());
+  return varGenomes.map((item, i) => {
+    const { L, R } = renderVariation(item);
     const buf = encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: base + " " + (i + 1) });
     return { name: base + "_" + String(i + 1).padStart(pad, "0") + ".wav", data: new Uint8Array(buf) };
   });
