@@ -49,6 +49,23 @@ function renderPatch(st, opts) {
   const baseCut = st.cutoff;
   const filtEnv = st.filtEnv;
   const fmode = Math.round(st.filterMode);   // 0 LP, 1 HP, 2 BP, 3 notch, 4 peak
+  /* THE MISSING PRIMITIVE FOR A WAH. `filtEnv` sweeps the cutoff with the AMP envelope, which on
+   * anything with a fast attack is over in tens of milliseconds — a spectral click, not a sweep. A
+   * wah pedal moves the cutoff on its own clock, independently of the note, and nothing here could
+   * do that: measured on a guitar patch, `filtEnv` at full moves the spectral centroid 1.19x on an
+   * undriven voice and 1.02x on a driven one, against a 1.05x control that has no filter envelope
+   * at all. (Drive is applied AFTER the filter, so a distorted voice flattens the peak entirely.)
+   *
+   * DEPTH 0 IS EXACTLY THE OLD EXPRESSION. The term below is added inside `Math.pow(2, …)`, and
+   * adding an exact 0 to a float is exact — so every preset that does not ask for a wah renders
+   * bit-for-bit as it did, by construction rather than by test.
+   *
+   * -cos, NOT sin, so a note starts heel-down and sweeps UP. A sine starts mid-travel and moving in
+   * an arbitrary direction, which is the shape `vibOnset` was added to fix for the vibrato: over a
+   * short note there is no second half to cancel the first, so the note simply sits somewhere the
+   * player never put it. */
+  const wahRate = st.wahRate || 0, wahDepth = st.wahDepth || 0;
+  const wahOn = wahRate > 0 && wahDepth > 0;
 
   // deterministic LCG so exports are reproducible
   let seed = 22222;
@@ -505,7 +522,11 @@ function renderPatch(st, opts) {
     // (Zavalishin). Unconditionally stable at ALL cutoffs; the old Chamberlin SVF
     // self-oscillated at Nyquist once cutoff neared SR/4, which turned bright sounds
     // into 22 kHz buzz that plays back as clicks/silence.
-    let cut = baseCut * Math.pow(2, filtEnv * 3 * prog);
+    // WAH_OCTAVES 1.5: a Cry Baby sweeps roughly 400 Hz to 2 kHz, which is a little over two
+    // octaves peak to peak — so ±1.5 from centre at full depth, and the record picks its own centre
+    // with `cutoff`.
+    const wah = wahOn ? wahDepth * 1.5 * -Math.cos(2 * Math.PI * wahRate * lt) : 0;
+    let cut = baseCut * Math.pow(2, filtEnv * 3 * prog + wah);
     cut = Math.min(Math.max(cut, 20), 20000);
     const g = Math.tan(Math.PI * cut / SR);
     const k = Math.max(2 - 1.9 * st.reso, 0.1);       // damping = 1/Q

@@ -269,6 +269,11 @@ const PARAMS = [
   ["cutoff",     "Cutoff",     40, 12000, 1, 8000, "Hz", "Filter"],
   ["reso",       "Resonance",  0, 0.95, 0.01, 0.1, "",   "Filter"],
   ["filtEnv",    "Filter env", -1, 1, 0.01, 0, "",       "Filter"],
+  // A wah: the cutoff on its own clock rather than the note's. `filtEnv` above sweeps with the AMP
+  // envelope, so on anything with a fast attack it is over in milliseconds — a spectral click. Both
+  // default to 0 and the term is added inside an exponent, so every existing preset is bit-identical.
+  ["wahRate",    "Wah rate",   0, 8, 0.01, 0, "Hz",     "Filter"],
+  ["wahDepth",   "Wah depth",  0, 1, 0.01, 0, "",       "Filter"],
   // Crunch
   ["drive",      "Drive",      0, 1, 0.01, 0.1, "",  "Crunch"],
   ["driveOS",    "Drive OS",   1, 8, 1, 1, "x",     "Crunch"],
