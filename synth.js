@@ -161,12 +161,34 @@ function renderPatch(st, opts) {
   const F_N = 3, fmB0 = new Float64Array(F_N), fmA1 = new Float64Array(F_N), fmA2 = new Float64Array(F_N);
   const fmX1 = new Float64Array(F_N), fmX2 = new Float64Array(F_N), fmY1 = new Float64Array(F_N), fmY2 = new Float64Array(F_N);
   const fmBreath = st.formantBreath;
+  // Source character (both 0 = original saw source → byte-identical). fmTilt darkens the source
+  // (one-pole LP: saw → mellow glottal pulse); fmRough adds subharmonic AM + period jitter (growl).
+  const fmTilt = isFormant ? Math.max(0, Math.min(1, st.formantTilt)) : 0;
+  const fmRough = isFormant ? Math.max(0, Math.min(1, st.formantRough)) : 0;
+  let fmLp = 0, fmSubPh = 0, fmJit = 1;   // tilt LP state, subharmonic-AM phase, per-period pitch jitter
   const fmQ = 4 + Math.max(0, Math.min(1, st.formantQ)) * 16;   // formant sharpness
   const fmLfoRate = st.formantLfoRate, fmLfoDepth = st.formantLfoDepth;
   const fmLfoOn = isFormant && fmLfoRate > 0 && fmLfoDepth > 0;    // vowel morphs over time
-  // Static vowel → coeffs are constant, precompute once (unchanged path). LFO on → recompute
-  // per sample from the morphing vowel (in the osc branch below).
-  if (isFormant && !fmLfoOn) computeFormantCoeffs(st.formantVowel, st.formantSize, fmQ, fmB0, fmA1, fmA2);
+  // "Say" text → morph the vowel through the vowels you typed (overrides the LFO). fmPathN>=2 means
+  // move over the sound's duration; ==1 means a single held vowel (static, precomputed like below).
+  const fmPath = isFormant ? formantVowelPath(st.speechText) : [];
+  const fmPathN = fmPath.length;
+  // Consonants: the vowel path can't shape them, so a WORD (text with any consonant) drives a phoneme
+  // TIMELINE that the formant loop below speaks with its OWN source — so growl/tilt/breath AND pitch
+  // (sweep/vibrato) carry through: it's the same voice, not a separate robot. Only-vowel text (aeiou,
+  // ooo) keeps the sustained vowel-morph path above.
+  const fmSayText = isFormant ? String(st.speechText || "") : "";
+  const fmSpeak = isFormant && /[bcdfghjklmnpqrstvwxyz]/i.test(fmSayText);
+  let fmPlan = null;
+  if (fmSpeak) {
+    const rate = Math.max(1, Math.min(4, speechLen(fmSayText) / Math.max(1, n)));   // natural pace; speed up only if the word overruns
+    fmPlan = buildFormantSpeechPlan(n, fmSayText, rate);
+  }
+  const fmCf = [500, 1500, 2500];   // gliding formant freqs (speak mode)
+  let fmVoi = 1, fmAmp = 0;         // eased voicing + amplitude (speak mode)
+  // Static vowel → coeffs are constant, precompute once (unchanged path). LFO / multi-vowel Say / a
+  // spoken word → recompute per sample from the morphing target (in the osc branch below).
+  if (isFormant && !fmLfoOn && !fmSpeak && fmPathN < 2) computeFormantCoeffs(fmPathN === 1 ? fmPath[0] : st.formantVowel, st.formantSize, fmQ, fmB0, fmA1, fmA2);
   // Bubble / water (wave "bubble"): built up front into a stereo buffer, then read per-sample.
   const isBubble = waveType === 14;
   let bubL = null, bubR = null;
@@ -392,11 +414,26 @@ function renderPatch(st, opts) {
     } else if (isGranular) {
       oscL = granL[i]; oscR = granR[i];               // prebuilt grain cloud (already stereo)
     } else if (isFormant) {
-      // buzz source (band-limited saw) + optional breath noise, through 3 formant resonators
-      if (fmLfoOn) computeFormantCoeffs(st.formantVowel + fmLfoDepth * Math.sin(2 * Math.PI * fmLfoRate * t), st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      // Pick the formant coeffs + source voicing/amp for this sample. Non-speak modes leave voi=1,
+      // ampMul=1 → byte-identical to before. Every mode's source is the SAME buzz below, so its
+      // pitch tracks fOsc (sweep/vibrato) — a spoken word bends too, unlike the old speech buffer.
+      let voi = 1, ampMul = 1;
+      if (fmPlan) {                                     // speaking a word: glide toward phoneme targets
+        fmCf[0] += (fmPlan.f1[i] - fmCf[0]) * 0.005; fmCf[1] += (fmPlan.f2[i] - fmCf[1]) * 0.005; fmCf[2] += (fmPlan.f3[i] - fmCf[2]) * 0.005;
+        fmVoi += (fmPlan.voi[i] - fmVoi) * 0.02; fmAmp += (fmPlan.amp[i] - fmAmp) * 0.01;
+        voi = fmVoi; ampMul = fmAmp;
+        computeFormantCoeffsF(fmCf[0], fmCf[1], fmCf[2], st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      } else if (fmPathN >= 2) {                        // "Say" pure vowels: morph over the duration
+        const x = (i / n) * (fmPathN - 1), k = Math.min(fmPathN - 2, x | 0);
+        computeFormantCoeffs(fmPath[k] + (fmPath[k + 1] - fmPath[k]) * (x - k), st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      } else if (fmLfoOn) computeFormantCoeffs(st.formantVowel + fmLfoDepth * Math.sin(2 * Math.PI * fmLfoRate * t), st.formantSize, fmQ, fmB0, fmA1, fmA2);
       const dt = fOsc / SR;
-      fmPhase += dt; if (fmPhase >= 1) fmPhase -= 1;
-      let src = waveform(2, fmPhase, dt, 0.25);
+      fmPhase += dt * fmJit;                            // fmJit=1 unless Growl engaged (per-period jitter)
+      if (fmPhase >= 1) { fmPhase -= 1; if (fmRough > 0) fmJit = 1 + (rnd() * 2 - 1) * fmRough * 0.06; }
+      let buzz = waveform(2, fmPhase, dt, 0.25);        // voiced glottal source (saw)
+      if (fmTilt > 0) { fmLp += (1 - fmTilt * 0.97) * (buzz - fmLp); buzz = fmLp * (1 + fmTilt); }   // darken → mellow
+      if (fmRough > 0) { fmSubPh += dt * 0.5; if (fmSubPh >= 1) fmSubPh -= 1; buzz *= 1 - fmRough * 0.9 * (0.5 - 0.5 * Math.cos(2 * Math.PI * fmSubPh)); }  // growl
+      let src = voi >= 1 ? buzz : voi * buzz + (1 - voi) * (rnd() * 2 - 1);   // unvoiced phoneme (fricative/stop burst) → noise
       if (fmBreath > 0) src = src * (1 - fmBreath) + (rnd() * 2 - 1) * fmBreath;
       let y = 0;
       for (let fi = 0; fi < F_N; fi++) {
@@ -404,7 +441,7 @@ function renderPatch(st, opts) {
         fmX2[fi] = fmX1[fi]; fmX1[fi] = src; fmY2[fi] = fmY1[fi]; fmY1[fi] = o;
         y += o * FORMANT_GAIN[fi];
       }
-      oscL = y * 1.6; oscR = y * 1.6;                 // mono, centered; makeup for a healthy level
+      oscL = y * 1.6 * ampMul; oscR = y * 1.6 * ampMul;   // mono, centered; makeup for a healthy level
     } else if (isBubble) {
       oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
     } else if (isParticle) {

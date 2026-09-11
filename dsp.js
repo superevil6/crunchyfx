@@ -581,6 +581,34 @@ function makeSpeech(n, text, freq, size, rateScale, seed) {
   return out;
 }
 
+// Natural length (samples) of an utterance at rate 1 — used to fit spoken text to a sound's duration.
+function speechLen(text) {
+  let nat = 0;
+  for (const key of textToPhonemes(text)) {
+    if (key === "_") { nat += 0.05 * SR; continue; }
+    const sp = SPEECH_PHON[key]; if (!sp) continue;
+    if (sp.stop) nat += 0.045 * SR;
+    nat += Math.max(4, (sp.d || 120) / 1000 * SR);
+  }
+  return nat;
+}
+
+// Parse a word into the sequence of vowel positions (0..1 across A E I O U) the formant engine
+// morphs through, so a voice can "say" the vowels you type (raaawr → o-a, wooo → held o, hello →
+// e-o). Consonants are ignored — this engine has no consonants; for full words use the Speech
+// engine. Consecutive identical vowels collapse to one held target. Returns [] when text has none.
+const VOWEL_POS = { a: 0.0, e: 0.25, i: 0.5, o: 0.75, u: 1.0, y: 0.5 };
+function formantVowelPath(text) {
+  const out = [];
+  const s = String(text || "").toLowerCase();
+  for (let k = 0; k < s.length; k++) {
+    const p = VOWEL_POS[s[k]];
+    if (p === undefined) continue;
+    if (out.length === 0 || out[out.length - 1] !== p) out.push(p);
+  }
+  return out;
+}
+
 // Fill the 3 formant bandpass coefficient sets for a vowel (0..1 morph A→E→I→O→U), voice size, and
 // Q. Shared by the static precompute and the per-sample vowel-LFO path (RBJ bandpass; b1=0, b2=−b0).
 function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
@@ -592,6 +620,45 @@ function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
     const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
     b0[fi] = alpha / a0; a1[fi] = -2 * Math.cos(w0) / a0; a2[fi] = (1 - alpha) / a0;
   }
+}
+
+// Same, but from EXPLICIT formant freqs (for speaking — consonant/nasal targets aren't on the
+// A→U vowel line). size scales them (voice size). RBJ bandpass; b1=0, b2=−b0.
+function computeFormantCoeffsF(f1, f2, f3, size, Q, b0, a1, a2) {
+  const fv = [f1, f2, f3];
+  for (let fi = 0; fi < 3; fi++) {
+    const fc = Math.max(60, Math.min(0.45 * SR, fv[fi] * size));
+    const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+    b0[fi] = alpha / a0; a1[fi] = -2 * Math.cos(w0) / a0; a2[fi] = (1 - alpha) / a0;
+  }
+}
+
+// Per-sample control timeline for the formant engine to SPEAK text: target formant freqs (F1/F2/F3,
+// unscaled), voicing (1 buzz / 0 noise / ~0.35 mix), and amplitude — same phoneme durations/stops/
+// glides as makeSpeech, but the formant loop supplies its OWN source, so its growl/tilt/breath AND
+// pitch tracking carry through (unlike makeSpeech, which is a fixed-pitch prebuilt buffer). rate>1
+// speeds a long word to fit; stops insert a closure silence then the burst falls out of the phoneme.
+function buildFormantSpeechPlan(n, text, rate) {
+  const f1 = new Float32Array(n), f2 = new Float32Array(n), f3 = new Float32Array(n),
+        voi = new Float32Array(n), amp = new Float32Array(n);
+  const phon = textToPhonemes(text), rs = Math.max(0.25, rate);
+  let idx = 0, last = [500, 1500, 2500];
+  const hold = (cnt, v) => { for (let k = 0; k < cnt && idx < n; k++, idx++) { f1[idx] = last[0]; f2[idx] = last[1]; f3[idx] = last[2]; voi[idx] = v; amp[idx] = 0; } };
+  for (const key of phon) {
+    if (key === "_") { hold(Math.floor(0.05 * SR / rs), 1); continue; }              // word gap
+    const sp = SPEECH_PHON[key]; if (!sp) continue;
+    if (sp.stop) hold(Math.floor(0.045 * SR / rs), 0);                               // stop closure = silence
+    const dur = Math.max(4, Math.floor((sp.d || 120) / 1000 * SR / rs));
+    const t0 = sp.f, t1 = sp.to || sp.f, v = sp.v == null ? 1 : sp.v, a = sp.a == null ? 1 : sp.a;
+    for (let k = 0; k < dur && idx < n; k++, idx++) {
+      const fr = k / dur;
+      f1[idx] = t0[0] + (t1[0] - t0[0]) * fr; f2[idx] = t0[1] + (t1[1] - t0[1]) * fr; f3[idx] = t0[2] + (t1[2] - t0[2]) * fr;
+      voi[idx] = v; amp[idx] = a;
+    }
+    last = sp.to || sp.f;
+  }
+  for (; idx < n; idx++) { f1[idx] = last[0]; f2[idx] = last[1]; f3[idx] = last[2]; voi[idx] = 0; amp[idx] = 0; }   // trailing silence
+  return { f1, f2, f3, voi, amp };
 }
 
 // ---------- Master finishing stage ----------

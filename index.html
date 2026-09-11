@@ -200,6 +200,12 @@ const PARAMS = [
   ["formantSize", "Voice size", 0.5, 2, 0.01, 1, "",   "Formant"],
   ["formantQ",    "Formant Q",  0, 1, 0.01, 0.5, "",   "Formant"],
   ["formantBreath","Breath",    0, 1, 0.01, 0, "",     "Formant"],
+  // Source character — the missing lever. The buzz source used to be a fixed saw, so patches only
+  // differed by vowel/size and converged. Tilt darkens the source (saw → mellow/rounded glottal
+  // pulse: coos, oohs, soft voices); Rough adds subharmonic AM + period jitter (creak / vocal fry /
+  // growl). Both default 0 = the original saw, so existing presets stay byte-identical.
+  ["formantTilt", "Source tone",0, 1, 0.01, 0, "",     "Formant"],
+  ["formantRough","Growl",      0, 1, 0.01, 0, "",     "Formant"],
   // Vowel LFO — slowly morphs the vowel over time so the voice "talks" (aa-ee-oo). Both default 0
   // (off) so existing formant presets are unchanged.
   ["formantLfoRate","Vowel rate",0, 8, 0.01, 0, "Hz",  "Formant"],
@@ -1218,6 +1224,29 @@ if (speechPanel) {
 }
 function syncSpeechInput() { if (speechInput) speechInput.value = state.speechText; }
 
+// ---------- Formant "Say" text box ----------
+// The formant/vocal engine has no consonants, but you can type the VOWELS the voice should move
+// through (raaawr → o-a, wooo → held o, hello → e-o). Shares state.speechText with the Speech
+// engine (already threaded through the patch), so it travels with presets/share links. When text
+// is present it OVERRIDES the sinusoidal Vowel LFO — which is what makes the robotic "yo-ya" chant.
+const formantPanel = panels.querySelector('[data-group="Formant"]');
+let formantSay = null;
+if (formantPanel) {
+  formantSay = document.createElement("input");
+  formantSay.id = "formantSay"; formantSay.className = "speech-input";
+  formantSay.placeholder = "Say… (grr, hello, roar)"; formantSay.spellcheck = false;
+  formantSay.value = state.speechText;
+  formantPanel.querySelector("h2").insertAdjacentElement("afterend", formantSay);
+  const fhint = document.createElement("div");
+  fhint.className = "hint";
+  fhint.textContent = "Type words — this voice speaks them in its own character, and the pitch (sweep/vibrato) bends the word. Only-vowel text (aeiou, ooo) holds/glides. Odd spellings may mishear — respell phonetically.";
+  formantPanel.appendChild(fhint);
+  const commitSay = () => { state.speechText = formantSay.value; play("Say"); };   // stays on the formant engine
+  formantSay.addEventListener("change", commitSay);
+  formantSay.addEventListener("keydown", (e) => { if (e.key === "Enter") formantSay.blur(); });
+}
+function syncFormantSay() { if (formantSay) formantSay.value = state.speechText; }
+
 // ---------- Load-your-own-IR (the "Custom IR" convolution space) ----------
 // The convolution engine convolves the sound with an impulse response; "Custom IR" swaps the
 // synthesized space (Room/Hall/Plate/Spring) for a real .wav you load — a recorded room, a spring
@@ -1316,6 +1345,7 @@ function syncUI() {
   }
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
   if (typeof syncSpeechInput === "function") syncSpeechInput();     // restore the speech text box
+  if (typeof syncFormantSay === "function") syncFormantSay();       // restore the formant "Say" box
   if (typeof syncWaveButtons === "function") syncWaveButtons();     // light the active engine button
   if (typeof highlightConsole === "function") highlightConsole(null); // deselect console skin on load (applyConsole re-lights after)
   updateWavePanels();                                               // show only the current wave's panels

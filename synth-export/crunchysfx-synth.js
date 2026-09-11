@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (5855945 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.1.0 (a0bfe25 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   16c276566778896beeab4dfea5a4a7df0369acf45af53d35e1725ef62dd5aa09   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   7bbd79746253b08b87fbb6e2f2823be4682ddc244d20f7e0ecf744f9664dc910   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -597,6 +597,34 @@ function makeSpeech(n, text, freq, size, rateScale, seed) {
   return out;
 }
 
+// Natural length (samples) of an utterance at rate 1 — used to fit spoken text to a sound's duration.
+function speechLen(text) {
+  let nat = 0;
+  for (const key of textToPhonemes(text)) {
+    if (key === "_") { nat += 0.05 * SR; continue; }
+    const sp = SPEECH_PHON[key]; if (!sp) continue;
+    if (sp.stop) nat += 0.045 * SR;
+    nat += Math.max(4, (sp.d || 120) / 1000 * SR);
+  }
+  return nat;
+}
+
+// Parse a word into the sequence of vowel positions (0..1 across A E I O U) the formant engine
+// morphs through, so a voice can "say" the vowels you type (raaawr → o-a, wooo → held o, hello →
+// e-o). Consonants are ignored — this engine has no consonants; for full words use the Speech
+// engine. Consecutive identical vowels collapse to one held target. Returns [] when text has none.
+const VOWEL_POS = { a: 0.0, e: 0.25, i: 0.5, o: 0.75, u: 1.0, y: 0.5 };
+function formantVowelPath(text) {
+  const out = [];
+  const s = String(text || "").toLowerCase();
+  for (let k = 0; k < s.length; k++) {
+    const p = VOWEL_POS[s[k]];
+    if (p === undefined) continue;
+    if (out.length === 0 || out[out.length - 1] !== p) out.push(p);
+  }
+  return out;
+}
+
 // Fill the 3 formant bandpass coefficient sets for a vowel (0..1 morph A→E→I→O→U), voice size, and
 // Q. Shared by the static precompute and the per-sample vowel-LFO path (RBJ bandpass; b1=0, b2=−b0).
 function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
@@ -608,6 +636,45 @@ function computeFormantCoeffs(vowel, size, Q, b0, a1, a2) {
     const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
     b0[fi] = alpha / a0; a1[fi] = -2 * Math.cos(w0) / a0; a2[fi] = (1 - alpha) / a0;
   }
+}
+
+// Same, but from EXPLICIT formant freqs (for speaking — consonant/nasal targets aren't on the
+// A→U vowel line). size scales them (voice size). RBJ bandpass; b1=0, b2=−b0.
+function computeFormantCoeffsF(f1, f2, f3, size, Q, b0, a1, a2) {
+  const fv = [f1, f2, f3];
+  for (let fi = 0; fi < 3; fi++) {
+    const fc = Math.max(60, Math.min(0.45 * SR, fv[fi] * size));
+    const w0 = 2 * Math.PI * fc / SR, alpha = Math.sin(w0) / (2 * Q), a0 = 1 + alpha;
+    b0[fi] = alpha / a0; a1[fi] = -2 * Math.cos(w0) / a0; a2[fi] = (1 - alpha) / a0;
+  }
+}
+
+// Per-sample control timeline for the formant engine to SPEAK text: target formant freqs (F1/F2/F3,
+// unscaled), voicing (1 buzz / 0 noise / ~0.35 mix), and amplitude — same phoneme durations/stops/
+// glides as makeSpeech, but the formant loop supplies its OWN source, so its growl/tilt/breath AND
+// pitch tracking carry through (unlike makeSpeech, which is a fixed-pitch prebuilt buffer). rate>1
+// speeds a long word to fit; stops insert a closure silence then the burst falls out of the phoneme.
+function buildFormantSpeechPlan(n, text, rate) {
+  const f1 = new Float32Array(n), f2 = new Float32Array(n), f3 = new Float32Array(n),
+        voi = new Float32Array(n), amp = new Float32Array(n);
+  const phon = textToPhonemes(text), rs = Math.max(0.25, rate);
+  let idx = 0, last = [500, 1500, 2500];
+  const hold = (cnt, v) => { for (let k = 0; k < cnt && idx < n; k++, idx++) { f1[idx] = last[0]; f2[idx] = last[1]; f3[idx] = last[2]; voi[idx] = v; amp[idx] = 0; } };
+  for (const key of phon) {
+    if (key === "_") { hold(Math.floor(0.05 * SR / rs), 1); continue; }              // word gap
+    const sp = SPEECH_PHON[key]; if (!sp) continue;
+    if (sp.stop) hold(Math.floor(0.045 * SR / rs), 0);                               // stop closure = silence
+    const dur = Math.max(4, Math.floor((sp.d || 120) / 1000 * SR / rs));
+    const t0 = sp.f, t1 = sp.to || sp.f, v = sp.v == null ? 1 : sp.v, a = sp.a == null ? 1 : sp.a;
+    for (let k = 0; k < dur && idx < n; k++, idx++) {
+      const fr = k / dur;
+      f1[idx] = t0[0] + (t1[0] - t0[0]) * fr; f2[idx] = t0[1] + (t1[1] - t0[1]) * fr; f3[idx] = t0[2] + (t1[2] - t0[2]) * fr;
+      voi[idx] = v; amp[idx] = a;
+    }
+    last = sp.to || sp.f;
+  }
+  for (; idx < n; idx++) { f1[idx] = last[0]; f2[idx] = last[1]; f3[idx] = last[2]; voi[idx] = 0; amp[idx] = 0; }   // trailing silence
+  return { f1, f2, f3, voi, amp };
 }
 
 // ---------- Master finishing stage ----------
@@ -948,12 +1015,34 @@ function renderPatch(st, opts) {
   const F_N = 3, fmB0 = new Float64Array(F_N), fmA1 = new Float64Array(F_N), fmA2 = new Float64Array(F_N);
   const fmX1 = new Float64Array(F_N), fmX2 = new Float64Array(F_N), fmY1 = new Float64Array(F_N), fmY2 = new Float64Array(F_N);
   const fmBreath = st.formantBreath;
+  // Source character (both 0 = original saw source → byte-identical). fmTilt darkens the source
+  // (one-pole LP: saw → mellow glottal pulse); fmRough adds subharmonic AM + period jitter (growl).
+  const fmTilt = isFormant ? Math.max(0, Math.min(1, st.formantTilt)) : 0;
+  const fmRough = isFormant ? Math.max(0, Math.min(1, st.formantRough)) : 0;
+  let fmLp = 0, fmSubPh = 0, fmJit = 1;   // tilt LP state, subharmonic-AM phase, per-period pitch jitter
   const fmQ = 4 + Math.max(0, Math.min(1, st.formantQ)) * 16;   // formant sharpness
   const fmLfoRate = st.formantLfoRate, fmLfoDepth = st.formantLfoDepth;
   const fmLfoOn = isFormant && fmLfoRate > 0 && fmLfoDepth > 0;    // vowel morphs over time
-  // Static vowel → coeffs are constant, precompute once (unchanged path). LFO on → recompute
-  // per sample from the morphing vowel (in the osc branch below).
-  if (isFormant && !fmLfoOn) computeFormantCoeffs(st.formantVowel, st.formantSize, fmQ, fmB0, fmA1, fmA2);
+  // "Say" text → morph the vowel through the vowels you typed (overrides the LFO). fmPathN>=2 means
+  // move over the sound's duration; ==1 means a single held vowel (static, precomputed like below).
+  const fmPath = isFormant ? formantVowelPath(st.speechText) : [];
+  const fmPathN = fmPath.length;
+  // Consonants: the vowel path can't shape them, so a WORD (text with any consonant) drives a phoneme
+  // TIMELINE that the formant loop below speaks with its OWN source — so growl/tilt/breath AND pitch
+  // (sweep/vibrato) carry through: it's the same voice, not a separate robot. Only-vowel text (aeiou,
+  // ooo) keeps the sustained vowel-morph path above.
+  const fmSayText = isFormant ? String(st.speechText || "") : "";
+  const fmSpeak = isFormant && /[bcdfghjklmnpqrstvwxyz]/i.test(fmSayText);
+  let fmPlan = null;
+  if (fmSpeak) {
+    const rate = Math.max(1, Math.min(4, speechLen(fmSayText) / Math.max(1, n)));   // natural pace; speed up only if the word overruns
+    fmPlan = buildFormantSpeechPlan(n, fmSayText, rate);
+  }
+  const fmCf = [500, 1500, 2500];   // gliding formant freqs (speak mode)
+  let fmVoi = 1, fmAmp = 0;         // eased voicing + amplitude (speak mode)
+  // Static vowel → coeffs are constant, precompute once (unchanged path). LFO / multi-vowel Say / a
+  // spoken word → recompute per sample from the morphing target (in the osc branch below).
+  if (isFormant && !fmLfoOn && !fmSpeak && fmPathN < 2) computeFormantCoeffs(fmPathN === 1 ? fmPath[0] : st.formantVowel, st.formantSize, fmQ, fmB0, fmA1, fmA2);
   // Bubble / water (wave "bubble"): built up front into a stereo buffer, then read per-sample.
   const isBubble = waveType === 14;
   let bubL = null, bubR = null;
@@ -1179,11 +1268,26 @@ function renderPatch(st, opts) {
     } else if (isGranular) {
       oscL = granL[i]; oscR = granR[i];               // prebuilt grain cloud (already stereo)
     } else if (isFormant) {
-      // buzz source (band-limited saw) + optional breath noise, through 3 formant resonators
-      if (fmLfoOn) computeFormantCoeffs(st.formantVowel + fmLfoDepth * Math.sin(2 * Math.PI * fmLfoRate * t), st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      // Pick the formant coeffs + source voicing/amp for this sample. Non-speak modes leave voi=1,
+      // ampMul=1 → byte-identical to before. Every mode's source is the SAME buzz below, so its
+      // pitch tracks fOsc (sweep/vibrato) — a spoken word bends too, unlike the old speech buffer.
+      let voi = 1, ampMul = 1;
+      if (fmPlan) {                                     // speaking a word: glide toward phoneme targets
+        fmCf[0] += (fmPlan.f1[i] - fmCf[0]) * 0.005; fmCf[1] += (fmPlan.f2[i] - fmCf[1]) * 0.005; fmCf[2] += (fmPlan.f3[i] - fmCf[2]) * 0.005;
+        fmVoi += (fmPlan.voi[i] - fmVoi) * 0.02; fmAmp += (fmPlan.amp[i] - fmAmp) * 0.01;
+        voi = fmVoi; ampMul = fmAmp;
+        computeFormantCoeffsF(fmCf[0], fmCf[1], fmCf[2], st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      } else if (fmPathN >= 2) {                        // "Say" pure vowels: morph over the duration
+        const x = (i / n) * (fmPathN - 1), k = Math.min(fmPathN - 2, x | 0);
+        computeFormantCoeffs(fmPath[k] + (fmPath[k + 1] - fmPath[k]) * (x - k), st.formantSize, fmQ, fmB0, fmA1, fmA2);
+      } else if (fmLfoOn) computeFormantCoeffs(st.formantVowel + fmLfoDepth * Math.sin(2 * Math.PI * fmLfoRate * t), st.formantSize, fmQ, fmB0, fmA1, fmA2);
       const dt = fOsc / SR;
-      fmPhase += dt; if (fmPhase >= 1) fmPhase -= 1;
-      let src = waveform(2, fmPhase, dt, 0.25);
+      fmPhase += dt * fmJit;                            // fmJit=1 unless Growl engaged (per-period jitter)
+      if (fmPhase >= 1) { fmPhase -= 1; if (fmRough > 0) fmJit = 1 + (rnd() * 2 - 1) * fmRough * 0.06; }
+      let buzz = waveform(2, fmPhase, dt, 0.25);        // voiced glottal source (saw)
+      if (fmTilt > 0) { fmLp += (1 - fmTilt * 0.97) * (buzz - fmLp); buzz = fmLp * (1 + fmTilt); }   // darken → mellow
+      if (fmRough > 0) { fmSubPh += dt * 0.5; if (fmSubPh >= 1) fmSubPh -= 1; buzz *= 1 - fmRough * 0.9 * (0.5 - 0.5 * Math.cos(2 * Math.PI * fmSubPh)); }  // growl
+      let src = voi >= 1 ? buzz : voi * buzz + (1 - voi) * (rnd() * 2 - 1);   // unvoiced phoneme (fricative/stop burst) → noise
       if (fmBreath > 0) src = src * (1 - fmBreath) + (rnd() * 2 - 1) * fmBreath;
       let y = 0;
       for (let fi = 0; fi < F_N; fi++) {
@@ -1191,7 +1295,7 @@ function renderPatch(st, opts) {
         fmX2[fi] = fmX1[fi]; fmX1[fi] = src; fmY2[fi] = fmY1[fi]; fmY1[fi] = o;
         y += o * FORMANT_GAIN[fi];
       }
-      oscL = y * 1.6; oscR = y * 1.6;                 // mono, centered; makeup for a healthy level
+      oscL = y * 1.6 * ampMul; oscR = y * 1.6 * ampMul;   // mono, centered; makeup for a healthy level
     } else if (isBubble) {
       oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
     } else if (isParticle) {
@@ -1643,6 +1747,12 @@ const PARAMS = [
   ["formantSize", "Voice size", 0.5, 2, 0.01, 1, "",   "Formant"],
   ["formantQ",    "Formant Q",  0, 1, 0.01, 0.5, "",   "Formant"],
   ["formantBreath","Breath",    0, 1, 0.01, 0, "",     "Formant"],
+  // Source character — the missing lever. The buzz source used to be a fixed saw, so patches only
+  // differed by vowel/size and converged. Tilt darkens the source (saw → mellow/rounded glottal
+  // pulse: coos, oohs, soft voices); Rough adds subharmonic AM + period jitter (creak / vocal fry /
+  // growl). Both default 0 = the original saw, so existing presets stay byte-identical.
+  ["formantTilt", "Source tone",0, 1, 0.01, 0, "",     "Formant"],
+  ["formantRough","Growl",      0, 1, 0.01, 0, "",     "Formant"],
   // Vowel LFO — slowly morphs the vowel over time so the voice "talks" (aa-ee-oo). Both default 0
   // (off) so existing formant presets are unchanged.
   ["formantLfoRate","Vowel rate",0, 8, 0.01, 0, "Hz",  "Formant"],
@@ -1764,8 +1874,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.1.0",
-  BUILT: "5855945-dirty",
-  SHA256: "16c276566778896beeab4dfea5a4a7df0369acf45af53d35e1725ef62dd5aa09",
+  BUILT: "a0bfe25-dirty",
+  SHA256: "7bbd79746253b08b87fbb6e2f2823be4682ddc244d20f7e0ecf744f9664dc910",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
