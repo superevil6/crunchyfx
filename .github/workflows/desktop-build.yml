@@ -32,13 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The frontend is SIX sibling files at the repo root (index.html, dsp.js, presets.js, synth.js,
-      # suite.js, styles.css) — they must all land in ../dist
+      # The frontend is EIGHT sibling files at the repo root (index.html, dsp.js, presets.js, synth.js,
+      # crunchy-icons.js, suite.js, crunchy-base.css, styles.css; the three crunchy*/suite files are pulled
+      # from crunchyCore) — they must all land in ../dist
       # side by side or the app throws at startup (dsp.js defines the engines, presets.js the
       # library, styles.css the UI). build.rs copies them too; this is belt-and-suspenders.
       - name: Prepare frontend
         shell: bash
-        run: mkdir -p dist && cp index.html dsp.js presets.js synth.js suite.js styles.css dist/
+        run: mkdir -p dist && cp index.html dsp.js presets.js synth.js crunchy-icons.js suite.js crunchy-base.css styles.css dist/
 
       - name: Install Linux webview deps
         if: matrix.platform == 'ubuntu-22.04'

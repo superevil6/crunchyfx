@@ -1,12 +1,17 @@
+// GENERATED from crunchyCore/suite.js @ b95653d by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 7a5a0b901c814e81a350b7a35c5602b5d22a8885e5b3d74154d597bdca3ff252
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
 // with links to the other Crunchy applications and one liner about what they do."
 //
-// PORTABLE and CANONICAL HERE, like textures.js: copy this file into a sibling unchanged, then call
-// suiteMount("<its id>", …). CHANGE A LINK OR A LINE HERE FIRST, then copy it out, so the apps never
-// disagree about each other. Its styles are the `suite-*` block in styles.css (the suite's shared custom
-// properties only).
+// A CORE FILE (crunchyCore; each app pulls it with tools/pull-core.mjs, unchanged), then calls
+// suiteMount("<its id>", …). CHANGE A LINK OR A LINE IN crunchyCore, so the apps never disagree about each other.
+// Its styles are the `suite-*` block in crunchy-base.css.
+//
+// EACH TOOL IN ITS OWN COLOUR (build 4, CONSOLIDATION-PLAN.md §9): `accent` is that app's --accent, set on its row
+// as --tool, so the list reads as siblings. `pxi` names its pixel icon (crunchy-icons.js); an app that has not pulled
+// the icons yet shows the text glyph in `icon` instead.
 //
 // The data is pure; the DOM is touched only inside suiteMount's functions (the wiring test loads every
 // sibling with no DOM).
@@ -18,25 +23,25 @@
 // each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
 // the hosts listed there. A link outside that scope does nothing on desktop.
 
-const SUITE_BUILD = 3;
+const SUITE_BUILD = 4;
 const CRUNCHY_SUITE = [
-  { id: "tile", name: "CrunchyTile", icon: "▦",
+  { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
     web: "https://crunchytile.com/", desktop: "" },
-  { id: "ui", name: "CrunchyUI", icon: "▣",
+  { id: "ui", name: "CrunchyUI", icon: "▣", pxi: "window", accent: "#7ea6ff",
     what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
     web: "", desktop: "" },
-  { id: "sfx", name: "CrunchySFX", icon: "♪",
+  { id: "sfx", name: "CrunchySFX", icon: "♪", pxi: "speaker", accent: "#ffd23f",
     what: "Sound effects from scratch: coins, lasers, explosions, robot voices and more, as WAV.",
     web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx" },
-  { id: "vfx", name: "CrunchyVFX", icon: "✸",
+  { id: "vfx", name: "CrunchyVFX", icon: "✸", pxi: "sparkle", accent: "#c77dff",
     what: "Sprite effects: explosions, hit sparks, magic, smoke and weather, as sprite sheets.",
     web: "https://crunchyvfx.com/", desktop: "" },
-  { id: "bgm", name: "CrunchyBGM", icon: "♫",
+  { id: "bgm", name: "CrunchyBGM", icon: "♫", pxi: "music", accent: "#3ddc97",
     what: "Background music: whole game scores in seamless loops, with layers your engine mixes live.",
     web: "https://crunchybgm.com/", desktop: "" },
   // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. No domain or store page yet.
-  { id: "character", name: "CrunchyCharacter", icon: "♟",
+  { id: "character", name: "CrunchyCharacter", icon: "♟", pxi: "person", accent: "#ff5c8a",
     what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
     web: "", desktop: "" },
 ];
@@ -88,7 +93,10 @@ function suiteMount(self, opts) {
     suiteList(self).forEach(function (t) {
       const row = el("div", "suite-tool" + (t.id === self ? " here" : ""));
       row.dataset.id = t.id;
-      row.appendChild(el("span", "suite-icon", t.icon));
+      row.style.setProperty("--tool", t.accent);
+      const mark = el("span", "suite-icon"), px = typeof crunchyIcon === "function" ? crunchyIcon(t.pxi) : null;
+      if (px) mark.appendChild(px); else mark.textContent = t.icon;
+      row.appendChild(mark);
       const body = el("div", "suite-body");
       body.appendChild(el("strong", "suite-name", t.name));
       body.appendChild(el("span", "suite-what", t.what));

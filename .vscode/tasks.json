@@ -2,6 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
+      // crunchyCore first, then this app (crunchyTile TILE-DESIGN.md §111): shows what changed in crunchyCore, runs its
+      // tests, asks for the CORE's commit message and a yes, commits and pushes the core, then pulls it in here.
+      // This app is never committed by it: commit it afterwards as usual. The script is a core file (tools/core-commit.mjs).
+      "label": "Commit crunchyCore, then pull it here",
+      "type": "shell",
+      "command": "node tools/core-commit.mjs",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+    },
+    {
       // Static file server for the web version. Used as the preLaunchTask for the
       // "Web app (browser)" launch config; the background matcher below lets VS Code
       // know the server is ready (when python prints "Serving HTTP ...").

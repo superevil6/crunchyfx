@@ -1,0 +1,8 @@
+#!/bin/sh
+# crunchyCore guard: written by tools/pull-core.mjs. Rewritten on every pull: do not edit (an app that
+# needs its own hook removes this line, and the puller leaves it alone). Refuses a commit holding crunchyCore copies that
+# are trial pulls (commit the core first: the VS Code task "Commit crunchyCore, then pull it here") or hand-edited, or
+# that fails this app's tests/wiring.test.mjs. Switched on per clone: node tools/pull-core.mjs --guard
+# Skip once, knowingly: git commit --no-verify
+cd "$(git rev-parse --show-toplevel)" || exit 1
+exec node tools/pull-core.mjs --precommit

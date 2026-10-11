@@ -4,7 +4,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#14121a">
+<meta name="theme-color" content="#111015">
 <meta name="description" content="Free, from-scratch sound-effect generator in your browser — coins, lasers, explosions, robot voices, bells and more. Make a sound, share it as a link, export a WAV.">
 <link rel="canonical" href="https://crunchysfx.com/">
 <!-- Open Graph / Twitter card: a shared CrunchySFX link unfurls into a branded
@@ -25,27 +25,30 @@
 <meta name="twitter:title" content="CrunchySFX — make &amp; share sound effects">
 <meta name="twitter:description" content="Click to hear this sound. A free, from-scratch sound-effect generator. Make your own and share it as a link.">
 <meta name="twitter:image" content="https://crunchysfx.com/og.png">
+<!-- crunchy-base.css: the Crunchy suite's shared look, GENERATED from crunchyCore (tools/pull-core.mjs). It loads
+     FIRST so styles.css (SFX's layout and accent) wins any tie. -->
+<link rel="stylesheet" href="crunchy-base.css">
 <link rel="stylesheet" href="styles.css">
 
 <header>
   <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
-  <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true">🗂 Presets</button>
-  <button id="suiteBtn" class="viewtoggle" title="The other Crunchy tools: tiles, game UI, sprite effects and music">✦ Crunchy suite</button>
-  <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings">⚙</button>
+  <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true" data-icon="folder">Presets</button>
+  <button id="suiteBtn" class="viewtoggle" title="The other Crunchy tools: tiles, game UI, sprite effects and music" data-icon="star">Crunchy suite</button>
+  <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings" data-icon="cog"></button>
 </header>
 
 <div class="controls">
   <!-- Two clusters: the left (create/generate) and right (save/share/IO) groups each wrap as a UNIT,
        so when the row is too narrow the whole right cluster drops to a clean second row. -->
   <div class="controls-left">
-  <button class="primary" id="play">▶ Play <kbd>space</kbd></button>
-  <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
-  <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
-  <button id="rand" class="accent2">🎲 Randomize</button>
-  <button id="breed" class="accent2">🧬 Breed</button>
-  <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets">⚒ Foundry</button>
-  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound — or your whole sequence — and export them all">📦 Variations</button>
+  <button class="primary" id="play" data-icon="play">Play <kbd>space</kbd></button>
+  <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" disabled></button>
+  <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" disabled></button>
+  <button id="rand" class="accent2" data-icon="dice">Randomize</button>
+  <button id="breed" class="accent2" data-icon="breed">Breed</button>
+  <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets" data-icon="hammer">Foundry</button>
+  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound — or your whole sequence — and export them all" data-icon="package">Variations</button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
       <option value="22050">22 kHz</option>
@@ -66,12 +69,12 @@
   </span>
   </div>
   <div class="controls-right">
-  <button id="export" class="export-btn" title="Export the current sound as a WAV">⬇ Export WAV</button>
-  <button id="importwav" title="Import a WAV/audio file to mangle with the tools">📂 Import WAV</button>
+  <button id="export" class="export-btn" title="Export the current sound as a WAV" data-icon="download">Export WAV</button>
+  <button id="importwav" title="Import a WAV/audio file to mangle with the tools" data-icon="upload">Import WAV</button>
   <button id="save">Save preset</button>
   <button id="load">Load preset</button>
-  <button id="recordbtn" title="Record from your mic and use it as the waveform (say “boom”, then shape it)">🎤 Record</button>
-  <button id="share" title="Copy a link that recreates this exact sound">🔗 Share link</button>
+  <button id="recordbtn" title="Record from your mic and use it as the waveform (say “boom”, then shape it)">Record</button>
+  <button id="share" title="Copy a link that recreates this exact sound" data-icon="link">Share link</button>
   <span id="samplename" class="hint"></span>
   <!-- JS injects the desktop IO buttons (Save/Open project, Drag out) or the web "Get the Desktop app" CTA here -->
   </div>
@@ -82,11 +85,11 @@
 <div class="seqbar" id="seqbar">
   <span class="seq-label">Sequence</span>
   <div class="seq-list" id="seqlist"></div>
-  <button id="seqAdd" title="Append the current editor sound to the sequence">＋ Add current sound</button>
+  <button id="seqAdd" title="Append the current editor sound to the sequence" data-icon="plus">Add current sound</button>
   <label class="seq-gap" title="Silence inserted between each step">Gap <input type="range" id="seqGap" min="0" max="0.5" step="0.01" value="0"><span id="seqGapVal">0 ms</span></label>
   <span class="spacer"></span>
-  <button id="seqPlay" class="primary">▶ Play sequence</button>
-  <button id="seqExport">⬇ Export</button>
+  <button id="seqPlay" class="primary" data-icon="play">Play sequence</button>
+  <button id="seqExport" data-icon="download">Export</button>
   <button id="seqClear">Clear</button>
 </div>
 
@@ -106,10 +109,10 @@
     </div>
     <div class="mypresets" id="mypresets" hidden>
       <div class="mp-head">
-        <span>★ My Presets</span>
+        <span data-icon="star">My Presets</span>
         <span class="mp-head-btns">
-          <button id="mpExportAll" title="Render every saved preset to a WAV in a folder you choose">⬇ Export all</button>
-          <button id="mpSave" title="Save the current sound to your library">＋ Save current</button>
+          <button id="mpExportAll" title="Render every saved preset to a WAV in a folder you choose" data-icon="download">Export all</button>
+          <button id="mpSave" title="Save the current sound to your library" data-icon="plus">Save current</button>
         </span>
       </div>
       <div class="mp-naming">
@@ -150,9 +153,20 @@
 <script src="presets.js"></script>
 <script src="dsp.js"></script>
 <script src="synth.js"></script>
+<script src="crunchy-icons.js"></script>
 <script src="suite.js"></script>
 <script>
 "use strict";
+
+// ---------- Pixel icons (the suite's shared look, 2026-10-11) ----------
+// Chrome marks are crunchy-icons.js's pixel icons (pulled from crunchyCore), not emoji: an element says
+// data-icon="<name>" and iconsIn() draws it as its first child. A label a script REWRITES must go through
+// setIconLabel, because `textContent =` deletes the icon. Same helpers as CrunchyBGM's (§614).
+function iconsIn(root) { if (typeof crunchyIconsApply === "function") crunchyIconsApply(root || document); }
+function setIconLabel(el, name, text) {
+  el.textContent = text;
+  if (name) { el.setAttribute("data-icon", name); iconsIn(el); } else el.removeAttribute("data-icon");
+}
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
@@ -859,7 +873,7 @@ engineSection.className = "engine";
 engineSection.innerHTML =
   '<div class="engine-title"><span>Engine — the synthesis method</span>' +
     '<label class="wavelock" title="Keep this engine when switching presets / randomizing">' +
-    '<input type="checkbox" id="waveLock">🔒 lock</label></div>' +
+    '<input type="checkbox" id="waveLock"><span data-icon="lock">lock</span></label></div>' +
   '<div class="engine-grid" id="engineGrid"></div>';
 document.querySelector(".ws-editor").insertBefore(engineSection, panels);   // between Quick Shape & panels
 const engineGrid = engineSection.querySelector("#engineGrid");
@@ -992,7 +1006,7 @@ cwPanel.innerHTML =
     '<button data-shape="square">Square</button><button data-shape="triangle">Tri</button>' +
     '<button data-shape="random">Random</button><button data-shape="clear">Clear</button>' +
   '</div>' +
-  '<div class="cw-img"><button class="cw-img-btn" type="button">🖼 From image…</button>' +
+  '<div class="cw-img"><button class="cw-img-btn" type="button" data-icon="image">From image…</button>' +
     '<span class="cw-img-hint">traces an image into this wave — or drop one on the canvas</span></div>' +
   '<div class="hint">Draw one cycle — sets the “custom” waveform (band-limited on playback). Draw a 2nd wave on B and use the Wave-morph panel to blend/sweep A→B.</div>';
 // place the draw editor among the other wave-specific panels (before "Mix"), not at the very end
@@ -1231,7 +1245,7 @@ if (window.__TAURI__) {   // desktop-only: build the Save button + tile strip in
   const mwWrap = document.createElement("div");
   mwWrap.className = "mw-wrap";
   mwWrap.innerHTML =
-    '<div class="mw-head"><span>★ My Waveforms</span><button class="mw-save" title="Save the current drawing to your library">＋ Save wave</button></div>' +
+    '<div class="mw-head"><span data-icon="star">My Waveforms</span><button class="mw-save" title="Save the current drawing to your library" data-icon="plus">Save wave</button></div>' +
     '<div class="mw-list" id="mwList"></div>';
   cwPanel.appendChild(mwWrap);
   mwList = mwWrap.querySelector("#mwList");
@@ -1308,7 +1322,7 @@ if (spacePanel) {
   const irRow = document.createElement("div");
   irRow.className = "irrow";
   const irBtn = document.createElement("button");
-  irBtn.type = "button"; irBtn.className = "ir-load"; irBtn.textContent = "📂 Load IR…";
+  irBtn.type = "button"; irBtn.className = "ir-load"; setIconLabel(irBtn, "folder", "Load IR…");
   irNameEl = document.createElement("span");
   irNameEl.className = "ir-name";
   const irFile = document.createElement("input");
@@ -1625,7 +1639,7 @@ if (workspaceEl && browseToggle) {
     workspaceEl.classList.toggle("browser-hidden", hidden);
     browseToggle.classList.toggle("active", !hidden);
     browseToggle.setAttribute("aria-pressed", String(!hidden));
-    browseToggle.textContent = hidden ? "🗂 Show presets" : "🗂 Presets";
+    setIconLabel(browseToggle, "folder", hidden ? "Show presets" : "Presets");
   };
   browseToggle.addEventListener("click", () => { prefs.hideBrowser = !prefs.hideBrowser; savePrefs(); applyBrowse(); });
   applyBrowse();
@@ -1767,7 +1781,7 @@ function finishRecording(chunks, srcRate) {
 }
 function setRecordingUI(on) {
   if (!recordBtn) return;
-  recordBtn.textContent = on ? "⏹ Stop" : "🎤 Record";
+  setIconLabel(recordBtn, on ? "stop" : null, on ? "Stop" : "Record");   // no microphone icon yet: the word says it
   recordBtn.classList.toggle("recording", on);
 }
 async function startRecording() {
@@ -1837,7 +1851,7 @@ document.getElementById("save").addEventListener("click", () => {
 const normBtn = document.createElement("button");
 normBtn.id = "normbtn";
 function updateNormBtn() {
-  normBtn.textContent = normalizeOut ? "🔊 Normalize" : "🔈 Normalize off";
+  setIconLabel(normBtn, "speaker", normalizeOut ? "Normalize" : "Normalize off");
   normBtn.classList.toggle("off", !normalizeOut);
   normBtn.title = "Boost quiet sounds to an audible, consistent level";
 }
@@ -1854,8 +1868,8 @@ settingsModal.className = "modal";
 settingsModal.hidden = true;
 settingsModal.innerHTML =
   '<div class="modal-box settings-box">' +
-    '<div class="modal-head"><h2>⚙ Settings</h2><span class="hint">Export format &amp; sound options.</span>' +
-      '<button id="settingsClose">✕ Close</button></div>' +
+    '<div class="modal-head"><h2 data-icon="cog">Settings</h2><span class="hint">Export format &amp; sound options.</span>' +
+      '<button id="settingsClose" data-icon="close">Close</button></div>' +
     '<div class="settings-body">' +
       '<div class="settings-row"><div class="settings-lbl">Export format' +
         '<span class="settings-sub">sample rate · bit depth · channels · loop point — used by every WAV export</span></div>' +
@@ -1865,7 +1879,7 @@ settingsModal.innerHTML =
         '<div class="settings-ctl" id="settingsNorm"></div></div>' +
       '<div class="settings-row"><div class="settings-lbl">Getting started' +
         '<span class="settings-sub">a quick guided tour of the workflow</span></div>' +
-        '<div class="settings-ctl"><button id="tourReplay">▶ Take the tour</button></div></div>' +
+        '<div class="settings-ctl"><button id="tourReplay" data-icon="help">Take the tour</button></div></div>' +
       // Desktop-only: whether "Save preset" pops a native Save-As dialog for the .json. Gated on
       // window.__TAURI__ directly (isDesktop const isn't initialized yet at this point in the file).
       (window.__TAURI__ ?
@@ -1915,7 +1929,7 @@ function showUpdateBanner(info) {
   bar.className = "update-banner";
   bar.id = "updBanner";
   const msg = document.createElement("span");
-  msg.textContent = "🎉 CrunchySFX " + info.version + " is available" + (info.notes ? " — " + info.notes : "");
+  setIconLabel(msg, "sparkle", "CrunchySFX " + info.version + " is available" + (info.notes ? " — " + info.notes : ""));
   const get = document.createElement("button");
   get.className = "primary";
   get.textContent = "Get the update ↗";
@@ -2077,7 +2091,7 @@ keyboardEl.innerHTML =
     '<span class="kb-octlabel">Oct <b id="kbOctVal">4</b></span>' +
     '<button id="kbUp" title="Octave up (X)">▶</button></div>' +
   '<div class="kb-keys" id="kbKeys"></div>' +
-  '<span class="kb-hint">🎹 Play at pitch — <b>A–K</b> (+ W E T Y U), <b>Z/X</b> octave · <b>double-click</b> or <b>⇧</b>+key to keep a pitch</span>';
+  '<span class="kb-hint"><span data-icon="piano"></span>Play at pitch — <b>A–K</b> (+ W E T Y U), <b>Z/X</b> octave · <b>double-click</b> or <b>⇧</b>+key to keep a pitch</span>';
 document.querySelector(".scoperow").insertAdjacentElement("afterend", keyboardEl);
 const kbKeys = keyboardEl.querySelector("#kbKeys");
 KB_WHITE.forEach((w) => {
@@ -2154,16 +2168,16 @@ const riffStepDur = () => 60 / riffBpm / 2;      // one step = an 8th note
 const riffPanel = document.createElement("div");
 riffPanel.className = "riff";
 riffPanel.innerHTML =
-  '<div class="riff-head collapse-head">🎹 Keyboard &amp; Riff — play at pitch, sequence a melody</div>' +
+  '<div class="riff-head collapse-head" data-icon="piano">Keyboard &amp; Riff — play at pitch, sequence a melody</div>' +
   '<div class="riff-body">' +
   '<div class="riff-ctl">' +
-    '<label class="riff-write" title="On: play the keys to fill riff steps. Off: keys just audition."><input type="checkbox" id="riffWriteIn"> ✎ Write steps</label>' +
+    '<label class="riff-write" title="On: play the keys to fill riff steps. Off: keys just audition."><input type="checkbox" id="riffWriteIn"> <span data-icon="edit">Write steps</span></label>' +
     '<label>BPM <input type="number" id="riffBpmIn" min="40" max="300" step="1" value="140"></label>' +
     '<label>Steps <select id="riffNIn"><option>4</option><option selected>8</option><option>16</option></select></label>' +
-    '<button id="riffPlayBtn" class="primary">▶ Play</button>' +
+    '<button id="riffPlayBtn" class="primary" data-icon="play">Play</button>' +
     '<label class="riff-loop"><input type="checkbox" id="riffLoopIn"> Loop</label>' +
-    '<button id="riffExportBtn">⬇ WAV</button>' +
-    '<button id="riffClearBtn">✕ Clear</button>' +
+    '<button id="riffExportBtn" data-icon="download">WAV</button>' +
+    '<button id="riffClearBtn" data-icon="close">Clear</button>' +
     '<span class="riff-hint"><b>✎ Write</b> on → play keys to fill the selected step · <b>.</b> rest · <b>Del</b> clear · <b>←/→</b> move</span>' +
   '</div>' +
   '<div class="riff-grid" id="riffGrid"></div>' +
@@ -2210,7 +2224,7 @@ function buildRiffBuffer() {
   return { L, R };
 }
 function riffHighlight(i) { [...riffGrid.children].forEach((c, k) => c.classList.toggle("playing", k === i)); }
-function updateRiffPlayBtn() { riffPlayBtn.textContent = riffPlaying ? "⏹ Stop" : "▶ Play"; }
+function updateRiffPlayBtn() { setIconLabel(riffPlayBtn, riffPlaying ? "stop" : "play", riffPlaying ? "Stop" : "Play"); }
 function riffStop() {
   if (riffSrc) { try { riffSrc.stop(); } catch (e) { /* already stopped */ } riffSrc = null; }
   riffTimers.forEach(clearTimeout); riffTimers = [];
@@ -2355,16 +2369,16 @@ shareModal.innerHTML =
   '<div class="modal-box share-box">' +
     '<div class="modal-head"><h2>Share sound</h2>' +
       '<span class="hint">Name it (optional), then copy the link.</span>' +
-      '<button id="shareClose">✕ Close</button></div>' +
+      '<button id="shareClose" data-icon="close">Close</button></div>' +
     '<div class="share-body">' +
       '<label class="share-lbl" for="shareName">Name</label>' +
       '<input id="shareName" class="share-input" type="text" placeholder="Name your sound" maxlength="60" autocomplete="off">' +
       '<label class="share-lbl" for="shareUrl">Link</label>' +
       '<input id="shareUrl" class="share-input" type="text" readonly>' +
     '</div>' +
-    '<div class="modal-foot"><button id="shareCopy" class="primary">🔗 Copy link</button>' +
-      '<button id="shareVfx" title="Open this sound in CrunchyVFX to build a matching visual effect">🎆 Send to CrunchyVFX</button>' +
-      '<button id="shareBgm" title="Open this sound in CrunchyBGM to build a track or loop">🎵 Send to CrunchyBGM</button>' +
+    '<div class="modal-foot"><button id="shareCopy" class="primary" data-icon="link">Copy link</button>' +
+      '<button id="shareVfx" title="Open this sound in CrunchyVFX to build a matching visual effect" data-icon="sparkle">Send to CrunchyVFX</button>' +
+      '<button id="shareBgm" title="Open this sound in CrunchyBGM to build a track or loop" data-icon="music">Send to CrunchyBGM</button>' +
       '<span id="shareMsg" class="hint"></span></div>' +
   '</div>';
 document.body.appendChild(shareModal);
@@ -2461,14 +2475,14 @@ breedModal.hidden = true;
 breedModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head">' +
-      '<h2>🧬 Breed sounds</h2>' +
+      '<h2 data-icon="breed">Breed sounds</h2>' +
       '<span class="hint">Click the tiles you like → Breed. ▶ hears a tile · double-click loads it into the editor.</span>' +
-      '<button id="breedClose">✕ Close</button>' +
+      '<button id="breedClose" data-icon="close">Close</button>' +
     '</div>' +
     '<div id="breedGrid" class="breed-grid"></div>' +
     '<div class="modal-foot">' +
-      '<button id="breedNext" class="primary">🧬 Breed selected</button>' +
-      '<button id="breedReroll">🎲 New batch</button>' +
+      '<button id="breedNext" class="primary" data-icon="breed">Breed selected</button>' +
+      '<button id="breedReroll" data-icon="dice">New batch</button>' +
       '<span id="breedGen" class="hint"></span>' +
       '<span class="spacer"></span>' +
       '<button id="breedAdopt">✓ Use selected</button>' +
@@ -2586,17 +2600,17 @@ varModal.className = "modal";
 varModal.hidden = true;
 varModal.innerHTML =
   '<div class="modal-box">' +
-    '<div class="modal-head"><h2>📦 Variation pack</h2>' +
+    '<div class="modal-head"><h2 data-icon="package">Variation pack</h2>' +
       '<span class="hint">N takes on a sound — or your whole sequence — same character, slightly varied. ▶ hears one · double-click adopts it.</span>' +
-      '<span id="varMode" class="hint" style="color:#ff7a45"></span>' +
-      '<button id="varClose">✕ Close</button></div>' +
+      '<span id="varMode" class="hint" style="color:var(--accent)"></span>' +
+      '<button id="varClose" data-icon="close">Close</button></div>' +
     '<div class="var-ctl">' +
       '<label>Count <select id="varCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select></label>' +
       '<label>Variation <input id="varAmt" type="range" min="0.05" max="0.5" step="0.01" value="0.2"></label>' +
-      '<button id="varRegen">🎲 Regenerate</button>' +
+      '<button id="varRegen" data-icon="dice">Regenerate</button>' +
       '<span class="spacer"></span>' +
       '<label>Name <input id="varName" type="text" class="var-name" placeholder="footstep" autocomplete="off"></label>' +
-      '<button id="varExport" class="primary">⬇ Export pack</button>' +
+      '<button id="varExport" class="primary" data-icon="download">Export pack</button>' +
     '</div>' +
     '<div id="varGrid" class="breed-grid"></div>' +
     '<div class="modal-foot"><span id="varMsg" class="hint"></span></div>' +
@@ -2942,8 +2956,9 @@ function renderUserCats() {
   userCatsBox.innerHTML = "";
   const head = document.createElement("div");
   head.className = "uc-head";
-  head.innerHTML = '<button id="ucNew" class="uc-newbtn" data-uc-drop="new" title="Create a new category">＋ New Category</button>' +
+  head.innerHTML = '<button id="ucNew" class="uc-newbtn" data-uc-drop="new" title="Create a new category" data-icon="plus">New Category</button>' +
     '<span class="hint">Drag presets or your saved sounds in to organize them.</span>';
+  iconsIn(head);
   userCatsBox.appendChild(head);
   head.querySelector("#ucNew").addEventListener("click", () => { if (!ucSuppressClick) ucNewCategory(); });
 
@@ -3104,7 +3119,8 @@ function ucOpenMenu(e) {
   const rows = userCats.map((c) => '<button data-cat="' + c.id + '">' + ucEsc(c.name) + '</button>').join("") || '<div class="uc-menu-empty">No categories yet</div>';
   const m = document.createElement("div");
   m.className = "uc-menu";
-  m.innerHTML = '<div class="uc-menu-h">Add “' + ucEsc(payload.label) + '” to</div>' + rows + '<button class="uc-menu-new" data-cat="new">＋ New category</button>';
+  m.innerHTML = '<div class="uc-menu-h">Add “' + ucEsc(payload.label) + '” to</div>' + rows + '<button class="uc-menu-new" data-cat="new" data-icon="plus">New category</button>';
+  iconsIn(m);
   document.body.appendChild(m);
   m.style.left = Math.min(e.clientX, window.innerWidth - m.offsetWidth - 8) + "px";
   m.style.top = Math.min(e.clientY, window.innerHeight - m.offsetHeight - 8) + "px";
@@ -3367,20 +3383,20 @@ foundryModal.hidden = true;
 foundryModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head">' +
-      '<h2>⚒ Foundry</h2>' +
+      '<h2 data-icon="hammer">Foundry</h2>' +
       '<span class="hint">Generate → ▶ audition → ✎ Edit Sound loads it into the editor to tweak &amp; export.' + (isDesktop ? ' Or ＋ Keep several and save them to My Presets.' : '') + ' All procedural + your ear — no AI.</span>' +
-      '<button id="fndClose">✕ Close</button>' +
+      '<button id="fndClose" data-icon="close">Close</button>' +
     '</div>' +
     '<div class="foundry-gen">' +
       '<label class="fnd-typel">Kind ' +
         '<select id="fndType">' +
-          '<option value="any">🎲 Surprise me</option>' +
+          '<option value="any">Surprise me</option>' +
           ARCHETYPES.map((a) => '<option value="' + a.name + '">' + a.name + '</option>').join('') +
           '<option value="random">Full random (chaotic)</option>' +
         '</select>' +
       '</label>' +
       '<button id="fndGen" class="primary">Generate ' + FOUNDRY_N + '</button>' +
-      '<button id="fndMutate">🧬 Mutate current sound</button>' +
+      '<button id="fndMutate" data-icon="breed">Mutate current sound</button>' +
       '<span id="fndCount" class="hint"></span>' +
     '</div>' +
     '<div class="fnd-styles" id="fndStyles">' +
@@ -3394,7 +3410,7 @@ foundryModal.innerHTML =
         '<div id="fndKeepList" class="fnd-keep-list"></div>' +
       '</div>' +
       '<div class="modal-foot">' +
-        '<button id="fndSaveMy" class="primary">★ Save kept to My Presets</button>' +
+        '<button id="fndSaveMy" class="primary" data-icon="star">Save kept to My Presets</button>' +
         '<button id="fndClear">Clear kept</button>' +
         '<span id="fndMsg" class="hint"></span>' +
       '</div>'
@@ -3423,9 +3439,10 @@ function renderFoundryGrid() {
     cell.appendChild(cv);
     const bar = document.createElement("div");
     bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-editbtn">✎ Edit Sound</button>' +
-      (isDesktop ? '<button class="fnd-keepbtn">＋ Keep</button>' : '') +
+    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-editbtn" data-icon="edit">Edit Sound</button>' +
+      (isDesktop ? '<button class="fnd-keepbtn" data-icon="plus">Keep</button>' : '') +
       '<span class="breed-tag">#' + (i + 1) + '</span>';
+    iconsIn(bar);
     cell.appendChild(bar);
     fndGrid.appendChild(cell);
     drawMini(cv, L, R);
@@ -3519,11 +3536,11 @@ if (isDesktop) {
 
   // Project Save/Open — injected into the controls bar, desktop-only (needs native dialogs).
   const projSave = document.createElement("button");
-  projSave.id = "projSave"; projSave.textContent = "💾 Save project";
+  projSave.id = "projSave"; projSave.textContent = "Save project";   // no save icon yet: the word says it
   projSave.title = "Save the whole workspace (editor sound, My Presets, sequence) to a .crunchysfx file";
   projSave.addEventListener("click", saveProject);
   const projOpen = document.createElement("button");
-  projOpen.id = "projOpen"; projOpen.textContent = "📁 Open project";
+  projOpen.id = "projOpen"; setIconLabel(projOpen, "folder", "Open project");
   projOpen.title = "Load a .crunchysfx project file";
   projOpen.addEventListener("click", openProject);
   const cbar = document.querySelector(".controls-right");   // keep desktop IO in the right cluster so it wraps as a unit
@@ -3533,7 +3550,7 @@ if (isDesktop) {
   // "Drag out" chip — drag the current editor sound into a folder / game engine as a .wav.
   // draggable=true + a dragstart handler that kicks off the native drag (tauri-plugin-drag).
   const dragChip = document.createElement("button");
-  dragChip.id = "dragOut"; dragChip.className = "dragchip"; dragChip.textContent = "⤓ Drag out";
+  dragChip.id = "dragOut"; dragChip.className = "dragchip"; setIconLabel(dragChip, "download", "Drag out");
   dragChip.title = "Drag this into a folder or game engine to drop the current sound as a .wav";
   dragChip.setAttribute("draggable", "true");
   dragChip.addEventListener("dragstart", (e) => {
@@ -3550,7 +3567,7 @@ if (isDesktop) {
   const steamBtn = document.createElement("button");
   steamBtn.id = "steambtn";
   steamBtn.className = "primary";
-  steamBtn.textContent = "🎮 Get the Desktop app";
+  setIconLabel(steamBtn, "monitor", "Get the Desktop app");
   steamBtn.title = "Get the desktop app on itch.io";
 
   const steamModal = document.createElement("div");
@@ -3559,18 +3576,18 @@ if (isDesktop) {
   steamModal.innerHTML =
     '<div class="modal-box steam-box">' +
       '<div class="modal-head">' +
-        '<h2>🎮 CrunchySFX Desktop</h2>' +
+        '<h2 data-icon="monitor">CrunchySFX Desktop</h2>' +
         '<span class="steam-badge">Available now</span>' +
         '<span class="hint">The web version stays free — the desktop app adds a pro workflow.</span>' +
-        '<button id="steamClose">✕ Close</button>' +
+        '<button id="steamClose" data-icon="close">Close</button>' +
       '</div>' +
       '<div class="steam-body">' +
         '<ul class="steam-feats">' +
-          '<li><b>★ My Presets library</b> — save, name, and organize your own sounds; persists on disk.</li>' +
-          '<li><b>⬇ Batch export</b> — render your whole library to WAV files in one click, into a folder you pick.</li>' +
-          '<li><b>💾 Project files</b> — save &amp; reopen your entire workspace (editor sound, library, sequence) as a <code>.crunchysfx</code> file.</li>' +
-          '<li><b>📂 Native import / export</b> — real system Save/Open dialogs, and import WAVs straight into your library.</li>' +
-          '<li><b>🔧 One-time purchase</b> — no account, no subscription; supports development.</li>' +
+          '<li><b><span data-icon="star"></span>My Presets library</b> — save, name, and organize your own sounds; persists on disk.</li>' +
+          '<li><b><span data-icon="download"></span>Batch export</b> — render your whole library to WAV files in one click, into a folder you pick.</li>' +
+          '<li><b><span data-icon="package"></span>Project files</b> — save &amp; reopen your entire workspace (editor sound, library, sequence) as a <code>.crunchysfx</code> file.</li>' +
+          '<li><b><span data-icon="folder"></span>Native import / export</b> — real system Save/Open dialogs, and import WAVs straight into your library.</li>' +
+          '<li><b><span data-icon="unlock"></span>One-time purchase</b> — no account, no subscription; supports development.</li>' +
         '</ul>' +
         '<p class="steam-note">Everything you make in the free web version is CC0 and yours to keep. The desktop app is about workflow, not locking up your sounds.</p>' +
       '</div>' +
@@ -3598,14 +3615,14 @@ if (isDesktop) {
 // a card explaining it. Walks the core workflow (presets → play → Foundry → Breed → export → share).
 // Shows once on a fresh visit (prefs.tourSeen); replayable from Settings. Skips on shared-link visits.
 const TOUR = [
-  { target: null, title: "Welcome to CrunchySFX 👋", body: "Make game & UI sound effects from scratch — coins, lasers, explosions, robot voices and more. Here's the 30-second workflow." },
+  { target: null, title: "Welcome to CrunchySFX", body: "Make game & UI sound effects from scratch — coins, lasers, explosions, robot voices and more. Here's the 30-second workflow." },
   { target: ".ws-browser", title: "1 · Start from a preset", body: "600+ ready-made sounds, grouped by type. Click any to hear it, or search by name." },
   { target: "#play,#rand", title: "2 · Play, or roll the dice", body: "Press Play to hear the current sound — or Randomize to generate a fresh one from nothing." },
   { target: "#foundry", title: "3 · Foundry — invent originals", body: "Foundry generates brand-new sounds procedurally. Make a batch and keep the ones you like." },
   { target: "#breed", title: "4 · Breed — fine-tune by ear", body: "Pick a sound you like and Breed makes a grid of variations. Choose favorites and it evolves them toward what you're after." },
   { target: "#export", title: "5 · Export a WAV", body: "Happy with it? Export drops a ready-to-use WAV straight into your game." },
   { target: "#share", title: "Bonus · share a link", body: "Every sound is a URL — share it and the other person hears your exact sound, no file needed." },
-  { target: null, title: "You're all set! 🔊", body: "Explore the panels to shape any sound in detail. Replay this tour anytime from ⚙ Settings. Now go make some noise." },
+  { target: null, title: "You're all set!", body: "Explore the panels to shape any sound in detail. Replay this tour anytime from ⚙ Settings. Now go make some noise." },
 ];
 let tourIdx = 0;
 const tourEl = document.createElement("div");
@@ -3642,7 +3659,7 @@ function showTourStep(i) {
   tourEl.querySelector(".tour-title").textContent = step.title;
   tourEl.querySelector(".tour-body").textContent = step.body;
   tourEl.querySelector(".tour-progress").textContent = (tourIdx + 1) + " / " + TOUR.length;
-  tourEl.querySelector(".tour-next").textContent = last ? "Got it 🔊" : "Next";
+  tourEl.querySelector(".tour-next").textContent = last ? "Got it" : "Next";
   tourEl.querySelector(".tour-prev").style.visibility = tourIdx === 0 ? "hidden" : "visible";
   tourEl.querySelector(".tour-skip").style.visibility = last ? "hidden" : "visible";
   const els = step.target ? Array.from(document.querySelectorAll(step.target)).filter((e) => e.getClientRects().length) : [];
@@ -3681,7 +3698,7 @@ tourOffer.innerHTML =
 document.body.appendChild(tourOffer);
 function showTourOffer() {
   const nm = (seqLabel && seqLabel !== "Sound" && seqLabel !== "Shared") ? '“' + seqLabel + '”' : "This sound";
-  tourOffer.querySelector(".tour-offer-msg").textContent = "🔊 " + nm + " was made with CrunchySFX — press ▶ Play to hear it. New here?";
+  setIconLabel(tourOffer.querySelector(".tour-offer-msg"), "speaker", nm + " was made with CrunchySFX — press ▶ Play to hear it. New here?");
   tourOffer.hidden = false;
 }
 function hideTourOffer(markSeen) { tourOffer.hidden = true; if (markSeen && !prefs.tourSeen) { prefs.tourSeen = true; savePrefs(); } }
@@ -3695,4 +3712,5 @@ if (!loadSharedSound()) {
   showTourOffer();                        // shared-link first visit: gentle offer, don't hijack the sound
 }
 commitHistory();                          // seed undo history with the initial sound (deduped if a share/preset already did)
+iconsIn(document);                        // pixel icons on everything built at startup (dialogs, rows, the desktop IO)
 </script>

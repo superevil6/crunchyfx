@@ -2,24 +2,29 @@
 /* CrunchySFX — styles, extracted from index.html for organization.
    Linked via <link rel="stylesheet" href="styles.css"> in the <head>.
    Static CSS only. Keep this file beside index.html; the desktop build copies both
-   (see src-tauri/build.rs). */
+   (see src-tauri/build.rs).
+
+   THE SUITE'S SHARED LOOK (2026-10-11; crunchyTile TILE-DESIGN.md §105, CONSOLIDATION-PLAN.md §9, CrunchyBGM's
+   §614): crunchy-base.css (pulled from crunchyCore, linked BEFORE this file) owns the neutrals (--bg, --panel,
+   --panel2, --line, --line2, --ink, --muted, --bad, --info), square corners, the hard step shadow, buttons,
+   sliders and checkboxes. Its FLOOR rules are not overridden here. This file keeps SFX's layout and its accent. */
   :root {
-    --bg: #14121a;
-    --panel: #1e1b28;
-    --panel2: #262231;
-    --ink: #e8e4f0;
-    --muted: #9a92ad;
-    --accent: #ff7a45;
-    --accent2: #45d0ff;
-    --line: #322c40;
-    --bad: #ff8f97;   /* the suite's shared "danger" colour (CrunchyTile's value); portable blocks like suite-* may use it */
+    /* SFX's accent is yellow (CONSOLIDATION-PLAN.md §9). Text on an accent fill is the base's dark --on-accent. */
+    --accent: #ffd23f;
+    --accent-dk: #a8841a;
+    /* CONTENT colours, split off the chrome so the accent change does not repaint the sound. The scope and
+       every thumbnail draw the left channel in this orange and the right in --sel's cyan (hard-coded on the
+       canvases); the lit piano key and the riff's playing step are "the sound now", so they share the orange. */
+    --wave: #ff7a45;
+    --wave-dk: #c25326;
+    --sel: #45d0ff;   /* the selected riff step: the one the keys write into (was --accent2, now the base's grey --info) */
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: radial-gradient(1200px 600px at 70% -10%, #241f30, var(--bg));
+    background: var(--bg);
     color: var(--ink);
-    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 14px/1.4 var(--font);
     min-height: 100vh;
   }
   header {
@@ -32,7 +37,6 @@
   h1 {
     font-size: 22px;
     margin: 0;
-    letter-spacing: -0.5px;
   }
   h1 b { color: var(--accent); }
   .tag { color: var(--muted); font-size: 13px; }
@@ -46,17 +50,16 @@
   .panel {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 12px;
     padding: 14px 16px 16px;
   }
-  .cw-canvas { width: 100%; height: 130px; background: var(--panel2); border-radius: 8px; display: block; cursor: crosshair; touch-action: none; }
-  .cw-canvas.cw-drop { outline: 2px dashed #ff7a45; outline-offset: -2px; background: rgba(255,122,69,0.08); }
+  .cw-canvas { width: 100%; height: 130px; background: var(--panel2); display: block; cursor: crosshair; touch-action: none; }
+  .cw-canvas.cw-drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
   .cw-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
   .cw-btns button { padding: 5px 9px; font-size: 12px; }
   .cw-ab { display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; }
   .cw-ab > span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
   .cw-slot { padding: 3px 12px; font-size: 12px; }
-  .cw-slot.active { background: #ff7a45; border-color: #ff7a45; color: #17131f; }
+  .cw-slot.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--step) var(--step) 0 var(--accent-dk); }
   .cw-ab-hint { font-size: 11px; color: var(--muted); margin-left: auto; }
   .cw-img { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; flex-wrap: wrap; }
   .cw-img-btn { padding: 5px 9px; font-size: 12px; }
@@ -68,20 +71,21 @@
   .mw-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .mw-empty { color: var(--muted); font-size: 12px; }
   .mw-tile { width: 76px; }
-  .mw-thumb { display: block; width: 72px; height: 40px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
-  .mw-thumb:hover { border-color: #ff7a45; }
+  .mw-thumb { display: block; width: 72px; height: 40px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+  .mw-thumb:hover { border-color: var(--accent); }
   .mw-row { display: flex; gap: 2px; margin-top: 2px; }
-  .mw-name { flex: 1; min-width: 0; font-size: 11px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 2px 4px; }
+  .mw-name { flex: 1; min-width: 0; font-size: 11px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); padding: 2px 4px; }
   .mw-del { padding: 0 5px; font-size: 11px; line-height: 1; }
-  .speech-input { width: 100%; box-sizing: border-box; margin: 4px 0 8px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+  .speech-input { width: 100%; box-sizing: border-box; margin: 4px 0 8px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; font: inherit; }
   .irrow { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
   .ir-load { padding: 5px 10px; font-size: 12px; }
   .ir-name { color: var(--muted); font-size: 12px; word-break: break-all; }
   .panel h2 {
+    font-family: var(--head);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--accent2);
+    color: var(--info);
     margin: 0 0 12px;
   }
   .row {
@@ -98,33 +102,15 @@
     color: var(--ink);
     font-size: 12px;
   }
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    border-radius: 3px;
-    background: var(--panel2);
-    outline: none;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid #1a1622;
-  }
-  input[type=range]::-moz-range-thumb {
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid #1a1622;
-  }
+  /* Sliders are crunchy-base.css's (a square knob on a flat track, FLOOR); only the cursor is ours. */
+  input[type=range] { outline: none; }
+  input[type=range]::-webkit-slider-thumb { cursor: pointer; }
+  input[type=range]::-moz-range-thumb { cursor: pointer; }
   select {
     width: 100%;
-    /* Force our own colors + a light color-scheme so the OS/GTK theme can't render the
+    /* (2026-10-11, the shared look: kept LIGHT on purpose. CrunchyBGM's notes call this "the safest direction":
+       a light popup with dark text reads under any GTK theme. Squared, and it takes the base's hard step.)
+       Force our own colors + a light color-scheme so the OS/GTK theme can't render the
        native dropdown as white-on-white (unreadable under some system themes). */
     background: #f4f2f7;
     color: #14121a;
@@ -132,7 +118,6 @@
     -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--line);
-    border-radius: 7px;
     padding: 6px 26px 6px 8px;
     font: inherit;
     /* custom caret (native arrow is gone with appearance:none) */
@@ -164,35 +149,20 @@
     flex-wrap: wrap;
     justify-content: space-between;   /* left & right clusters to the edges; each wraps to its own row when cramped */
     padding: 10px 24px;
-    background: rgba(20,18,26,0.85);
-    backdrop-filter: blur(8px);
+    background: var(--bg);
     border-bottom: 1px solid var(--line);
   }
   /* Each cluster is its own flex group so it wraps as a UNIT (the whole right cluster drops to a
      second, left-aligned row when the bar is too narrow) — and still wraps internally on very small screens. */
   .controls-left, .controls-right { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-  button {
-    background: var(--panel2);
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 9px 14px;
-    font: inherit;
-    cursor: pointer;
-    transition: background .12s, transform .05s;
-  }
-  button:hover { background: #302a3d; }
-  button:active { transform: translateY(1px); }
-  button:disabled { opacity: 0.4; cursor: default; transform: none; }
+  /* Buttons are crunchy-base.css's (border, hover, the hard step, the press, .primary on the accent); SFX keeps
+     only its roomier padding. */
+  button { padding: 9px 14px; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:disabled:hover { background: var(--panel2); border-color: var(--line2); }
   .icon-btn { padding: 9px 11px; font-size: 16px; line-height: 1; }
-  button.primary {
-    background: var(--accent);
-    color: #201005;
-    border-color: transparent;
-    font-weight: 600;
-  }
-  button.primary:hover { background: #ff8a5c; }
-  button.accent2 { border-color: var(--accent2); color: var(--accent2); }
+  .icon-btn .pxi, .cog .pxi { margin-right: 0; vertical-align: -2px; }   /* an icon-only button: no gap after the mark */
+  button.accent2 { border-color: var(--info); color: var(--info); }
   /* Export WAV — the primary output action, flagged with a green border so it stands out in the IO cluster. */
   button.export-btn { border-color: #4fd18a; color: #7ce0a6; }
   button.export-btn:hover { border-color: #7ce0a6; color: var(--ink); }
@@ -202,14 +172,13 @@
   .dragchip { cursor: grab; }
   .dragchip:active { cursor: grabbing; }
   .fmtgroup { display: inline-flex; gap: 5px; align-items: center; }
-  .fmtgroup select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; border-radius: 8px; }
+  .fmtgroup select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; }
   .fmt-loop { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
   .fmt-loop input { cursor: pointer; }
   canvas {
     width: 100%;
     height: 90px;
     background: var(--panel2);
-    border-radius: 8px;
     display: block;
   }
   .hint { color: var(--muted); font-size: 12px; }
@@ -217,21 +186,22 @@
     max-width: 1200px; margin: 30px 24px 44px; padding: 16px 18px;
     border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.65;
   }
-  footer.license h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); margin: 0 0 8px; }
+  footer.license h2 { font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--info); margin: 0 0 8px; }
   footer.license p { margin: 0 0 8px; max-width: 780px; }
-  footer.license a { color: var(--accent2); }
+  footer.license a { color: var(--info); }
   footer.license strong { color: var(--ink); }
   footer.license .tool-notice { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
   kbd {
     background: var(--panel2);
     border: 1px solid var(--line);
     border-bottom-width: 2px;
-    border-radius: 5px;
     padding: 1px 6px;
     font: 11px ui-monospace, monospace;
   }
+  /* On the accent fill (Play's "space") the dark key cap read dark-on-dark: draw it as an outline in the fill's ink. */
+  button.primary kbd { background: transparent; border-color: var(--on-accent); color: var(--on-accent); }
   .presetbar { display: flex; flex-direction: column; gap: 8px; }
-  .preset-section { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  .preset-section { border: 1px solid var(--line); background: var(--panel); overflow: hidden; }
   .preset-section > summary {
     list-style: none; cursor: pointer; user-select: none;
     padding: 9px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.4px;
@@ -250,27 +220,27 @@
   .presetbar button:hover { border-left-color: var(--fam, var(--accent)); }
   .fam-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 2px; font-size: 11px; color: var(--muted); }
   .fam-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-  .fam-key i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  .fam-key i { width: 9px; height: 9px; flex: none; }
   .presetsearch { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   #presetSearch {
     width: 280px; max-width: 100%;
     background: var(--panel2); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 8px;
+    border: 1px solid var(--line);
     padding: 7px 10px; font: inherit;
   }
   #presetSearch::placeholder { color: var(--muted); }
-  #presetSearch:focus { outline: none; border-color: var(--accent2); }
+  #presetSearch:focus { outline: none; border-color: var(--accent); }
 
   /* Crunchiness macro slider */
   .macro {
     max-width: 1200px;
     margin: 16px 24px 0;
-    background: linear-gradient(90deg, #221d2b, #2c2233);
+    background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 12px;
     padding: 12px 16px 14px;
   }
   .macro-title {
+    font-family: var(--head);
     font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
     color: var(--accent); font-weight: 600; margin-bottom: 10px;
   }
@@ -278,15 +248,14 @@
   .engine {
     max-width: 1200px;
     margin: 12px 24px 0;
-    background: linear-gradient(90deg, #221d2b, #2c2233);
+    background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 12px;
     padding: 12px 16px 14px;
   }
   .engine-title {
     display: flex; align-items: center; justify-content: flex-start; gap: 12px;
-    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--accent2); font-weight: 600; margin-bottom: 10px;
+    font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--info); font-weight: 600; margin-bottom: 10px;
   }
   .engine-title > span { margin-right: auto; }   /* label anchored left; lock/clean pushed to the right */
   .engine-grid { display: flex; flex-direction: column; gap: 9px; }
@@ -294,17 +263,18 @@
   .engine-cat-label { flex-shrink: 0; min-width: 84px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
   .engine-cat-btns { display: flex; flex-wrap: wrap; gap: 7px; }
   .engine-btn {
-    padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer;
+    padding: 7px 12px; font-size: 13px; cursor: pointer;
     background: var(--panel2); color: var(--muted); border: 1px solid var(--line);
     transition: background .1s, color .1s, border-color .1s;
   }
-  .engine-btn:hover { color: var(--ink); border-color: var(--accent2); }
-  .engine-btn.active { background: var(--accent); color: #201005; border-color: transparent; font-weight: 600; }
+  .engine-btn:hover { color: var(--ink); border-color: var(--accent); }
+  .engine-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600;
+    box-shadow: var(--step) var(--step) 0 var(--accent-dk); }
   /* Console skin (hero section below Engine) — same block as .macro/.engine, reuses .engine-btn pills */
   .console {
     max-width: 1200px; margin: 10px 24px 0;
-    background: linear-gradient(90deg, #221d2b, #2c2233);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line); padding: 12px 16px 14px;
   }
   .console-grid { display: flex; flex-wrap: wrap; gap: 7px; }
   /* Collapsible hero sections (Quick Shape / Engine / Console) — click the header to fold. */
@@ -324,8 +294,8 @@
   .macro-end { font-size: 12px; color: var(--muted); min-width: 56px; }
   .macro-end-r { text-align: right; }
   #crunch { flex: 1; height: 6px; }
-  #crunch::-webkit-slider-thumb { width: 20px; height: 20px; }
-  #crunch::-moz-range-thumb { width: 20px; height: 20px; }
+  #crunch::-webkit-slider-thumb { width: 10px; height: 20px; margin-top: -8px; }
+  #crunch::-moz-range-thumb { width: 10px; height: 20px; }
 
   /* History rail (right side) */
   body { padding-right: 300px; }
@@ -343,8 +313,8 @@
     border-bottom: 1px solid var(--line);
   }
   .hist-head h2 {
-    margin: 0; font-size: 12px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--accent2);
+    margin: 0; font-family: var(--head); font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--info);
   }
   .hist-head button { padding: 4px 9px; font-size: 11px; }
   #histlist { flex: 1; overflow-y: auto; padding: 10px; }
@@ -355,10 +325,9 @@
     gap: 8px; align-items: center;
     background: var(--panel2);
     border: 1px solid var(--line);
-    border-radius: 9px;
     padding: 8px; margin-bottom: 8px;
   }
-  .hist-thumb { width: 74px; height: 34px; background: #14121a; border-radius: 5px; display: block; }
+  .hist-thumb { width: 74px; height: 34px; background: var(--bg); display: block; }
   .hist-meta { min-width: 0; }
   .hist-label { display: block; font-size: 12px; font-weight: 600; color: var(--ink); }
   .hist-sub { display: block; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -371,15 +340,15 @@
   /* Sequence tray */
   .seqbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     margin: 12px 24px 0; padding: 10px 12px; max-width: 1200px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
-  .seq-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); font-weight: 600; }
+    background: var(--panel); border: 1px solid var(--line); }
+  .seq-label { font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--info); font-weight: 600; }
   .seq-list { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 160px; }
   .seq-empty { font-size: 12px; color: var(--muted); }
   .seq-chip { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 8px;
-    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; cursor: grab; }
+    background: var(--panel2); border: 1px solid var(--line); font-size: 12px; cursor: grab; }
   .seq-chip.drag { opacity: 0.4; }
   .seq-chip-name { color: var(--ink); }
-  .seq-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 3px; font-size: 12px; }
+  .seq-chip button { background: none; border: none; box-shadow: none; color: var(--muted); cursor: pointer; padding: 0 3px; font-size: 12px; }
   .seq-chip button:hover { color: var(--accent); }
   .seqbar button[disabled] { opacity: 0.4; cursor: default; }
   .seq-gap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -387,24 +356,24 @@
   .seq-gap span { min-width: 44px; }
 
   /* My Presets library (desktop) */
-  .mypresets { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 12px; margin-top: 12px; margin-bottom: 12px; }
+  .mypresets { border: 1px solid var(--line); background: var(--panel); padding: 10px 12px; margin-top: 12px; margin-bottom: 12px; }
   .mypresets[hidden] { display: none; }
   .mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .mp-head > span { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
+  .mp-head > span { font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
   .mp-head button { padding: 5px 9px; font-size: 12px; }
   .mp-head-btns { display: inline-flex; gap: 6px; }
   .mp-naming { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .mp-naming label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-  .mp-naming input { width: 150px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; font: inherit; font-size: 12px; }
+  .mp-naming input { width: 150px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); padding: 5px 8px; font: inherit; font-size: 12px; }
   .mp-naming .hint { font-family: monospace; }
   .mp-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
   .mp-empty { font-size: 12px; color: var(--muted); padding: 4px 2px; }
   .up-item { display: flex; align-items: center; gap: 6px; }
-  .up-item .up-name { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); font: inherit; font-size: 13px; padding: 4px 8px; }
-  .up-item .up-name:focus { outline: none; border-color: var(--accent2); }
-  .up-item button { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; cursor: pointer; padding: 3px 7px; font-size: 12px; line-height: 1; }
+  .up-item .up-name { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 13px; padding: 4px 8px; }
+  .up-item .up-name:focus { outline: none; border-color: var(--accent); }
+  .up-item button { background: none; border: 1px solid var(--line); box-shadow: none; color: var(--muted); cursor: pointer; padding: 3px 7px; font-size: 12px; line-height: 1; }
   .up-item button:hover { color: var(--accent); border-color: var(--accent); }
-  .up-badge { color: var(--accent2); font-size: 12px; flex: none; }
+  .up-badge { color: var(--info); font-size: 12px; flex: none; }
   .up-item .uc-grip { cursor: grab; flex: none; padding: 3px 5px; color: var(--muted); touch-action: none; }
   .up-item .uc-grip:active { cursor: grabbing; }
 
@@ -413,46 +382,48 @@
   .usercats[hidden] { display: none; }
   .uc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .uc-newbtn { padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--accent);
-    border: 1px dashed var(--accent); border-radius: 8px; background: none; cursor: pointer; }
+    border: 1px dashed var(--accent); background: none; box-shadow: none; cursor: pointer; }
   .uc-newbtn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
   .uc-head .hint { font-size: 11px; }
   .usercat > summary { gap: 6px; }
   .usercat > summary .uc-name { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line);
-    border-radius: 6px; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; padding: 3px 7px; }
-  .usercat > summary .uc-name:focus { outline: none; border-color: var(--accent2); }
-  .usercat > summary .uc-del { margin-left: auto; background: none; border: 1px solid var(--line); color: var(--muted);
-    border-radius: 6px; cursor: pointer; padding: 2px 7px; font-size: 12px; line-height: 1; }
+    color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; padding: 3px 7px; }
+  .usercat > summary .uc-name:focus { outline: none; border-color: var(--accent); }
+  .usercat > summary .uc-del { margin-left: auto; background: none; border: 1px solid var(--line); box-shadow: none; color: var(--muted);
+    cursor: pointer; padding: 2px 7px; font-size: 12px; line-height: 1; }
   .usercat > summary .uc-del:hover { color: var(--accent); border-color: var(--accent); }
   .uc-buttons { align-items: center; }
   .uc-empty { color: var(--muted); font-size: 12px; font-style: italic; padding: 2px 0 4px; }
-  .uc-item { display: inline-flex; align-items: stretch; touch-action: none; }
+  /* ONE CONTROL, TWO HALVES: the name and its ✕ carry one hard step on the pair, not one each. */
+  .uc-item { display: inline-flex; align-items: stretch; touch-action: none; box-shadow: var(--step) var(--step) 0 var(--drop); }
+  .uc-item > button { box-shadow: none; }
   .uc-item .uc-item-btn { padding: 6px 10px; font-size: 12px; cursor: grab;
     border-left: 3px solid var(--fam, var(--line));
-    border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    }
   .uc-item .uc-item-btn:active { cursor: grabbing; }
   .uc-item .uc-item-rm { padding: 0 6px; font-size: 11px; line-height: 1; color: var(--muted);
-    border: 1px solid var(--line); border-left: none; border-radius: 0 6px 6px 0; background: var(--panel2); cursor: pointer; }
+    border: 1px solid var(--line); border-left: none; background: var(--panel2); cursor: pointer; }
   .uc-item .uc-item-rm:hover { color: var(--accent); border-color: var(--accent); }
   /* drag affordances */
-  .uc-ghost { position: fixed; z-index: 9998; pointer-events: none; background: var(--accent); color: #201005;
-    font: 600 12px/1 inherit; padding: 6px 10px; border-radius: 7px; box-shadow: 0 6px 20px rgba(0,0,0,.5); white-space: nowrap; }
+  .uc-ghost { position: fixed; z-index: 9998; pointer-events: none; background: var(--accent); color: var(--on-accent);
+    font: 600 12px/1 inherit; padding: 6px 10px; box-shadow: var(--step) var(--step) 0 var(--accent-dk); white-space: nowrap; }
   body.uc-dragging { cursor: grabbing; }
   body.uc-dragging .usercat, body.uc-dragging .uc-newbtn { transition: box-shadow .08s ease; }
-  .uc-drop-hot { box-shadow: 0 0 0 2px var(--accent) inset, 0 0 0 2px var(--accent); border-radius: 10px; }
-  .uc-menu { position: fixed; z-index: 9999; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.55); padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 170px; max-height: 60vh; overflow-y: auto; }
+  .uc-drop-hot { box-shadow: 0 0 0 2px var(--accent) inset, 0 0 0 2px var(--accent); }
+  .uc-menu { position: fixed; z-index: 9999; background: var(--panel); border: 2px solid var(--line2);
+    box-shadow: var(--lift); padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 170px; max-height: 60vh; overflow-y: auto; }
   .uc-menu-h { font-size: 11px; color: var(--muted); padding: 4px 8px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
-  .uc-menu button { text-align: left; background: none; border: none; color: var(--ink); border-radius: 6px; cursor: pointer; padding: 6px 8px; font: inherit; font-size: 12px; }
+  .uc-menu button { text-align: left; background: none; border: none; box-shadow: none; color: var(--ink); cursor: pointer; padding: 6px 8px; font: inherit; font-size: 12px; }
   .uc-menu button:hover { background: var(--panel2); color: var(--accent); }
-  .uc-menu .uc-menu-new { color: var(--accent); font-weight: 600; margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; }
+  .uc-menu .uc-menu-new { color: var(--accent); font-weight: 600; margin-top: 4px; border-top: 1px solid var(--line); }
   .uc-menu-empty { font-size: 12px; color: var(--muted); padding: 4px 8px; font-style: italic; }
 
   /* Update-available banner (desktop only) */
   .update-banner {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 300;
     display: flex; align-items: center; gap: 12px; max-width: min(680px, 92vw);
-    background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
-    padding: 10px 12px 10px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.55); font-size: 13px;
+    background: var(--panel); border: 1px solid var(--accent);
+    padding: 10px 12px 10px 16px; box-shadow: var(--lift); font-size: 13px;
   }
   .update-banner button { padding: 6px 10px; font-size: 12px; }
 
@@ -460,17 +431,17 @@
   .modal { position: fixed; inset: 0; z-index: 200; background: rgba(10, 8, 14, 0.82);
     display: flex; align-items: center; justify-content: center; padding: 20px; }
   .modal[hidden] { display: none; }
-  .modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  .modal-box { background: var(--panel); border: 2px solid var(--line2); box-shadow: var(--lift);
     width: min(940px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
   .modal-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
-  .modal-head h2 { margin: 0; font-size: 16px; color: var(--accent); white-space: nowrap; }
+  .modal-head h2 { margin: 0; font: 700 16px/1.4 var(--head); text-transform: uppercase; letter-spacing: .03em; color: var(--accent); white-space: nowrap; }
   .modal-head .hint { flex: 1; }
   .breed-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 16px; overflow-y: auto; }
-  .breed-cell { border: 2px solid var(--line); border-radius: 10px; background: var(--panel2);
+  .breed-cell { border: 2px solid var(--line); background: var(--panel2);
     padding: 8px; cursor: pointer; transition: border-color 0.1s, box-shadow 0.1s; }
-  .breed-cell:hover { border-color: var(--accent2); }
+  .breed-cell:hover { border-color: var(--line2); }
   .breed-cell.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .breed-cell canvas { width: 100%; height: 62px; display: block; background: #17131f; border-radius: 6px; }
+  .breed-cell canvas { width: 100%; height: 62px; display: block; background: var(--bg); }
   .breed-cell-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
   .breed-cell-bar .breed-play { padding: 2px 9px; font-size: 12px; }
   .breed-tag { font-size: 11px; color: var(--muted); }
@@ -481,25 +452,25 @@
   .var-ctl label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
   .var-ctl select { width: auto; }
   .var-ctl input[type=range] { width: 120px; }
-  .var-name { width: 130px; box-sizing: border-box; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; font: inherit; }
+  .var-name { width: 130px; box-sizing: border-box; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); padding: 6px 9px; font: inherit; }
   /* Share dialog (name the sound + copy its link). .share-box overrides .modal-box width — must
      stay after it in the file so it wins at equal specificity. */
   .share-box { width: min(460px, 92vw); }
   .share-body { display: flex; flex-direction: column; padding: 14px 18px; }
   .share-lbl { font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
   .share-input { width: 100%; box-sizing: border-box; background: var(--panel2); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+    border: 1px solid var(--line); padding: 9px 11px; font: inherit; }
   .share-input[readonly] { color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
   /* Settings cog (header) + settings modal */
   /* Focus-mode toggle in the header: show/hide the whole preset browser. */
-  .viewtoggle { margin-left: auto; align-self: center; background: var(--panel2); border: 1px solid var(--line);
-    color: var(--muted); font-size: 12px; padding: 6px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
-  .viewtoggle:hover { color: var(--ink); border-color: var(--accent2); }
-  .viewtoggle.active { color: var(--accent2); border-color: var(--accent2); }   /* browser visible */
+  .viewtoggle { margin-left: auto; align-self: center; background: var(--panel2); border: 1px solid var(--line2);
+    color: var(--muted); font-size: 12px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  .viewtoggle:hover { color: var(--ink); border-color: var(--accent); }
+  .viewtoggle.active { color: var(--accent); border-color: var(--accent); }   /* browser visible */
   .workspace.browser-hidden .ws-browser { display: none; }   /* focus mode */
-  .cog { align-self: center; background: transparent; border: 1px solid var(--line);
-    color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 9px; border-radius: 8px; cursor: pointer; }
-  .cog:hover { color: var(--ink); border-color: var(--accent2); background: var(--panel2); }
+  .cog { align-self: center; background: var(--panel2); border: 1px solid var(--line2);
+    color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 9px; cursor: pointer; }
+  .cog:hover { color: var(--ink); border-color: var(--accent); }
   .settings-box { width: min(520px, 92vw); }
   .settings-body { padding: 4px 18px 14px; }
   .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -516,59 +487,60 @@
   .tour[hidden] { display: none; }
   /* 100vmax, not 9999px (2026-10-08): a shadow that wide is a ~20000 px texture, and with the tour open
      it closed CrunchyTile's browser window on AJ's machine. 100vmax still covers any viewport. */
-  .tour-hole { position: absolute; border-radius: 10px; border: 2px solid var(--accent2); pointer-events: none;
+  .tour-hole { position: absolute; border: 2px solid var(--accent); pointer-events: none;
     box-shadow: 0 0 0 100vmax rgba(8, 6, 12, 0.74); transition: left .18s, top .18s, width .18s, height .18s; }
   .tour-hole.notarget { border-color: transparent; box-shadow: 0 0 0 100vmax rgba(8, 6, 12, 0.82); }
-  .tour-card { position: absolute; width: min(340px, 90vw); background: var(--panel); border: 1px solid var(--line);
-    border-radius: 12px; padding: 15px 17px; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55); }
-  .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .tour-card { position: absolute; width: min(340px, 90vw); background: var(--panel); border: 2px solid var(--line2);
+    padding: 15px 17px; box-shadow: var(--lift); }
+  .tour-title { font: 700 15px/1.4 var(--head); text-transform: uppercase; letter-spacing: .02em; color: var(--accent); margin-bottom: 6px; }
   .tour-body { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
   .tour-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 10px; }
   .tour-progress { font-size: 12px; color: var(--muted); }
   .tour-btns { display: flex; gap: 8px; }
   .tour-btns button { padding: 6px 12px; font-size: 13px; }
-  .tour-skip { background: transparent; border-color: transparent; color: var(--muted); }
+  .tour-skip { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); }
   /* Share-link first-timer's tour offer (small dismissible banner, not the full overlay) */
   .tour-offer { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 260;
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
-    background: var(--panel); border: 1px solid var(--accent2); border-radius: 12px;
-    padding: 10px 12px 10px 16px; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5); max-width: min(640px, 94vw); }
+    background: var(--panel); border: 2px solid var(--accent);
+    padding: 10px 12px 10px 16px; box-shadow: var(--lift); max-width: min(640px, 94vw); }
   .tour-offer[hidden] { display: none; }
   .tour-offer-msg { font-size: 13.5px; color: var(--ink); }
   .tour-offer-go { padding: 7px 13px; font-size: 13px; }
-  .tour-offer-x { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
+  .tour-offer-x { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); padding: 6px 8px; }
   /* Foundry modal (curate original presets from procedural candidates) */
   .foundry-gen { display: flex; align-items: center; gap: 10px; padding: 12px 18px 0; flex-wrap: wrap; }
   .fnd-typel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-  .fnd-typel select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; border-radius: 8px; }
+  .fnd-typel select { width: auto; padding: 7px 24px 7px 8px; font-size: 12px; }
   .fnd-styles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 18px 0; }
   .fnd-slabel { font-size: 12px; color: var(--muted); margin-right: 2px; }
   .fnd-style { cursor: pointer; }
   .fnd-style input { position: absolute; opacity: 0; width: 0; height: 0; }
   .fnd-style span { display: inline-block; padding: 4px 11px; font-size: 12px; border: 1px solid var(--line);
-    border-radius: 999px; color: var(--muted); background: var(--panel2); transition: border-color 0.1s, color 0.1s; }
-  .fnd-style:hover span { border-color: var(--accent2); color: var(--ink); }
+    color: var(--muted); background: var(--panel2); transition: border-color 0.1s, color 0.1s; }
+  .fnd-style:hover span { border-color: var(--line2); color: var(--ink); }
   .fnd-style input:checked + span { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-  .fnd-style input:focus-visible + span { outline: 2px solid var(--accent2); outline-offset: 1px; }
+  .fnd-style input:focus-visible + span { outline: 1px solid var(--accent); outline-offset: 1px; }
   /* Web-only "Get the Desktop app" modal (premium features, Coming soon) */
   button[disabled] { opacity: 0.55; cursor: default; }
-  button[disabled]:hover { background: var(--accent); }
+  button.primary[disabled]:hover { background: var(--accent); border-color: var(--accent); }   /* a disabled primary stays put */
   .steam-box { width: min(640px, 100%); }
   .steam-badge { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: #201005; background: var(--accent); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+    color: var(--on-accent); background: var(--accent); padding: 3px 9px; white-space: nowrap; }
   .steam-body { padding: 18px; overflow-y: auto; }
   .steam-feats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
   .steam-feats li { font-size: 14px; line-height: 1.45; color: var(--ink); }
-  .steam-feats b { color: var(--accent2); }
-  .steam-feats code { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .steam-feats b { color: var(--info); }
+  .steam-feats code { background: var(--panel2); border: 1px solid var(--line); padding: 1px 5px; font-size: 12px; }
   .steam-note { margin: 16px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
   .breed-cell-bar .fnd-keepbtn { padding: 2px 9px; font-size: 12px; }
   .breed-cell-bar .fnd-editbtn { flex: 1; padding: 4px 10px; font-size: 12px; font-weight: 600;
-    background: var(--accent); color: #201005; border-color: transparent; }
-  .breed-cell-bar .fnd-editbtn:hover { background: #ff8a5c; }
+    background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+    box-shadow: var(--step) var(--step) 0 var(--accent-dk); }
+  .breed-cell-bar .fnd-editbtn:hover { background: var(--accent); border-color: var(--ink); }
   .foundry-keep { padding: 4px 18px 0; border-top: 1px solid var(--line); margin-top: 4px; }
   .foundry-keep-head { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 8px; }
-  .foundry-keep-head > span:first-child { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
+  .foundry-keep-head > span:first-child { font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 600; }
   .fnd-keep-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
   @media (max-width: 920px) {
     body { padding-right: 0; }
@@ -584,7 +556,7 @@
   .scoperow canvas { width: 100%; height: 90px; display: block; }
   .scope-modes { display: flex; gap: 4px; justify-content: flex-end; margin-bottom: 6px; }
   .scope-mode { padding: 2px 9px; font-size: 11px; }
-  .scope-mode.active { background: #ff7a45; border-color: #ff7a45; color: #17131f; }
+  .scope-mode.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--step) var(--step) 0 var(--accent-dk); }
   .scoperow.xy canvas { width: 320px; height: 320px; max-width: 100%; margin: 0 auto; aspect-ratio: 1 / 1; }
 
   /* Play-at-pitch keyboard (under the scope) */
@@ -593,16 +565,17 @@
   .kb-oct button { padding: 3px 8px; font-size: 12px; }
   .kb-octlabel b { color: var(--ink); }
   .kb-keys { position: relative; display: flex; flex: 1; min-width: 280px; height: 62px; user-select: none; touch-action: none; }
-  .kb-white { flex: 1; background: linear-gradient(#e9e6ef, #cfc9db); border: 1px solid #2a2533; border-radius: 0 0 5px 5px;
-    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; cursor: pointer; }
+  /* The keys are an INSTRUMENT (content), not chrome: they keep their shading and 2px playing ends. */
+  .kb-white { flex: 1; background: linear-gradient(#e9e6ef, #cfc9db); border: 1px solid #2a2533; border-radius: 0 0 2px 2px;
+    box-shadow: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; cursor: pointer; }
   .kb-white + .kb-white { border-left: none; }
   .kb-white .kb-lbl { color: #6b6478; font-size: 10px; font-weight: 600; }
   .kb-black { position: absolute; top: 0; width: 8%; height: 62%; transform: translateX(-50%); z-index: 2;
-    background: linear-gradient(#2a2533, #14121a); border: 1px solid #000; border-radius: 0 0 4px 4px;
-    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; cursor: pointer; }
+    background: linear-gradient(#2a2533, #14121a); border: 1px solid #000; border-radius: 0 0 2px 2px;
+    box-shadow: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; cursor: pointer; }
   .kb-black .kb-lbl { color: #b6aecb; font-size: 9px; font-weight: 600; }
-  .kb-white.active { background: linear-gradient(var(--accent), #d85f30); }
-  .kb-black.active { background: linear-gradient(var(--accent), #c25326); }
+  .kb-white.active { background: linear-gradient(var(--wave), #d85f30); }
+  .kb-black.active { background: linear-gradient(var(--wave), var(--wave-dk)); }
   .kb-hint { font-size: 11px; color: var(--muted); }
   .kb-hint b { color: var(--ink); font-weight: 600; }
   @media (max-width: 600px) { .kb-hint { display: none; } .keyboard { margin: 10px 12px 0; } }
@@ -611,12 +584,12 @@
   /* Bordered, collapsible hero-style box (matches .macro/.engine/.console). */
   .riff {
     max-width: 1200px; margin: 10px 24px 0;
-    background: linear-gradient(90deg, #221d2b, #2c2233);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line); padding: 12px 16px 14px;
   }
   .riff-head {
-    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--accent2); font-weight: 600; margin-bottom: 10px;
+    font-family: var(--head); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--info); font-weight: 600; margin-bottom: 10px;
   }
   .riff.collapsed .riff-body { display: none; }
   .riff.collapsed { padding-bottom: 12px; }
@@ -624,19 +597,23 @@
   .riff-write:has(#riffWriteIn:checked) { color: var(--accent); font-weight: 600; }   /* Write mode active */
   .riff-ctl { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
   .riff-ctl label { display: inline-flex; align-items: center; gap: 5px; }
-  .riff-ctl input[type="number"] { width: 56px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 12px; }
-  .riff-ctl select { background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font-size: 12px; }
+  .riff-ctl input[type="number"] { width: 56px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); padding: 4px 6px; font: inherit; font-size: 12px; }
+  /* background-COLOR, not the shorthand: the shorthand reset the global select's caret, so this one had none. Dark,
+     so its caret is drawn light. */
+  .riff-ctl select { width: auto; background-color: var(--panel2); color: var(--ink); border: 1px solid var(--line2); padding: 4px 22px 4px 6px; font-size: 12px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23ece9f2' stroke-width='1.5'/></svg>");
+    background-position: right 7px center; }
   .riff-ctl button { padding: 5px 10px; font-size: 12px; }
   .riff-hint { font-size: 11px; }
   .riff-hint b { color: var(--ink); font-weight: 600; }
   .riff-grid { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
-  .riff-cell { position: relative; height: 46px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+  .riff-cell { position: relative; height: 46px; background: var(--panel2); border: 1px solid var(--line);
     color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .riff-cell.rest { color: var(--muted); font-weight: 400; }
-  .riff-cell.sel { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2) inset; }
-  .riff-cell.playing { background: var(--accent); color: #201005; border-color: transparent; }
+  .riff-cell.sel { border-color: var(--sel); box-shadow: 0 0 0 1px var(--sel) inset; }
+  .riff-cell.playing { background: var(--wave); color: var(--on-accent); border-color: transparent; }
   .riff-num { position: absolute; top: 3px; left: 5px; font-size: 9px; font-weight: 400; color: var(--muted); }
-  .riff-cell.playing .riff-num { color: #201005; }
+  .riff-cell.playing .riff-num { color: var(--on-accent); }
   @media (min-width: 1500px) { .riff { max-width: 1900px; } }
   @media (max-width: 600px) { .riff { margin: 8px 12px 0; } .riff-cell { height: 40px; font-size: 12px; } }
 
@@ -686,43 +663,15 @@
      slider handle and give buttons a comfortable minimum tap height. Gated on
      pointer:coarse so desktop mouse styling is untouched. */
   @media (pointer: coarse) {
-    input[type=range] { height: 6px; }
-    input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; }
-    input[type=range]::-moz-range-thumb { width: 24px; height: 24px; }
+    input[type=range] { height: 24px; }
+    input[type=range]::-webkit-slider-thumb { width: 12px; height: 24px; margin-top: -10px; }
+    input[type=range]::-moz-range-thumb { width: 12px; height: 24px; }
     button { min-height: 40px; }
     .wavelock input, .fmt-loop input { width: 20px; height: 20px; }
   }
 
-/* THE CRUNCHY SUITE (§80, css-build 19): suite.js's dialog. PORTABLE like the lib-* block: the suite's shared
-   custom properties and `suite-*` classes only, so it copies into every Crunchy tool unchanged. */
-/* Self-contained: a host app may lack the global `[hidden] { display: none !important }`, and then this block's
-   `display: flex` would beat the browser's [hidden] and the dialog could never close (found porting to VFX). */
-.suite-overlay[hidden] { display: none !important; }
-.suite-overlay { position: fixed; inset: 0; z-index: 260; background: rgba(8, 7, 12, 0.78); display: flex;
-                 align-items: center; justify-content: center; padding: 16px; }
-.suite-panel { width: min(640px, 100%); max-height: 100%; overflow: auto; background: var(--panel);
-               border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
-.suite-head { display: flex; align-items: center; gap: 8px; }
-.suite-title { margin: 0; flex: 1; font-size: 17px; color: var(--accent); }
-.suite-close { font-size: 16px; line-height: 1; padding: 4px 9px; }
-.suite-line { margin: 6px 0 12px; color: var(--ink); }
-.suite-list { display: grid; gap: 8px; }
-.suite-tool { display: flex; align-items: center; gap: 12px; background: var(--panel2); border: 1px solid var(--line);
-              border-radius: 6px; padding: 10px 12px; }
-.suite-tool.here { border-color: var(--accent); }
-.suite-icon { font-size: 22px; width: 1.4em; text-align: center; color: var(--accent2); }
-.suite-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.suite-name { font-size: 14px; }
-.suite-what { font-size: 12.5px; color: var(--muted); }
-.suite-go { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; white-space: nowrap; }
-.suite-link { font-size: 12.5px; color: var(--accent2); text-decoration: none; border: 1px solid var(--line);
-              border-radius: 4px; padding: 3px 9px; }
-.suite-link:hover { border-color: var(--accent2); }
-.suite-here, .suite-soon { font-size: 12px; color: var(--muted); }
-.suite-here { color: var(--accent); }
-.suite-foot { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
-@media (max-width: 520px) { .suite-tool { flex-wrap: wrap; } .suite-go { flex-direction: row; } }
-
+/* THE CRUNCHY SUITE: the dialog's styles (suite-*) are crunchy-base.css's since the shared look (2026-10-11,
+   crunchy-base.css 3's MIGRATION); only the header button's placement is SFX's. */
 #suiteBtn { white-space: nowrap; }
 /* SFX-local (outside the copied block): the suite button borrows the header's .viewtoggle look, but the
    preset toggle beside it already takes the margin-left:auto that pushes the pair right. */
