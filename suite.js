@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ b95653d by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 7a5a0b901c814e81a350b7a35c5602b5d22a8885e5b3d74154d597bdca3ff252
+// GENERATED from crunchyCore/suite.js @ b7decfb by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 32fca458c0d134275c31b6d460e5fa398da8c026e93ba890f4957c24c93cec2a
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -19,18 +19,18 @@
 // LINKS: a web link only once that deploy answers, a desktop link only once its store page is published.
 // A tool with neither says "coming soon". A dead link from a store-bought app looks worse than none.
 // Each tool has its own .com (crunchysfx.com, crunchyvfx.com and crunchybgm.com are live, crunchytile.com since
-// 2026-10-09; crunchyui.com was bought that day). When a link changes, change it HERE, AND in
+// 2026-10-09; crunchyui.com since 2026-10-11). When a link changes, change it HERE, AND in
 // each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
 // the hosts listed there. A link outside that scope does nothing on desktop.
 
-const SUITE_BUILD = 4;
+const SUITE_BUILD = 5;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
     web: "https://crunchytile.com/", desktop: "" },
   { id: "ui", name: "CrunchyUI", icon: "▣", pxi: "window", accent: "#7ea6ff",
     what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
-    web: "", desktop: "" },
+    web: "https://crunchyui.com/", desktop: "" },
   { id: "sfx", name: "CrunchySFX", icon: "♪", pxi: "speaker", accent: "#ffd23f",
     what: "Sound effects from scratch: coins, lasers, explosions, robot voices and more, as WAV.",
     web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx" },

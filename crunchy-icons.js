@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ b95653d by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 a5496d9277b0a41f52484e225e89649f93d6517464416ba61311758399d24077
+// GENERATED from crunchyCore/crunchy-icons.js @ b7decfb by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 40af477eb195ab6a63f56c3f42389a9bdd0387fcd6adb3f0830728d74255580a
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
 // CANONICAL HERE; every Crunchy tool copies it unchanged, with crunchy-base.css (which styles `.pxi`). Emoji read
@@ -14,7 +14,7 @@
 // preview sheet shows them in); a name is never reused or removed. Add a batch per adoption round, not one per idea:
 // every stamp bump is a follow-up in every app that has pulled (pull-core moves the app's `want` for it).
 
-const CRUNCHY_ICONS_BUILD = 6;
+const CRUNCHY_ICONS_BUILD = 7;
 
 const CRUNCHY_ICONS = {
   // DOWNLOAD, LINK and GRID (build 2) — the three a header still needed an emoji for. Drawn for
@@ -617,6 +617,106 @@ const CRUNCHY_ICONS = {
     ".#...#...#..",
     ".#...#...#..",
     "............",
+    "............",
+    "............",
+  ],
+  // FROM THE SFX AND VFX RESTYLES (build 7): mic (Record), save (Save project), clock (Timing), frame (a safe area),
+  // swap (Swap), flask (VFX's Take 8/16 experiments, once an alembic), mute (sound off).
+  mic: [
+    "....####....",
+    "...######...",
+    "...######...",
+    "...######...",
+    "...######...",
+    ".#.######.#.",
+    ".#..####..#.",
+    "..#......#..",
+    "...######...",
+    ".....##.....",
+    "....####....",
+    "............",
+  ],
+  save: [
+    "##########..",
+    "#.######.##.",
+    "#.######..##",
+    "#.######...#",
+    "#..........#",
+    "#..........#",
+    "#.########.#",
+    "#.#......#.#",
+    "#.#......#.#",
+    "#.#......#.#",
+    "############",
+    "............",
+  ],
+  clock: [
+    "...######...",
+    "..##....##..",
+    ".#...##...#.",
+    "#....##....#",
+    "#....##....#",
+    "#....#####.#",
+    "#..........#",
+    ".#........#.",
+    "..##....##..",
+    "...######...",
+    "............",
+    "............",
+  ],
+  frame: [
+    "####....####",
+    "#..........#",
+    "#..........#",
+    "............",
+    "...######...",
+    "...#....#...",
+    "...#....#...",
+    "...######...",
+    "............",
+    "#..........#",
+    "#..........#",
+    "####....####",
+  ],
+  swap: [
+    "........#...",
+    "........##..",
+    "###########.",
+    "........##..",
+    "........#...",
+    "...#........",
+    "..##........",
+    ".###########",
+    "..##........",
+    "...#........",
+    "............",
+    "............",
+  ],
+  flask: [
+    "...######...",
+    "....#..#....",
+    "....#..#....",
+    "....#..#....",
+    "...#....#...",
+    "..#......#..",
+    ".#.######.#.",
+    "#.########.#",
+    "#.########.#",
+    "############",
+    "............",
+    "............",
+  ],
+  mute: [
+    "............",
+    ".....##.....",
+    "....###.....",
+    "..#####.#..#",
+    "#######..##.",
+    "#######..##.",
+    "#######.#..#",
+    "..#####.....",
+    "....###.....",
+    ".....##.....",
     "............",
     "............",
   ],

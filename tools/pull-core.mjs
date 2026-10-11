@@ -246,7 +246,7 @@ if (changes.length) console.log("\nWhat changed (crunchyCore/CHANGELOG.md):\n" +
 process.exit(0);
 
 function followWants(files) {
-  const page = join(app, "index.html"), notes = [];
+  const page = join(app, "index.html"), notes = [], unchecked = [];
   if (!existsSync(page)) return notes;
   const lines = readFileSync(page, "utf8").split("\n");
   let changed = false;
@@ -264,7 +264,7 @@ function followWants(files) {
         if (/want: \d+/.test(lines[k])) { i = k; break; }
       }
     }
-    if (i < 0) { notes.push(`${f}: stamp ${n}, but no want for it in index.html (update it by hand)`); continue; }
+    if (i < 0) { unchecked.push(`${f} ${n}`); continue; }
     const was = (css ? /wants (\d+)/ : /want: (\d+)/).exec(lines[i]);
     if (was && Number(was[1]) === n) continue;
     lines[i] = css ? lines[i].replace(/!== "\d+"/, '!== "' + n + '"').replace(/wants \d+/, "wants " + n)
@@ -273,5 +273,7 @@ function followWants(files) {
     notes.push(`${f}: index.html want ${was ? was[1] : "?"} -> ${n}`);
   }
   if (changed) writeFileSync(page, lines.join("\n"));
+  // one line, not one per file: an app may simply not check stamps (SFX); the stamps are listed for its own guard
+  if (unchecked.length) notes.push(`index.html checks no stamp for: ${unchecked.join(", ")} (add a want, or ignore if this app has no stamp checks)`);
   return notes;
 }

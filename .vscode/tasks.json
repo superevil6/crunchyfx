@@ -1,6 +1,57 @@
 {
   "version": "2.0.0",
   "tasks": [
+    // RUN ANY CRUNCHY APP'S DESKTOP VERSION from this window (crunchyCore tools/run-app.mjs; crunchyTile TILE-DESIGN.md
+    // §113): `cargo run` on that app's working tree, uncommitted changes included. One terminal per app, so several can
+    // run at once; closing the app's window ends its task. A first build takes a few minutes.
+    {
+      "label": "Run desktop: CrunchyTile",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" tile",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchyUI",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" ui",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchySFX",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" sfx",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchyVFX",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" vfx",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchyBGM",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" bgm",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchyCharacter",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" character",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
     {
       // crunchyCore first, then this app (crunchyTile TILE-DESIGN.md §111): shows what changed in crunchyCore, runs its
       // tests, asks for the CORE's commit message and a yes, commits and pushes the core, then pulls it in here.
