@@ -1,0 +1,120 @@
+"use strict";
+// THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
+// about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
+// with links to the other Crunchy applications and one liner about what they do."
+//
+// PORTABLE and CANONICAL HERE, like textures.js: copy this file into a sibling unchanged, then call
+// suiteMount("<its id>", …). CHANGE A LINK OR A LINE HERE FIRST, then copy it out, so the apps never
+// disagree about each other. Its styles are the `suite-*` block in styles.css (the suite's shared custom
+// properties only).
+//
+// The data is pure; the DOM is touched only inside suiteMount's functions (the wiring test loads every
+// sibling with no DOM).
+//
+// LINKS: a web link only once that deploy answers, a desktop link only once its store page is published.
+// A tool with neither says "coming soon". A dead link from a store-bought app looks worse than none.
+// Each tool has its own .com (crunchysfx.com, crunchyvfx.com and crunchybgm.com are live, crunchytile.com since
+// 2026-10-09; crunchyui.com was bought that day). When a link changes, change it HERE, AND in
+// each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
+// the hosts listed there. A link outside that scope does nothing on desktop.
+
+const SUITE_BUILD = 3;
+const CRUNCHY_SUITE = [
+  { id: "tile", name: "CrunchyTile", icon: "▦",
+    what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
+    web: "https://crunchytile.com/", desktop: "" },
+  { id: "ui", name: "CrunchyUI", icon: "▣",
+    what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
+    web: "", desktop: "" },
+  { id: "sfx", name: "CrunchySFX", icon: "♪",
+    what: "Sound effects from scratch: coins, lasers, explosions, robot voices and more, as WAV.",
+    web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx" },
+  { id: "vfx", name: "CrunchyVFX", icon: "✸",
+    what: "Sprite effects: explosions, hit sparks, magic, smoke and weather, as sprite sheets.",
+    web: "https://crunchyvfx.com/", desktop: "" },
+  { id: "bgm", name: "CrunchyBGM", icon: "♫",
+    what: "Background music: whole game scores in seamless loops, with layers your engine mixes live.",
+    web: "https://crunchybgm.com/", desktop: "" },
+  // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. No domain or store page yet.
+  { id: "character", name: "CrunchyCharacter", icon: "♟",
+    what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
+    web: "", desktop: "" },
+];
+// The mission statement's one line (crunchy-suite.md §1). Quoted, never reworded.
+const SUITE_LINE = "Crunchy tools make the art and sound for your game, so you can spend your time on the game.";
+
+// The tools other than `self`, with `self` first (it is marked "you're here").
+function suiteList(self) {
+  const me = CRUNCHY_SUITE.filter(function (t) { return t.id === self; });
+  return me.concat(CRUNCHY_SUITE.filter(function (t) { return t.id !== self; }));
+}
+
+// suiteMount(self, { button, openUrl }) → { open, close, isOpen }
+//   button   the element that opens it (the app places it)
+//   openUrl  (url) → opens it outside the app. The web passes nothing (a plain link with target _blank);
+//            the desktop app passes its opener plugin, since a webview will not leave for a browser itself.
+function suiteMount(self, opts) {
+  opts = opts || {};
+  let root = null;
+  const el = function (tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  function link(label, url, title) {
+    const a = el("a", "suite-link", label);
+    a.href = url; a.target = "_blank"; a.rel = "noopener"; a.title = title;
+    if (opts.openUrl) a.addEventListener("click", function (e) { e.preventDefault(); opts.openUrl(url); });
+    return a;
+  }
+  function build() {
+    root = el("div", "suite-overlay");
+    root.hidden = true;
+    root.setAttribute("role", "dialog");
+    root.setAttribute("aria-label", "The Crunchy suite");
+    root.addEventListener("click", function (e) { if (e.target === root) close(); });
+    root.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); close(); } });
+    const panel = el("div", "suite-panel");
+    const head = el("div", "suite-head");
+    head.appendChild(el("h2", "suite-title", "The Crunchy suite"));
+    const x = el("button", "suite-close", "×");
+    x.title = "Close (Esc)";
+    x.addEventListener("click", close);
+    head.appendChild(x);
+    panel.appendChild(head);
+    panel.appendChild(el("p", "suite-line", SUITE_LINE));
+    const list = el("div", "suite-list");
+    suiteList(self).forEach(function (t) {
+      const row = el("div", "suite-tool" + (t.id === self ? " here" : ""));
+      row.dataset.id = t.id;
+      row.appendChild(el("span", "suite-icon", t.icon));
+      const body = el("div", "suite-body");
+      body.appendChild(el("strong", "suite-name", t.name));
+      body.appendChild(el("span", "suite-what", t.what));
+      row.appendChild(body);
+      const go = el("div", "suite-go");
+      if (t.id === self) go.appendChild(el("span", "suite-here", "You're here"));
+      else {
+        if (t.web) go.appendChild(link("Open ↗", t.web, "Open " + t.name + " in your browser (free)"));
+        if (t.desktop) go.appendChild(link("Desktop ↗", t.desktop, t.name + "'s desktop app on itch.io"));
+        if (!t.web && !t.desktop) go.appendChild(el("span", "suite-soon", "Coming soon"));
+      }
+      row.appendChild(go);
+      list.appendChild(row);
+    });
+    panel.appendChild(list);
+    panel.appendChild(el("p", "suite-foot", "Every Crunchy tool makes everything in code, with no generative AI and no samples, " +
+      "and what you make is CC0. The web versions are free; the desktop versions add workflow, never features."));
+    root.appendChild(panel);
+    document.body.appendChild(root);
+  }
+  function open() {
+    if (!root) build();
+    root.hidden = false;
+    root.querySelector(".suite-close").focus();
+  }
+  function close() { if (root) root.hidden = true; }
+  if (opts.button) opts.button.addEventListener("click", open);
+  return { open: open, close: close, isOpen: function () { return !!root && !root.hidden; } };
+}

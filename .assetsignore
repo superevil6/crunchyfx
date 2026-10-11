@@ -5,7 +5,7 @@
 # Worker's own source. None of it is secret, none of it belongs on the public site either. Added
 # after the same file was written for CrunchyVFX and the omission here became obvious.
 #
-# The site is only: index.html, styles.css, presets.js, dsp.js, synth.js, the icons, og.png — and
+# The site is only: index.html, styles.css, presets.js, dsp.js, synth.js, suite.js, the icons, og.png — and
 # version.json, which the desktop app's update check FETCHES, so it must never be listed here.
 #
 # LOCAL RUNS NEED flatpak/ CLEANED FIRST. This file filters the asset list AFTER wrangler has walked

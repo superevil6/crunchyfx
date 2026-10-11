@@ -11,6 +11,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init()) // native Save dialog for WAV export
         .plugin(tauri_plugin_fs::init())     // write the chosen file to disk
         .plugin(tauri_plugin_drag::init())   // drag a rendered WAV out into the OS / an engine
+        .plugin(tauri_plugin_opener::init()) // the Crunchy suite dialog opens its links in the OS browser
         .setup(|app| {
             // Microphone for the Record button. WebKitGTK (Linux) denies getUserMedia by default —
             // enable the media-stream setting and auto-grant the permission request. (No JS change:

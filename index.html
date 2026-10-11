@@ -31,6 +31,7 @@
   <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
   <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true">🗂 Presets</button>
+  <button id="suiteBtn" class="viewtoggle" title="The other Crunchy tools: tiles, game UI, sprite effects and music">✦ Crunchy suite</button>
   <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings">⚙</button>
 </header>
 
@@ -143,12 +144,13 @@
   <h2>License</h2>
   <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with CrunchySFX is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention CrunchySFX.</p>
   <p>The built-in engine synthesizes everything from scratch — no third-party samples. If you <strong>import your own audio</strong>, the CC0 dedication above doesn't extend to that clip: its licensing is your responsibility.</p>
-  <p class="tool-notice">CrunchySFX (the app) &copy; 2026 Alex Cassells — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
+  <p class="tool-notice">CrunchySFX (the app) &copy; 2026 superevil6 — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
 </footer>
 
 <script src="presets.js"></script>
 <script src="dsp.js"></script>
 <script src="synth.js"></script>
+<script src="suite.js"></script>
 <script>
 "use strict";
 
@@ -370,10 +372,42 @@ function render() {
 
 // ---------- Audio playback ----------
 let audioCtx = null;
+let ctxStale = false;
 function ensureCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  // Recreate if the device was lost — state "closed" happens on a sink teardown, and a closed
+  // context never plays again — OR if the default output device changed (ctxStale): a USB headset
+  // (e.g. a Razer Kraken) unplugging/replugging switches the default sink, and an existing context
+  // keeps pointing at the gone one and plays silently. Rebinding = a fresh context on the next play.
+  if (!audioCtx || audioCtx.state === "closed" || ctxStale) {
+    if (audioCtx && audioCtx.state !== "closed") { try { audioCtx.close(); } catch (e) {} }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    ctxStale = false;
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
   return audioCtx;
+}
+// Flag a rebind (don't tear down mid-sound) when the OS audio devices change — the next play picks
+// up the new default output. Guarded: not all webviews expose mediaDevices / the event.
+try {
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", () => { ctxStale = true; });
+  }
+} catch (e) {}
+
+// Idle auto-suspend — the "noise after idle" fix. A running-but-silent AudioContext left open for a
+// while gets its output stream underrun/suspended by the OS audio backend (common on PipeWire/
+// PulseAudio); on the underrun the driver can REPEAT its last buffer → spontaneous looping noise.
+// Neither app ever suspended the context, so both hit it. Suspending it a few seconds after the last
+// sound ends means there's no live stream to underrun; the next play resumes it (deferred start above
+// covers the async-resume race), and a click/keypress re-warms it via the capture listeners below.
+let idleTimer = null;
+const IDLE_SUSPEND_SEC = 3;   // suspend this many seconds AFTER the last sound finishes (tunable)
+function armIdleSuspend(soundSec) {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    idleTimer = null;
+    if (audioCtx && audioCtx.state === "running") audioCtx.suspend().catch(() => {});
+  }, (soundSec + IDLE_SUSPEND_SEC) * 1000);
 }
 
 function playBuffer(L, R) {
@@ -384,9 +418,24 @@ function playBuffer(L, R) {
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.connect(ctx.destination);
-  src.start();
+  // The autoplay policy starts the context SUSPENDED, and it can drop back to suspended after
+  // sleep/wake, a backgrounded tab, or an audio-device change. resume() is ASYNC, so starting the
+  // source before the context is actually running schedules it against a stopped clock and the
+  // sound is silently lost — the classic "sometimes it doesn't play". Defer start() until running.
+  if (ctx.state === "running") {
+    src.start();
+  } else {
+    ctx.resume().then(() => src.start()).catch(() => { try { src.start(); } catch (e) {} });
+  }
+  armIdleSuspend(L.length / SR);   // (re)schedule idle auto-suspend from the end of THIS sound
   return src;   // callers may keep it to stop playback (the riff sequencer does)
 }
+
+// Warm/unlock the audio device on the FIRST user interaction anywhere (not just Play), so by the
+// time a sound plays the context is already running instead of racing the async resume. Idempotent
+// (ensureCtx guards) + capture-phase so it runs ahead of the app's own handlers.
+["pointerdown", "keydown", "touchstart"].forEach((ev) =>
+  window.addEventListener(ev, ensureCtx, { capture: true, passive: true }));
 
 // Render the current state, play it, draw it, and log it to history.
 function play(label) {
@@ -1581,6 +1630,14 @@ if (workspaceEl && browseToggle) {
   browseToggle.addEventListener("click", () => { prefs.hideBrowser = !prefs.hideBrowser; savePrefs(); applyBrowse(); });
   applyBrowse();
 }
+
+// The Crunchy suite (header ✦ button): suite.js is a byte-identical copy of CrunchyTile's (canonical there,
+// TILE-DESIGN.md §80). On desktop, links open in the OS browser via tauri-plugin-opener (its hosts are
+// scoped in src-tauri/capabilities/default.json); on the web they are plain target=_blank links.
+const suiteDialog = suiteMount("sfx", {
+  button: document.getElementById("suiteBtn"),
+  openUrl: (window.__TAURI__ && window.__TAURI__.opener) ? (url) => window.__TAURI__.opener.openUrl(url) : null,
+});
 
 async function savePreset() {
   // Desktop: add it to the persistent My Presets library — the reliable store there, and what the

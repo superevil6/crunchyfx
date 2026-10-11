@@ -2,7 +2,7 @@
 name = "crunchyfx"
 version = "1.1.0"
 description = "CrunchySFX — a from-scratch sound effect generator"
-authors = ["Alex Cassells"]
+authors = ["superevil6"]
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -14,6 +14,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-drag = "2"   # native drag-OUT of a WAV into the OS / a game engine
+tauri-plugin-opener = "2" # the Crunchy suite dialog opens its links in the OS browser (scoped in capabilities)
 
 # Linux only: enable WebKitGTK media-stream + grant the mic permission for the Record button
 # (main.rs setup hook). Pinned to the version wry already pulls in so it's the same instance.
