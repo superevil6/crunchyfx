@@ -257,6 +257,17 @@
     const fixed = sidecar("coin").hash === plantHash([{ path: "coin.wav", data: wav }]) && !card("Coin").querySelector(".lib-badge.hot") && !libButton("Update all (1)");
     return ok(badge && others && btn && fixed && same(M.bytes(ROOT + "/coin/coin.wav"), wav) && encodePatch("x") === screen, status());
   });
+  // AJ, 2026-10-12: a card's Play must be stoppable: it reads Stop while that sound plays
+  await t("card/play-turns-into-stop-and-stops", async function () {
+    const play = cardButton("Coin", "▶ Play");
+    play.click();
+    await settle();                                                 // the Library runs a card's action a tick later
+    const stop = cardButton("Coin", "■ Stop"), playing = !!projAudition;
+    if (!stop) return ok(false, JSON.stringify({ playing: playing, open: library.isOpen(), buttons: card("Coin") ? Array.from(card("Coin").querySelectorAll(".lib-acts button")).map(function (b) { return b.textContent; }) : "no card" }));
+    stop.click();
+    await settle();
+    return ok(play && stop && playing && !projAudition && !!cardButton("Coin", "▶ Play"));
+  });
   await t("card/re-export-shows-only-with-an-update", async function () {
     const before = !cardButton("Coin", "Re-export");                // up to date: no Re-export on the card
     const d = sidecar("coin");

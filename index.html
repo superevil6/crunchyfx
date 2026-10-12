@@ -3872,6 +3872,7 @@ if (libDock) {
     '</div>';
   document.body.appendChild(libDock);
 }
+let projAudition = null;                                     // the card whose sound is playing: { slug, src }
 const library = libraryMount({
   title: "Library",
   dock: libDock,
@@ -3948,7 +3949,19 @@ const library = libraryMount({
     });
   },
   actions: [
-    { label: "▶ Play", title: "Hear it", run: function (it) { const r = soundRender(it.asset.data); drawScope(r.L, r.R); playBuffer(r.L, r.R); } },
+    // PLAY / STOP (AJ, 2026-10-12, on BGM's cards: no way to stop once playing): the playing card's button reads Stop
+    { label: function (it) { return projAudition && projAudition.slug === it.asset.slug ? "■ Stop" : "▶ Play"; }, title: "Hear it, or stop it",
+      run: function (it) {
+        const was = projAudition;
+        if (was) { projAudition = null; try { was.src.stop(); } catch (e) { /* already ended */ } }
+        if (was && was.slug === it.asset.slug) { library.refresh(); return; }
+        const r = soundRender(it.asset.data);
+        drawScope(r.L, r.R);
+        const src = playBuffer(r.L, r.R), me = { slug: it.asset.slug, src: src };
+        projAudition = me;
+        src.onended = function () { if (projAudition === me) { projAudition = null; library.refresh(); } };
+        library.refresh();
+      } },
     // REPLACE (AJ, 2026-10-11: "I would assume it would overwrite the saved sound with the one I currently have loaded in
     // the editor"): the editor's sound into THIS card, same name, same file, so the game gets it. Two clicks, like Delete.
     { label: "Replace", confirm: true, title: "Put the sound in the editor into this card: same name and same file, so your game gets the new sound",

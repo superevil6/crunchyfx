@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/tools/core-commit.mjs @ 6a77157 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/tools/core-commit.mjs @ b41dd27 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 b6c4079c03f7d6fa0bd316b85e7e3a47cad91b4948e079e2f0356a4e737a33de
 // core-commit — commit and push crunchyCore, then pull it into this app: the core-first order in one step.
 //

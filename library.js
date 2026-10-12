@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/library.js @ 6a77157 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 5016af6bbeee02bf228b02777802ec4a74b2f72d41d2611c9bf0a20d29d3b3de
+// GENERATED from crunchyCore/library.js @ b41dd27 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 9514b82baa8360e28ab72b526f3197b1725f29a7c4129305068b0007cba1a5b5
 "use strict";
 // CrunchyTile — THE LIBRARY (TILE-DESIGN.md §79): a visual asset viewer over a project, as a PORTABLE
 // COMPONENT. AJ, 2026-10-09: "a visual project/asset viewer is a very obvious oversight in ALL of the
@@ -27,6 +27,12 @@
 //     actions              → [{ label, title, run(item), confirm }]          confirm: a second click
 //     (build 2, DESKTOP-ROADMAP.md, all optional; without them it is the dialog it always was)
 //     items()[].badges[].hot  a badge that must be noticed ("update available"): drawn in the accent
+//     tabs()               → [{ key, label, title, render(el) }]   (build 4, DESKTOP-ROADMAP.md) a row of TABS under the
+//                            top bar, the first selected. An asset tab shows the items whose `tab` is its key (search
+//                            and kind chips work inside it); a tab with `render` is the APP's own: the panel clears an
+//                            element and hands it over (CrunchyVFX's Imports & history; CrunchyBGM's six libraries are
+//                            asset tabs). A tab's `count` (optional) is shown after its label.
+//     actions[].label        may be a function(item) (build 4): a button that says what it will do NOW (Play / Stop)
 //     actions[].when(item)  (build 3) show this card button only where it returns true (Re-export: only on a card
 //                           that has an update; Replace: only where the editor holds the same kind of thing)
 //     dock                 an element: the Library is a PANEL docked in it rather than an overlay dialog
@@ -36,10 +42,10 @@
 //   });
 //   lib.open(); lib.close(); lib.refresh(); lib.status("Saved."); lib.isOpen();
 
-const LIBRARY_BUILD = 3;
+const LIBRARY_BUILD = 4;
 
 function libraryMount(opts) {
-  let root = null, grid = null, statusEl = null, searchEl = null, query = "", kind = "", busy = false;
+  let root = null, grid = null, statusEl = null, searchEl = null, query = "", kind = "", tab = null, busy = false;
   const el = function (tag, cls, text) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -141,8 +147,31 @@ function libraryMount(opts) {
       });
       (opts.commands ? opts.commands() : []).forEach(function (c) { tools.appendChild(button(c)); });
       links.appendChild(tools);
-      panel.appendChild(links);
+      if (links.childElementCount > 1 || tools.childElementCount) panel.appendChild(links);   // no empty bar (build 4)
 
+      // TABS (build 4): asset tabs filter the cards; an app-drawn tab replaces the search, chips and cards
+      const tabs = opts.tabs ? opts.tabs() : [];
+      if (tabs.length && !tabs.some(function (t) { return t.key === tab; })) tab = tabs[0].key;
+      const cur = tabs.find(function (t) { return t.key === tab; }) || null;
+      if (tabs.length) {
+        const row = el("div", "lib-tabs");
+        row.setAttribute("role", "tablist");
+        tabs.forEach(function (t) {
+          const b = el("button", "lib-tab" + (t.key === tab ? " on" : ""), t.label + (t.count != null ? " " + t.count : ""));
+          b.type = "button"; b.dataset.tab = t.key; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", t.key === tab ? "true" : "false");
+          if (t.title) b.title = t.title;
+          b.addEventListener("click", function () { if (tab !== t.key) { tab = t.key; kind = ""; query = ""; refresh(); } });
+          row.appendChild(b);
+        });
+        panel.appendChild(row);
+      }
+      if (cur && cur.render) {
+        const host = el("div", "lib-grid lib-own");
+        host.dataset.tab = cur.key;
+        panel.appendChild(host);
+        try { cur.render(host); } catch (e) { host.appendChild(el("p", "lib-hint", String(e && e.message ? e.message : e))); }
+        grid = null;
+      } else {
       const bar = el("div", "lib-bar");
       searchEl = el("input", "lib-search");
       searchEl.type = "search"; searchEl.placeholder = "Search by name…"; searchEl.value = query;
@@ -158,6 +187,7 @@ function libraryMount(opts) {
       grid = el("div", "lib-grid");
       panel.appendChild(grid);
       drawGrid();
+      }
       const others = opts.suite ? opts.suite() : [];
       if (others.length) {                                        // THE SUITE VIEW (build 2): read-only
         const sv = el("div", "lib-suite");
@@ -181,7 +211,7 @@ function libraryMount(opts) {
     grid.textContent = "";
     const q = query.trim().toLowerCase();
     const items = opts.items().filter(function (it) {
-      return (!kind || it.kind === kind) && (!q || it.name.toLowerCase().indexOf(q) >= 0 || String(it.group || "").toLowerCase().indexOf(q) >= 0);
+      return (!tab || it.tab === tab) && (!kind || it.kind === kind) && (!q || it.name.toLowerCase().indexOf(q) >= 0 || String(it.group || "").toLowerCase().indexOf(q) >= 0);
     });
     if (!items.length) {
       grid.appendChild(el("p", "lib-hint", q || kind ? "Nothing matches." : opts.emptyHint || "Nothing saved yet. Name a design and press “Save to project”."));
@@ -229,7 +259,7 @@ function libraryMount(opts) {
     }
     (opts.actions || []).forEach(function (a) {
       if (a.when && !a.when(it)) return;
-      const b = el("button", a.confirm ? "lib-danger" : "", a.label);
+      const b = el("button", a.confirm ? "lib-danger" : "", typeof a.label === "function" ? a.label(it) : a.label);
       if (a.title) b.title = a.title;
       b.addEventListener("click", function () {
         if (a.confirm && !b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Really?"; return; }
@@ -261,7 +291,7 @@ function libraryMount(opts) {
   }
   function open() {
     if (!root) build();
-    query = ""; kind = "";                                        // a filter from last time would hide things
+    query = ""; kind = "";                                        // a filter from last time would hide things (the tab stays)
     root.hidden = false;
     refresh();
     if (searchEl) searchEl.focus(); else root.querySelector("button").focus();
@@ -271,5 +301,6 @@ function libraryMount(opts) {
     open: open, close: close, refresh: refresh, status: status,
     isOpen: function () { return !!root && !root.hidden; },
     root: function () { return root; },
+    tab: function (key) { if (key !== undefined) { tab = key; kind = ""; query = ""; refresh(); } return tab; },   // build 4
   };
 }
