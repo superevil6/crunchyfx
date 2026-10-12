@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 77dcdb2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 1d5a7f52c4d4a111bf117aff25dc2b9ac12c9ddb22fa5460034426e28978c8c6 */
+/* GENERATED from crunchyCore/crunchy-base.css @ e631975 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 56771a821e72bd3665f1ab44ed8a22c1f742e157cf343949097e318c3bb61e89 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 6;
+  --base-build: 7;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -217,6 +217,28 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .setchk input::before { width: 10px; height: 10px; }
 .set-btn { flex: none; white-space: nowrap; }
 .set-el { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; max-width: 60%; }
+
+/* FEEDBACK (feedback.js): the person writes, sees every detail that would go with it, and sends from their own mail. */
+.fb-overlay[hidden] { display: none !important; }
+.fb-overlay { position: fixed; inset: 0; z-index: 260; background: rgba(8, 7, 12, 0.78); display: flex;
+              align-items: center; justify-content: center; padding: 16px; }
+.fb-panel { width: min(620px, 100%); max-height: 100%; overflow: auto; background: var(--panel);
+            border: 2px solid var(--line2); box-shadow: var(--lift); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.fb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fb-title { margin: 0; font: 700 17px/1.4 var(--head); text-transform: uppercase; letter-spacing: .03em; color: var(--accent); }
+.fb-hint { flex: 1; font-size: 12px; color: var(--muted); }
+.fb-close { font-size: 16px; line-height: 1; padding: 4px 9px; }
+.fb-field { display: flex; flex-direction: column; gap: 4px; }
+.fb-label { font-size: 12.5px; color: var(--muted); }
+.fb-text { width: 100%; resize: vertical; min-height: 54px; font: inherit; color: var(--ink); background: var(--bg);
+           border: 1px solid var(--line2); padding: 6px 8px; }
+.fb-details { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow: auto; padding: 6px 8px;
+              background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
+.fb-det { display: flex; gap: 6px; align-items: flex-start; color: var(--muted); }
+.fb-det b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.fb-val { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fb-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fb-said { flex: 1; font-size: 12px; color: var(--muted); }
 
 /* THE WEB'S ONE INVITATION (desktop.js): the header button, and what the desktop adds. */
 .desk-cta { white-space: nowrap; border-color: var(--accent); color: var(--accent); }

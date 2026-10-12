@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 77dcdb2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 4e80aafa544f663fcc91d7722ee78738fbeeffa7109b9dfee9c17d8fea1cd9f2
+// GENERATED from crunchyCore/plant.js @ e631975 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 56515127de9034ce921a26bc9a8ec36ddf602ea13d08ae701d04cd410a1a41fd
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -23,9 +23,10 @@
 //
 // SAFETY, the same promises as project.js: nothing is written outside this app's child folder (but GAME FILES, below:
 // only where an app names an engine's own asset folders); nothing is removed that
-// a sidecar does not list (and a listed path that would escape the asset's folder is ignored), with ONE companion: in a
+// a sidecar does not list (and a listed path that would escape the asset's folder is ignored), with TWO companions: in a
 // Godot project a removed file's own `<file>.import` goes with it, because Godot keeps serving a deleted texture from
-// its import cache while that file remains (found by tests/godot-plant.mjs: the game still loaded a deleted asset); a sidecar is written
+// its import cache while that file remains (found by tests/godot-plant.mjs: the game still loaded a deleted asset), and
+// `<file>.uid`, which Godot 4.4+ writes beside a script; a sidecar is written
 // LAST, so an export interrupted half-way never claims files it did not finish. RENAME CHANGES ONLY THE NAME, never
 // the path: a game's scenes refer to files by path, and moving them would break the game.
 //
@@ -47,7 +48,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 6;
+const PLANT_BUILD = 7;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -55,6 +56,7 @@ const PLANT_SUITE = {
   tile: ["tile", "Tile"], ui: ["ui", "UI"], sfx: ["sfx", "SFX"],
   vfx: ["vfx", "VFX"], bgm: ["bgm", "BGM"], character: ["character", "Character"],
 };
+const PLANT_SUITE_NAMES = { tile: "CrunchyTile", ui: "CrunchyUI", sfx: "CrunchySFX", vfx: "CrunchyVFX", bgm: "CrunchyBGM", character: "CrunchyCharacter" };
 
 // ---- paths ------------------------------------------------------------------------------------------------------
 function plantJoin() {
@@ -215,10 +217,13 @@ async function plantPrune(P, dir) {
     if ((await P.fs.readDir(sub)).length === 0) await P.fs.remove(sub);
   }
 }
-// Remove one file this app wrote, and in Godot its `.import` companion (see SAFETY above).
+// Remove one file this app wrote, and in Godot its companions: `.import` (see SAFETY above), and `.uid`, which Godot
+// 4.4+ writes beside every script and shader (found by CrunchyVFX's Godot check, 2026-10-12: the combined scene's
+// `.gd` left `<base>.gd.uid` behind, so a deleted effect's folder could not go).
 async function plantRemoveWritten(P, path) {
   if (await P.fs.exists(path)) await P.fs.remove(path);
-  if (P.engine === "godot" && await P.fs.exists(path + ".import")) await P.fs.remove(path + ".import");
+  if (P.engine !== "godot") return;
+  for (const c of [".import", ".uid"]) if (await P.fs.exists(path + c)) await P.fs.remove(path + c);
 }
 
 // ---- write -------------------------------------------------------------------------------------------------------
@@ -255,56 +260,61 @@ async function plantStale(P, req) {
 const PLANT_REF_EXT = { godot: /\.(tscn|tres|gd|cs|gdshader|godot|cfg)$/i, unity: /\.(unity|prefab|asset|mat|controller|anim|overrideController|playable|spriteatlas)$/i };
 const PLANT_REF_SKIP = /^(\.godot|\.import|\.git|\.svn|\.hg|node_modules|Library|Temp|Logs|obj|build|addons\/godot-git-plugin)$/;
 const PLANT_REF_MAX = 20000;                                    // files read at most: a guard, not an indexer
-// plantUsersOf(P, slug, paths) → [{ path, by: [game file relative to the game folder] }], only the paths something uses.
-// Godot: a text resource or script that names the file's res:// path. Unity: an asset that names the GUID in the file's
-// .meta. A plain folder has no game to break: always []. Read-only.
+// plantUsersOf(P, slug, paths) → [{ path, by: [who, as a person reads it] }], only the paths something uses. Read-only.
+//   SUITE LINKS (build 7, SUITE-LINKS.md): another planted asset, of any app, whose sidecar links this one (any engine,
+//     a plain folder too): "CrunchyVFX's effect “Fireball”".
+//   Godot: a text resource or script that names the file's res:// path, ANYWHERE but this app's own planted folder (a
+//     VFX scene in crunchy/vfx/ that plays an SFX WAV counts; before build 7 all of crunchy/ was skipped and missed it).
+//   Unity: an asset that names the GUID in the file's .meta, likewise.
+//   RPG Maker (build 6): the Database (data/*.json) naming an image by its file name without ".png" ("$Hero", "Hero").
 async function plantUsersOf(P, slug, paths) {
-  if (P.engine === "plain" || !paths.length) return [];
-  // RPG MAKER (build 6): the Database (data/*.json) names an image by its file name without ".png" ("$Hero", "Hero")
+  if (!paths.length) return [];
+  const fs = P.fs, by = {};
+  const add = function (path, who) { const l = by[path] = by[path] || []; if (l.indexOf(who) < 0) l.push(who); };
+  for (const l of await plantLinkersOf(P, slug)) paths.forEach(function (p) { if (l.file == null || l.file === p) add(p, l.label); });
   if (P.engine === "rpgmaker") {
     const imgs = paths.map(function (p) { const g = plantGameRel(p); return g === null ? null : { path: p, needle: JSON.stringify(g.split("/").pop().replace(/\.png$/i, "")) }; })
       .filter(Boolean);
-    const data = plantJoin(P.dir, "data"), by = {};
-    if (!imgs.length || !(await P.fs.exists(data))) return [];
-    for (const e of await P.fs.readDir(data)) {
+    const data = plantJoin(P.dir, "data");
+    if (imgs.length && await fs.exists(data)) for (const e of await fs.readDir(data)) {
       if (e.isDirectory || !/\.json$/i.test(e.name)) continue;
       let text = "";
-      try { text = await P.fs.readTextFile(plantJoin(data, e.name)); } catch (err) { continue; }
-      imgs.forEach(function (w) { if (text.indexOf(w.needle) >= 0) (by[w.path] = by[w.path] || []).push("data/" + e.name); });
+      try { text = await fs.readTextFile(plantJoin(data, e.name)); } catch (err) { continue; }
+      imgs.forEach(function (w) { if (text.indexOf(w.needle) >= 0) add(w.path, "data/" + e.name); });
     }
-    return imgs.filter(function (w) { return by[w.path]; }).map(function (w) { return { path: w.path, by: by[w.path] }; });
+  } else if (P.engine === "godot" || P.engine === "unity") {
+    const dir = plantJoin(P.dir, P.rel, slug), want = [];
+    for (const p of paths) {
+      if (P.engine === "godot") want.push({ path: p, needle: "res://" + plantJoin(P.rel, slug, p) });
+      else {
+        const meta = plantJoin(dir, p) + ".meta";
+        if (!(await fs.exists(meta))) continue;                  // Unity never imported it: nothing can refer to it
+        const m = /^guid:\s*([0-9a-f]{32})/m.exec(await fs.readTextFile(meta));
+        if (m) want.push({ path: p, needle: m[1] });
+      }
+    }
+    if (want.length) {
+      const ext = PLANT_REF_EXT[P.engine], own = plantJoin(P.dir, P.rel);
+      let read = 0;
+      const walk = async function (d, rel) {
+        if (read > PLANT_REF_MAX || d === own) return;
+        let entries = [];
+        try { entries = await fs.readDir(d); } catch (e) { return; }
+        for (const e of entries) {
+          if (read > PLANT_REF_MAX) return;
+          const r = rel ? rel + "/" + e.name : e.name, full = plantJoin(d, e.name);
+          if (e.isDirectory) { if (!PLANT_REF_SKIP.test(e.name) && !PLANT_REF_SKIP.test(r)) await walk(full, r); continue; }
+          if (!ext.test(e.name)) continue;
+          read++;
+          let text = "";
+          try { text = await fs.readTextFile(full); } catch (err) { continue; }
+          want.forEach(function (w) { if (text.indexOf(w.needle) >= 0) add(w.path, r); });
+        }
+      };
+      await walk(P.dir, "");
+    }
   }
-  const fs = P.fs, dir = plantJoin(P.dir, P.rel, slug), want = [];
-  for (const p of paths) {
-    if (P.engine === "godot") want.push({ path: p, needle: "res://" + plantJoin(P.rel, slug, p) });
-    else {
-      const meta = plantJoin(dir, p) + ".meta";
-      if (!(await fs.exists(meta))) continue;                    // Unity never imported it: nothing can refer to it
-      const m = /^guid:\s*([0-9a-f]{32})/m.exec(await fs.readTextFile(meta));
-      if (m) want.push({ path: p, needle: m[1] });
-    }
-  }
-  if (!want.length) return [];
-  const ext = PLANT_REF_EXT[P.engine], plantedRoot = plantJoin(P.dir, plantRootRel(P.engine));
-  const by = {};
-  let read = 0;
-  const walk = async function (d, rel) {
-    if (read > PLANT_REF_MAX || d === plantedRoot) return;
-    let entries = [];
-    try { entries = await fs.readDir(d); } catch (e) { return; }
-    for (const e of entries) {
-      if (read > PLANT_REF_MAX) return;
-      const r = rel ? rel + "/" + e.name : e.name, full = plantJoin(d, e.name);
-      if (e.isDirectory) { if (!PLANT_REF_SKIP.test(e.name) && !PLANT_REF_SKIP.test(r)) await walk(full, r); continue; }
-      if (!ext.test(e.name)) continue;
-      read++;
-      let text = "";
-      try { text = await fs.readTextFile(full); } catch (err) { continue; }
-      want.forEach(function (w) { if (text.indexOf(w.needle) >= 0) (by[w.path] = by[w.path] || []).push(r); });
-    }
-  };
-  await walk(P.dir, "");
-  return want.filter(function (w) { return by[w.path]; }).map(function (w) { return { path: w.path, by: by[w.path] }; });
+  return paths.filter(function (p) { return by[p]; }).map(function (p) { return { path: p, by: by[p] }; });
 }
 // One plain sentence for the app's status line: what would go, and what in the game uses it.
 function plantUsedMessage(used, verb) {
@@ -392,27 +402,89 @@ function plantNeedsUpdate(a, files) {
   return (h.indexOf("2:") === 0 ? plantHash(files) : plantHash(files, 1)) !== h;     // compared the way it was written
 }
 
-// ---- the suite view ----------------------------------------------------------------------------------------------
+// ---- the suite view, and SUITE LINKS (build 7, SUITE-LINKS.md) --------------------------------------------------------
+// Every sidecar in one app's child folder here (any app's, this one's too): [{ slug, d }], unreadable ones left out.
+async function plantReadChild(P, key) {
+  const fs = P.fs, rel = plantChildRel(P.engine, key), dir = plantJoin(P.dir, rel), out = [];
+  if (!(await fs.exists(dir))) return out;
+  for (const e of await fs.readDir(dir)) {
+    if (!e.isDirectory || !plantSafeRel(e.name)) continue;
+    const side = plantJoin(dir, e.name, e.name + PLANT_EXT);
+    if (!(await fs.exists(side))) continue;
+    let d = null;
+    try { d = JSON.parse(await fs.readTextFile(side)); } catch (err) { continue; }
+    if (!d || d.format !== PLANT_FORMAT || typeof d.kind !== "string" || typeof d.name !== "string") continue;
+    out.push({ slug: e.name, rel: rel, d: d });
+  }
+  return out;
+}
+// ANOTHER APP'S planted assets, read-only, by the fields every sidecar shares (rule 6: never an app's own fields):
+// [{ suite, slug, rel, kind, name, files, s, hash, modified }], by name. `kind` filters.
+async function plantPeek(P, key, kind) {
+  if (!PLANT_SUITE[key]) throw new Error("plant: unknown suite key " + key);
+  return (await plantReadChild(P, key)).filter(function (x) { return !kind || x.d.kind === kind; }).map(function (x) {
+    return { suite: key, slug: x.slug, rel: x.rel, kind: x.d.kind, name: x.d.name,
+             files: Array.isArray(x.d.files) ? x.d.files.filter(plantSafeRel) : [], s: typeof x.d.s === "string" ? x.d.s : "",
+             hash: String(x.d.hash || ""), modified: x.d.modified || "" };
+  }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+}
 // Read-only: what the OTHER Crunchy tools have planted in the same folder. [{ key, rel, count, kinds: { kind: n } }],
-// only the tools that have something. Their sidecars are counted, never parsed for more than kind, never written.
+// only the tools that have something.
 async function plantSuiteView(P) {
-  const out = [], fs = P.fs;
+  const out = [];
   for (const key of Object.keys(PLANT_SUITE)) {
     if (key === PROJECT_APP.suite) continue;
-    const rel = plantChildRel(P.engine, key), dir = plantJoin(P.dir, rel);
-    if (!(await fs.exists(dir))) continue;
-    const row = { key: key, rel: rel, count: 0, kinds: {} };
-    for (const e of await fs.readDir(dir)) {
-      if (!e.isDirectory || !plantSafeRel(e.name)) continue;
-      const side = plantJoin(dir, e.name, e.name + PLANT_EXT);
-      if (!(await fs.exists(side))) continue;
-      let kind = "asset";
-      try { const d = JSON.parse(await fs.readTextFile(side)); if (d && d.format === PLANT_FORMAT && typeof d.kind === "string") kind = d.kind; else continue; }
-      catch (err) { continue; }
-      row.count++;
-      row.kinds[kind] = (row.kinds[kind] || 0) + 1;
+    const list = await plantReadChild(P, key);
+    if (!list.length) continue;
+    const row = { key: key, rel: plantChildRel(P.engine, key), count: list.length, kinds: {} };
+    list.forEach(function (x) { row.kinds[x.d.kind] = (row.kinds[x.d.kind] || 0) + 1; });
+    out.push(row);
+  }
+  return out;
+}
+// A LINK, kept in the sidecar of the asset that uses another (`fields.links`, an array): { suite, slug, kind, name,
+// file, mode, hash }. mode "reference": the export POINTS at that file (a change reaches the game by itself); "embed":
+// the export is DRAWN from that design (a change makes this asset "update available"). `file` (one of its files; for
+// "reference") names what is used. `hash` is the target's fingerprint when linked.
+function plantLinkOf(peeked, file, mode) {
+  if (mode !== "reference" && mode !== "embed") throw new Error("plant: a link is \"reference\" or \"embed\"");
+  if (file != null && peeked.files.indexOf(file) < 0) throw new Error("plant: " + peeked.name + " has no file " + file);
+  if (mode === "reference" && file == null) throw new Error("plant: a reference link names a file");
+  const l = { suite: peeked.suite, slug: peeked.slug, kind: peeked.kind, name: peeked.name, mode: mode, hash: peeked.hash };
+  if (file != null) l.file = file;
+  return l;
+}
+// An asset's links, only well-formed ones (a hand-edited or foreign sidecar never reaches outside crunchy/ through one).
+function plantLinks(a) {
+  const ls = a && a.data && Array.isArray(a.data.links) ? a.data.links : [];
+  return ls.filter(function (l) {
+    return l && PLANT_SUITE[l.suite] && typeof l.slug === "string" && plantSafeRel(l.slug) && l.slug.indexOf("/") < 0 &&
+      (l.mode === "reference" || l.mode === "embed") && (l.file == null || (plantSafeRel(l.file) && plantGameRel(l.file) === null));
+  });
+}
+// Where a link's file is, relative to the game folder ("crunchy/sfx/boom/boom.wav"); Godot's path is "res://" + this.
+function plantLinkPath(P, l) { return plantJoin(plantChildRel(P.engine, l.suite), l.slug, l.file || ""); }
+// "ok" | "changed" (an embed link whose target was re-exported since) | "missing" (the target, or its file, is gone)
+async function plantLinkState(P, l) {
+  const side = plantJoin(P.dir, plantChildRel(P.engine, l.suite), l.slug, l.slug + PLANT_EXT);
+  let d = null;
+  try { d = (await P.fs.exists(side)) ? JSON.parse(await P.fs.readTextFile(side)) : null; } catch (err) { d = null; }
+  if (!d || d.format !== PLANT_FORMAT) return "missing";
+  if (l.file != null && (!Array.isArray(d.files) || d.files.indexOf(l.file) < 0 || !(await P.fs.exists(plantJoin(P.dir, plantLinkPath(P, l)))))) return "missing";
+  return l.mode === "embed" && String(d.hash || "") !== l.hash ? "changed" : "ok";
+}
+// WHO LINKS TO an asset of this app (`slug`), across every app here: [{ suite, slug, kind, name, file, mode, label }].
+async function plantLinkersOf(P, slug) {
+  const out = [];
+  for (const key of Object.keys(PLANT_SUITE)) {
+    for (const x of await plantReadChild(P, key)) {
+      if (key === PROJECT_APP.suite && x.slug === slug) continue;
+      plantLinks({ data: x.d }).forEach(function (l) {
+        if (l.suite !== PROJECT_APP.suite || l.slug !== slug) return;
+        out.push({ suite: key, slug: x.slug, kind: x.d.kind, name: x.d.name, file: l.file, mode: l.mode,
+                   label: PLANT_SUITE_NAMES[key] + "'s " + x.d.kind + " “" + x.d.name + "”" });
+      });
     }
-    if (row.count) out.push(row);
   }
   return out;
 }
