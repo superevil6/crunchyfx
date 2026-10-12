@@ -35,3 +35,7 @@ todo.md
 
 # Local state from `wrangler dev` (the Cloudflare runtime run locally). Cache and scratch only.
 .wrangler/
+
+# Generated test pages and their screenshots (python3 tests/build.py <suite>). tests/fixtures/ IS tracked.
+tests/run-*.html
+tests/*.png

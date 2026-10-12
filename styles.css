@@ -471,16 +471,10 @@
   .cog { align-self: center; background: var(--panel2); border: 1px solid var(--line2);
     color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 9px; cursor: pointer; }
   .cog:hover { color: var(--ink); border-color: var(--accent); }
-  .settings-box { width: min(520px, 92vw); }
-  .settings-body { padding: 4px 18px 14px; }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  .settings-row:last-child { border-bottom: none; }
-  .settings-lbl { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--ink); }
-  .settings-sub { font-size: 12px; color: var(--muted); max-width: 300px; }
-  .settings-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .settings-chk { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; user-select: none; }
-  .settings-chk input { cursor: pointer; }
+  /* ⚙ Settings is crunchy-base.css's dialog (settings.js) since the planted Library pass (2026-10-11); SFX adds one
+     row of its own, the export format (index.html settingsExtras). */
+  .settings-fmt { display: flex; align-items: center; flex-wrap: wrap; }
+  .settings-fmt .fmtgroup { flex-wrap: wrap; justify-content: flex-end; }
   /* Welcome tour (guided spotlight). .tour covers the screen (blocks background); the hole's big
      box-shadow dims everything except the highlighted target; the card explains the step. */
   .tour { position: fixed; inset: 0; z-index: 300; }
@@ -521,18 +515,8 @@
   .fnd-style:hover span { border-color: var(--line2); color: var(--ink); }
   .fnd-style input:checked + span { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .fnd-style input:focus-visible + span { outline: 1px solid var(--accent); outline-offset: 1px; }
-  /* Web-only "Get the Desktop app" modal (premium features, Coming soon) */
   button[disabled] { opacity: 0.55; cursor: default; }
   button.primary[disabled]:hover { background: var(--accent); border-color: var(--accent); }   /* a disabled primary stays put */
-  .steam-box { width: min(640px, 100%); }
-  .steam-badge { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--on-accent); background: var(--accent); padding: 3px 9px; white-space: nowrap; }
-  .steam-body { padding: 18px; overflow-y: auto; }
-  .steam-feats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
-  .steam-feats li { font-size: 14px; line-height: 1.45; color: var(--ink); }
-  .steam-feats b { color: var(--info); }
-  .steam-feats code { background: var(--panel2); border: 1px solid var(--line); padding: 1px 5px; font-size: 12px; }
-  .steam-note { margin: 16px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
   .breed-cell-bar .fnd-keepbtn { padding: 2px 9px; font-size: 12px; }
   .breed-cell-bar .fnd-editbtn { flex: 1; padding: 4px 10px; font-size: 12px; font-weight: 600;
     background: var(--accent); color: var(--on-accent); border-color: var(--accent);
@@ -676,3 +660,25 @@
 /* SFX-local (outside the copied block): the suite button borrows the header's .viewtoggle look, but the
    preset toggle beside it already takes the margin-left:auto that pushes the pair right. */
 #suiteBtn.viewtoggle { margin-left: 0; }
+
+/* THE PLANTED LIBRARY (desktop; crunchyCore plant.js + library.js's docked panel, DESKTOP-ROADMAP.md): a second rail,
+   docked beside the History rail, the core's .lib-dock under SFX's name-and-Save bar. The page makes room for it while
+   it is open (body padding grows by its width); under 920px, where History stops being a rail, it overlays instead. */
+#libraryBtn.viewtoggle { margin-left: 0; white-space: nowrap; }
+#libDock { position: fixed; top: 0; right: 300px; bottom: 0; width: 380px; z-index: 7; display: flex; flex-direction: column;
+  background: var(--panel); border-left: 2px solid var(--line2); }
+#libDock:not(:has(> .lib-dock:not([hidden]))) { display: none; }
+body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 680px; }
+#libDock > .lib-dock { flex: 1; min-height: 0; height: auto; border-left: 0; }
+#libDock .lib-panel.lib-docked { overflow: hidden; }
+#libDock .lib-thumb { image-rendering: auto; }
+.plant-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 12px 8px; border-bottom: 1px solid var(--line); }
+.plant-bar #plantWhere { flex-basis: 100%; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plant-bar #plantName { flex: 1; min-width: 8em; }
+.plant-bar button { padding: 6px 12px; }
+.plant-msg { max-width: 46ch; font-size: 12px; }
+.plant-msg:empty { display: none; }
+@media (max-width: 920px) {
+  #libDock { right: 0; width: min(420px, 100%); z-index: 150; box-shadow: var(--lift, none); }
+  body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 0; }
+}

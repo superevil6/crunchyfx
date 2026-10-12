@@ -1,5 +1,11 @@
 # CrunchySFX: project folders, a Library, and export straight into Godot and Unity
 
+> **Superseded (2026-10-11) by the PLANTED Library** (crunchyCore DESKTOP-ROADMAP.md: AJ decided planting REPLACES
+> separate project folders). There is no project folder and no link: CrunchySFX is planted in the game's own folder
+> (`crunchy/sfx/<sound>/`), each sound a WAV beside a `.crunchy` sidecar. What was built, and why it differs from this
+> plan (one kind, the share string not `state`, My Presets copied rather than moved), is in DESKTOP.md "The planted
+> Library" and the worklog. Kept for the survey of SFX's code (§2) and the open questions (§8).
+
 A handoff from CrunchyTile (2026-10-09). CrunchyTile's desktop tier gained these three features, and AJ wants
 the same for SFX:
 

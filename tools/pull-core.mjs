@@ -256,7 +256,8 @@ function followWants(files) {
     const css = f.endsWith(".css");
     // a DEPS row may put `want:` on one of the next lines (CrunchyBGM's do): look up to three lines on
     let i = -1;
-    if (css) i = lines.findIndex((l) => l.includes('"' + f + ' is build "'));
+    // the CHECK line, not a comment that quotes it (CrunchyVFX's does): it must also carry `wants N`
+    if (css) i = lines.findIndex((l) => l.includes('"' + f + ' is build "') && /wants \d+/.test(l));
     else {
       const at = lines.findIndex((l) => l.includes('file: "' + f + '"'));
       if (at >= 0) for (let k = at; k < Math.min(at + 4, lines.length); k++) {
@@ -267,8 +268,10 @@ function followWants(files) {
     if (i < 0) { unchecked.push(`${f} ${n}`); continue; }
     const was = (css ? /wants (\d+)/ : /want: (\d+)/).exec(lines[i]);
     if (was && Number(was[1]) === n) continue;
-    lines[i] = css ? lines[i].replace(/!== "\d+"/, '!== "' + n + '"').replace(/wants \d+/, "wants " + n)
-                   : lines[i].replace(/want: \d+/, "want: " + n);
+    const next = css ? lines[i].replace(/!== "\d+"/, '!== "' + n + '"').replace(/wants \d+/, "wants " + n)
+                     : lines[i].replace(/want: \d+/, "want: " + n);
+    if (next === lines[i]) continue;
+    lines[i] = next;
     changed = true;
     notes.push(`${f}: index.html want ${was ? was[1] : "?"} -> ${n}`);
   }

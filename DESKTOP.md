@@ -93,5 +93,38 @@ This regenerates every size (including the Windows `.ico`) into `src-tauri/icons
 - Native **Save As** dialog for WAV export (Tauri `dialog`/`fs` plugins) instead of a
   browser download.
 - Tauri clipboard plugin for the **Share link** button.
-- A **pro-only** feature gate (batch/family export, extra preset packs) to differentiate
-  the paid desktop build from the free web version.
+- ~~A desktop-only feature gate~~: the suite's rule is that the desktop sells WORKFLOW, never sound (crunchyCore
+  desktop.js). Everything the web makes stays free; see "The planted Library" below.
+
+## The planted Library (2026-10-11)
+
+crunchyCore's DESKTOP-ROADMAP.md step 3 (AJ's decisions §6), after crunchyTile (TILE-DESIGN.md §114) and crunchyUI
+(UI-DESIGN.md §18). The worklog has the detail; in short:
+
+- **Plant in a folder…** (the Library, a panel docked beside History; Ctrl+L): a Godot game, a Unity project or any
+  folder. Each sound saved there is `crunchy/sfx/<slug>/<slug>.wav` (Unity: `Assets/Crunchy/SFX/<slug>/`), the very
+  bytes Export WAV writes, beside `<slug>.crunchy` (JSON: the share string `s` that reopens it, the files it wrote,
+  a fingerprint). Save (Ctrl+S, or Save preset while planted) re-exports in place; rename changes the name only;
+  Update / Update all, Duplicate, Delete (its files and Godot's `.import`, nothing else), recent folders, and the
+  suite view (what CrunchyTile, UI, … planted in the same game).
+- **My Presets stay in the browser, untouched.** "Plant my presets" and "Plant a project file…" copy sounds in.
+- **Permissions:** capabilities/default.json adds read-text, read-dir, exists, mkdir, write-text and remove to the fs
+  plugin (scope `$HOME/**` and the usual places, as before). The Flatpak gets `--filesystem=home` (was
+  `xdg-download:rw`): the app writes into the game's folder directly, not through a portal.
+- **Proved:** `tests/` (see CLAUDE.md "How to verify"): the desktop suite over a mocked disk, a real Godot 4 import
+  (`node tests/godot-check.mjs`), and the audio of every preset identical to v1.1.
+- **Not yet:** a person clicking the native dialogs (AJ did for Tile and UI); a live Unity import (Unity imports WAVs
+  natively, and the `.crunchy` becomes a harmless DefaultAsset with a `.meta`, but no Unity is installed here).
+- **A release needs:** the version bump in the three places (ITCH-RELEASE.md: tauri.conf.json, Cargo.toml, the
+  metainfo's `<release>`; `scripts/release.sh` also moves APP_VERSION and version.json), release notes naming the
+  planted Library and the Flatpak's new home-folder access, and the itch page's "desktop app" lines (ITCH-RELEASE.md
+  §3) brought in line with the new list in index.html's `desktopMount` call.
+
+**Card buttons (AJ, 2026-10-11):** on SFX's card AJ expected "Update" to put the editor's sound into the card; it
+re-exported the saved one. Now, the same in Tile, UI and SFX (library.js 3's `when`): **Replace** (two clicks) puts
+what's in the editor into that card, same name and same files, so the game gets it (Tile: only on a card of the tab on
+screen, or a kit on the Scene tab; UI: the card keeps its shape); **Re-export** shows only on a card with "update
+available". The Save bar is unchanged. Each app's desktop suite proves both.
+
+**Proved by hand (AJ, 2026-10-11, the real desktop app and native dialogs):** planted, saved sounds, replaced one from
+the editor, and the card buttons: "Worked exactly as expected."

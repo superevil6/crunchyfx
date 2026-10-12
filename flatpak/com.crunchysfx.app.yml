@@ -42,11 +42,14 @@ finish-args:
   - --share=ipc                # required with X11 (shared memory)
   - --device=dri               # GPU access — the Flatpak GL brokering that fixes the EGL/blank-page bug
   - --socket=pulseaudio        # audio OUT (playback) + audio IN (the mic Record feature)
-  # File save / WAV / batch export use xdg-desktop-portal (native dialogs), so no broad filesystem
-  # access is needed. `xdg-download` is opened rw as a sensible default sink for exported sounds.
-  # If a Save/Export can't write in the sandbox, broaden this (e.g. `--filesystem=home`) AND check the
-  # Tauri fs scope in src-tauri/capabilities/default.json maps to the chosen path.
-  - --filesystem=xdg-download:rw
+  # THE PLANTED LIBRARY (crunchyCore plant.js, DESKTOP-ROADMAP.md): the person points CrunchySFX at their GAME's
+  # folder once (a Godot or Unity project, or any folder), and every sound saved there is written into
+  # crunchy/sfx/ inside it, and re-exported in place on every save. The app writes that folder directly through the
+  # Tauri fs plugin, not through a portal, so it needs the home directory (as CrunchyTile's manifest does). It writes
+  # only inside crunchy/sfx/ of a folder the person chose, and never removes a file a sidecar does not say it wrote
+  # (plant.js's guards). The Tauri fs scope in src-tauri/capabilities/default.json is $HOME/** and the usual places.
+  # (Before planting this was `--filesystem=xdg-download:rw`; home includes Downloads, so exports still land there.)
+  - --filesystem=home
   # Needed ONLY by the Settings → Updates check, which fetches https://crunchysfx.com/version.json
   # (a version number, nothing else — no account, no telemetry). All audio is still generated
   # locally; the app works fully offline if the user turns that check off.

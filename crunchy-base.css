@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ b7decfb by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 22506a65114fed10589fb88b2e08485c424d9683be3a95116ab84e5f13d44763 */
+/* GENERATED from crunchyCore/crunchy-base.css @ 6a77157 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 8cadca88f98ef5939b5d3d4750dad323a91c864f597039f9767dc06b3f849b7a */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 3;
+  --base-build: 5;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -142,6 +142,7 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .lib-meta { font-size: 11px; color: var(--muted); }
 .lib-badges { display: flex; gap: 4px; flex-wrap: wrap; }
 .lib-badge { font-size: 10px; padding: 0 5px; border: 1px solid var(--info); color: var(--info); }
+.lib-badge.hot { border-color: var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .lib-acts { display: flex; gap: 4px; flex-wrap: wrap; }
 .lib-acts button { font-size: 11px; padding: 2px 6px; }
 .lib-danger.armed { border-color: var(--bad); color: var(--bad); }
@@ -149,6 +150,19 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .lib-recent { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 24em; text-align: left; }
 .lib-hint { color: var(--muted); font-size: 13px; max-width: 70ch; }
 .lib-status { font-size: 12px; color: var(--muted); min-height: 1.5em; }
+
+/* THE LIBRARY AS A DOCKED PANEL (library.js build 2, DESKTOP-ROADMAP.md): the app places `opts.dock`; the panel fills
+   it, one column of narrower cards, and the suite view (what the other Crunchy tools planted in the same game) under. */
+.lib-dock[hidden] { display: none !important; }
+.lib-dock { height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--panel);
+            border-left: 2px solid var(--line2); }
+.lib-panel.lib-docked { width: auto; height: 100%; padding: 10px 12px; gap: 8px; border: 0; box-shadow: none; }
+.lib-docked .lib-cards { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.lib-docked .lib-pic { height: 84px; }
+.lib-docked .lib-path { max-width: 22ch; }
+.lib-suite { border-top: 1px solid var(--line); padding-top: 6px; display: grid; gap: 4px; }
+.lib-suite-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+.lib-suite-row .lib-meta { flex: 1; }
 
 /* THE CRUNCHY SUITE (suite.js). Each row carries its tool's accent as --tool (suite.js sets it): a stripe on the left,
    its icon, and the "you're here" mark, so the apps read as siblings, each in its own colour. */
@@ -197,6 +211,7 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .setchk input { width: 18px; height: 18px; }
 .setchk input::before { width: 10px; height: 10px; }
 .set-btn { flex: none; white-space: nowrap; }
+.set-el { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; max-width: 60%; }
 
 /* THE WEB'S ONE INVITATION (desktop.js): the header button, and what the desktop adds. */
 .desk-cta { white-space: nowrap; border-color: var(--accent); color: var(--accent); }

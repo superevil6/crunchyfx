@@ -155,6 +155,13 @@
 <script src="synth.js"></script>
 <script src="crunchy-icons.js"></script>
 <script src="suite.js"></script>
+<!-- The planted Library, Settings and the desktop gate (crunchyCore, pulled: tools/pull-core.mjs). project-app.js is
+     SFX's own (PROJECT_APP) and loads BEFORE plant.js; desktop.js needs suite.js first. -->
+<script src="project-app.js"></script>
+<script src="plant.js"></script>
+<script src="library.js"></script>
+<script src="settings.js"></script>
+<script src="desktop.js"></script>
 <script>
 "use strict";
 
@@ -494,6 +501,7 @@ function restoreEdit(entry) {
   state.customWaveB = entry.s.customWaveB || "";
   state.speechText = entry.s.speechText || "";
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
+  plantNameSync();
   customIR = "ir" in entry ? entry.ir : customIR;
   updateSampleUI(); updateIRUI(); updateNormBtn(); syncUI();
   const { L, R, rawPeak } = render();                        // re-render/play WITHOUT addHistory or re-commit
@@ -1176,7 +1184,7 @@ cwCanvas.addEventListener("drop", (e) => {
   if (f) loadImageFile(f);
 });
 
-// ---------- My Waveforms library (DESKTOP premium) ----------
+// ---------- My Waveforms library (desktop) ----------
 // A persistent palette of your drawn single-cycle waves, independent of any sound: save the current
 // drawing, recall it into the editor with one click, rename, delete. Desktop-only like My Presets (the
 // store lives on the user's disk). Each entry is just the 256-sample cycle as base64 (~344 chars), tiny.
@@ -1498,6 +1506,7 @@ function applyPreset(obj, label) {
   for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
+  plantNameSync();                         // the Library's name box follows it (desktop)
   riffSetPatch(obj.riff);                  // load this patch's riff, or clear it (reset-then-overlay)
   syncUI();
   play(label || "Preset");
@@ -1656,7 +1665,8 @@ const suiteDialog = suiteMount("sfx", {
 async function savePreset() {
   // Desktop: add it to the persistent My Presets library — the reliable store there, and what the
   // user reaches for. Web has no library, so it just downloads the JSON below.
-  if (isDesktop) saveCurrentUserPreset();
+  // While a folder is PLANTED, the library copy goes there instead (the browser's My Presets is left exactly as it is).
+  if (isDesktop) { if (project) projSave(); else saveCurrentUserPreset(); }
   const fname = (seqLabel && seqLabel !== "Sound") ? sanitizeFilename(seqLabel) : "crunchysfx-preset";
   const json = JSON.stringify(state, null, 2);
   const T = window.__TAURI__;
@@ -1822,7 +1832,7 @@ document.getElementById("save").addEventListener("click", () => {
   savePreset();
   if (isDesktop) {   // confirm the library save (saveCurrentUserPreset also focuses the new row to rename)
     const b = document.getElementById("save"), t = b.textContent;
-    b.textContent = "✓ Saved to My Presets";
+    b.textContent = project ? "✓ Saved to the Library" : "✓ Saved to My Presets";
     setTimeout(() => { b.textContent = t; }, 1400);
   }
 });
@@ -1846,62 +1856,19 @@ document.getElementById("save").addEventListener("click", () => {
   syncFmt();
 }
 
-// Normalize toggle: injected into the controls bar so quiet sounds get boosted to
-// an audible, consistent level. Off = raw levels (whatever the patch produces).
+// Normalize toggle. It lives in ⚙ Settings now (a check row, below); the button stays as the one place its label
+// is kept, so every caller of updateNormBtn (a share link, undo) keeps working. normalizeOut is per session, as before.
+let settingsDialog = null;   // the ⚙ Settings dialog (below); declared first, updateNormBtn refreshes it
 const normBtn = document.createElement("button");
 normBtn.id = "normbtn";
 function updateNormBtn() {
   setIconLabel(normBtn, "speaker", normalizeOut ? "Normalize" : "Normalize off");
   normBtn.classList.toggle("off", !normalizeOut);
   normBtn.title = "Boost quiet sounds to an audible, consistent level";
+  if (settingsDialog) settingsDialog.refresh();   // the Settings row follows
 }
 normBtn.addEventListener("click", () => { normalizeOut = !normalizeOut; updateNormBtn(); play("Edit"); });
 updateNormBtn();
-const controlsBar = document.querySelector(".controls");
-controlsBar.appendChild(normBtn);   // relocated into the Settings modal right after this (see below)
-
-// ---------- Settings modal (⚙ in the header) ----------
-// Declutters the controls bar: the export-format group and the Normalize toggle move in here.
-// We RELOCATE the existing elements (same IDs / handlers), so all their wiring keeps working.
-const settingsModal = document.createElement("div");
-settingsModal.className = "modal";
-settingsModal.hidden = true;
-settingsModal.innerHTML =
-  '<div class="modal-box settings-box">' +
-    '<div class="modal-head"><h2 data-icon="cog">Settings</h2><span class="hint">Export format &amp; sound options.</span>' +
-      '<button id="settingsClose" data-icon="close">Close</button></div>' +
-    '<div class="settings-body">' +
-      '<div class="settings-row"><div class="settings-lbl">Export format' +
-        '<span class="settings-sub">sample rate · bit depth · channels · loop point — used by every WAV export</span></div>' +
-        '<div class="settings-ctl" id="settingsFmt"></div></div>' +
-      '<div class="settings-row"><div class="settings-lbl">Loudness' +
-        '<span class="settings-sub">boost quiet sounds to an audible, consistent level</span></div>' +
-        '<div class="settings-ctl" id="settingsNorm"></div></div>' +
-      '<div class="settings-row"><div class="settings-lbl">Getting started' +
-        '<span class="settings-sub">a quick guided tour of the workflow</span></div>' +
-        '<div class="settings-ctl"><button id="tourReplay" data-icon="help">Take the tour</button></div></div>' +
-      // Desktop-only: whether "Save preset" pops a native Save-As dialog for the .json. Gated on
-      // window.__TAURI__ directly (isDesktop const isn't initialized yet at this point in the file).
-      (window.__TAURI__ ?
-        '<div class="settings-row"><div class="settings-lbl">Prompt on preset save' +
-          '<span class="settings-sub">ask where to save the .json when you click Save preset (off = save silently to Downloads)</span></div>' +
-          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefPromptSave"> Prompt</label></div></div>' +
-        // Desktop-only: the web build is always current, so an update check would be meaningless there.
-        '<div class="settings-row"><div class="settings-lbl">Updates' +
-          '<span class="settings-sub">ask crunchysfx.com whether a newer desktop version exists — no account, no telemetry, just a version number</span></div>' +
-          '<div class="settings-ctl"><label class="settings-chk"><input type="checkbox" id="prefCheckUpdates"> On launch</label>' +
-          '<button id="checkUpdatesNow">Check now</button><span class="hint" id="updMsg"></span></div></div>'
-        : '') +
-    '</div>' +
-  '</div>';
-document.body.appendChild(settingsModal);
-settingsModal.querySelector("#settingsFmt").appendChild(document.querySelector(".fmtgroup"));   // move the rate/depth/channels/loop group
-settingsModal.querySelector("#settingsNorm").appendChild(normBtn);                              // move the Normalize toggle
-const prefPromptSave = settingsModal.querySelector("#prefPromptSave");                          // desktop-only preset-save preference
-if (prefPromptSave) {
-  prefPromptSave.checked = !!prefs.promptPresetSave;
-  prefPromptSave.addEventListener("change", () => { prefs.promptPresetSave = prefPromptSave.checked; savePrefs(); });
-}
 
 // ---------- Update check (DESKTOP only) ----------
 // Deliberately a NOTIFIER, not an auto-updater: it fetches one tiny JSON from our own domain,
@@ -1964,16 +1931,51 @@ async function checkForUpdates(manual) {
   return null;
 }
 
-const prefCheckUpdates = settingsModal.querySelector("#prefCheckUpdates");
-if (prefCheckUpdates) {
-  prefCheckUpdates.checked = prefs.checkUpdates !== false;
-  prefCheckUpdates.addEventListener("change", () => { prefs.checkUpdates = prefCheckUpdates.checked; savePrefs(); });
-  settingsModal.querySelector("#checkUpdatesNow").addEventListener("click", () => checkForUpdates(true));
+// ---------- Settings (⚙ in the header) ----------
+// The suite's dialog (crunchyCore settings.js) from SFX's rows. Every preference keeps its storage key and shape
+// (crunchyfx.prefs.v1: promptPresetSave, checkUpdates; normalizeOut stays per session). The export format is four
+// controls rather than a check, so its row is SFX's own, added into the core's dialog once it is built (the
+// .fmtgroup is MOVED there, same ids and handlers, as the old modal did); so is the update check's message.
+// window.__TAURI__ directly: the isDesktop const is declared further down.
+settingsDialog = settingsMount({
+  hint: "Export format and sound options. Preferences follow you, not the sound.",
+  rows: [
+    { type: "check", id: "prefNormalize", label: "Normalize loudness",
+      sub: "Boost quiet sounds to an audible, consistent level. Off plays and exports each sound at its raw level.",
+      get: () => normalizeOut, set: (v) => { normalizeOut = !!v; updateNormBtn(); play("Edit"); } },
+    { type: "button", label: "Getting started", sub: "A quick guided tour of the workflow.", text: "Take the tour",
+      run: () => { settingsDialog.close(); startTour(); } },
+  ].concat(window.__TAURI__ ? [
+    { type: "check", id: "prefPromptSave", label: "Prompt on preset save",
+      sub: "Ask where to save the .json when you click Save preset (off saves it silently to Downloads).",
+      get: () => !!prefs.promptPresetSave, set: (v) => { prefs.promptPresetSave = !!v; savePrefs(); } },
+    { type: "check", id: "prefCheckUpdates", label: "Check for updates on launch",
+      sub: "Ask crunchysfx.com whether a newer desktop version exists: no account, no telemetry, just a version number.",
+      get: () => prefs.checkUpdates !== false, set: (v) => { prefs.checkUpdates = !!v; savePrefs(); } },
+    { type: "button", label: "Updates", sub: "Check right now.", text: "Check now", run: () => checkForUpdates(true) },
+  ] : []),
+});
+// SFX's own parts of the dialog, added once it exists: the export format row first, the update message.
+function settingsExtras() {
+  const root = document.getElementById("setModal");
+  if (!root || root.dataset.sfx) return;
+  root.dataset.sfx = "1";
+  const row = document.createElement("div");
+  row.className = "setrow";
+  row.id = "settingsFmtRow";
+  row.innerHTML = '<div class="setlbl">Export format<span class="setsub">Sample rate, bit depth, channels and loop point: used by every WAV export, and by a sound saved to the Library.</span></div>';
+  const fg = document.querySelector(".fmtgroup"), ctl = document.createElement("div");
+  ctl.className = "settings-fmt";
+  fg.style.display = "";
+  ctl.appendChild(fg);
+  row.appendChild(ctl);
+  const head = root.querySelector(".set-head");
+  head.parentNode.insertBefore(row, head.nextSibling);
+  const now = Array.from(root.querySelectorAll(".set-btn")).find((b) => b.textContent === "Check now");
+  if (now) { const msg = document.createElement("span"); msg.className = "hint"; msg.id = "updMsg"; now.parentNode.appendChild(msg); }
 }
-document.getElementById("settingsBtn").addEventListener("click", () => { settingsModal.hidden = false; });
-settingsModal.querySelector("#settingsClose").addEventListener("click", () => { settingsModal.hidden = true; });
-settingsModal.addEventListener("click", (e) => { if (e.target === settingsModal) settingsModal.hidden = true; });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !settingsModal.hidden) settingsModal.hidden = true; });
+document.getElementById("settingsBtn").addEventListener("click", () => { settingsDialog.open(); settingsExtras(); });
+document.querySelector(".fmtgroup").style.display = "none";   // until Settings first opens (it sat in the old, hidden modal from the start)
 
 // ---------- Macros ----------
 // Each macro is one plain-language slider (0..1) that writes a handful of the real
@@ -2674,8 +2676,32 @@ function buildPackFiles() {
   return varGenomes.map((item, i) => {
     const { L, R } = renderVariation(item);
     const buf = encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: base + " " + (i + 1) });
-    return { name: base + "_" + String(i + 1).padStart(pad, "0") + ".wav", data: new Uint8Array(buf) };
+    // (title, item and L ride along for the web zip's sidecars, packZipFiles; the files themselves are unchanged)
+    return { name: base + "_" + String(i + 1).padStart(pad, "0") + ".wav", data: new Uint8Array(buf), title: base + " " + (i + 1), item: item, L: L };
   });
+}
+// THE WEB ZIP CARRIES SIDECARS (crunchyCore DESKTOP-ROADMAP.md §6.4): each variation of a single sound IS a sound with a
+// share form, so it goes in a folder of its own beside its <name>.crunchy, the shape a planted Library reads. Unzipped
+// into a game's crunchy/sfx/, the desktop Library finds every one and re-renders the same bytes (its exportName is the
+// WAV's title, its wav the file's name). The WAVs themselves are byte-for-byte what they were. A SEQUENCE variation has
+// no share form (a list of sounds), so a sequence pack stays WAVs only, at the root, as before.
+function packZipFiles(files) {
+  if (files.some((f) => Array.isArray(f.item))) return files;
+  const enc = new TextEncoder();
+  const out = [];
+  files.forEach(function (f) {
+    const stem = f.name.replace(/\.wav$/, "");
+    const keepRiff = riffGetPatch;
+    riffGetPatch = () => null;                                   // a variation carries no riff
+    let s;
+    try { s = withState(f.item, () => encodePatch(f.title)); } finally { riffGetPatch = keepRiff; }
+    const fields = { s: s, exportName: f.title, wav: f.name, fmt: fmtNow(), peaks: soundPeaks({ L: f.L }) };
+    if (sampleBuf && usesSample(f.item.wave)) fields.sampleF32 = f32ToB64(sampleBuf);
+    if (customIR && Math.round(f.item.convType) === 4 && f.item.convMix > 0) fields.customIR = customIR.name || "a loaded impulse response";
+    const side = plantSidecarFile(stem, plantSidecar("sound", f.title, fields, [{ path: f.name, data: f.data }], APP_VERSION));
+    out.push({ name: stem + "/" + f.name, data: f.data }, { name: stem + "/" + side.path, data: enc.encode(side.data) });
+  });
+  return out;
 }
 async function exportPack() {
   const files = buildPackFiles();
@@ -2688,7 +2714,7 @@ async function exportPack() {
   } else {                                                  // web: one .zip
     const base = files[0].name.replace(/_\d+\.wav$/, "");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([makeZip(files)], { type: "application/zip" }));
+    a.href = URL.createObjectURL(new Blob([makeZip(packZipFiles(files))], { type: "application/zip" }));
     a.download = base + "_pack.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -2779,7 +2805,7 @@ seqExportBtn.addEventListener("click", exportSequence);
 seqClearBtn.addEventListener("click", () => { sequence = []; renderSeq(); });
 renderSeq();
 
-// ---------- My Presets (desktop premium: a saved-sound library you can rename) ----------
+// ---------- My Presets (desktop: a saved-sound library you can rename) ----------
 // Only shown in the desktop (Tauri) build. Persists to localStorage (which lives on the
 // user's disk in the desktop app). Snapshot the current sound in, load/rename/delete inline.
 const UP_KEY = "crunchyfx.userpresets.v1";
@@ -2889,7 +2915,7 @@ function saveCurrentUserPreset() {
   const first = mpList.querySelector(".up-name");   // focus for immediate rename
   if (first) { first.focus(); first.select(); }
 }
-// ---------- Custom categories (desktop premium: your own drag-organized preset collections) ----------
+// ---------- Custom categories (desktop: your own drag-organized preset collections) ----------
 // ADDITIVE + non-destructive: a custom category holds REFERENCES to built-in presets (by name) and/or
 // your saved presets (by id). Built-ins stay in their curated section too — this never re-partitions
 // the 638-preset layout. Persisted like My Presets; only wired up on desktop.
@@ -3227,7 +3253,7 @@ async function openProject() {
   const T = window.__TAURI__;
   if (!(T && T.dialog && T.fs)) { alert("Opening projects is a desktop-app feature."); return; }
   let path;
-  try { path = await T.dialog.open({ filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx"] }] }); }
+  try { path = await T.dialog.open({ filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx", "crunchyfx"] }] }); }
   catch (e) { console.warn("crunchysfx: open dialog failed —", e); alert("Could not open the file picker: " + e.message); return; }
   if (!path) return;   // cancelled
   try {
@@ -3239,7 +3265,8 @@ async function openProject() {
 // Restore a parsed project. Defensive: each section is validated independently so a partial
 // or hand-edited file still loads what it can.
 function loadProject(data) {
-  if (!data || data.app !== "crunchysfx" || typeof data.editor !== "object") throw new Error("not a crunchysfx project");
+  // "crunchyfx": files saved before the 2026-07-15 rename (PROJECTS-HANDOFF.md §6). Same shape, so the same loader.
+  if (!data || (data.app !== "crunchysfx" && data.app !== "crunchyfx") || typeof data.editor !== "object") throw new Error("not a crunchysfx project");
   if (Array.isArray(data.userPresets)) {
     userPresets = data.userPresets.filter((p) => p && typeof p.state === "object");
     upSeq = userPresets.reduce((m, p) => Math.max(m, p.id || 0), 0);
@@ -3510,9 +3537,491 @@ if (isDesktop) {
   });
 }
 
+// ============================================================================================
+// THE PLANTED LIBRARY (crunchyCore plant.js + DESKTOP-ROADMAP.md step 3; the worked examples are crunchyTile
+// TILE-DESIGN.md §114 and crunchyUI UI-DESIGN.md §18) — desktop only. You PLANT CrunchySFX in a folder once: your game
+// (the one holding project.godot, or a Unity project's Assets/ + ProjectSettings/) or any folder. Every sound you save
+// lands in crunchy/sfx/<sound>/ inside it (Unity: Assets/Crunchy/SFX/<sound>/): exactly the WAV Export WAV writes for
+// it, beside a small <sound>.crunchy that reopens it exactly (its share string; its imported audio, if it plays some).
+// Saving the same name re-exports IN PLACE (same path, so the game's references hold); a rename changes the name only
+// (`exportName` and `wav` are fixed at the first save). The Library is a panel docked beside the History rail, and
+// lists what the other Crunchy tools planted in the same game.
+//
+// THE BROWSER'S MY PRESETS ARE NEVER TOUCHED. Its keys (crunchyfx.userpresets.v1, .usercats.v1, .mywaves.v1, …) keep
+// their shape and contents. "Plant my presets" COPIES them into the folder (each one once: the sidecar's `from`).
+// While a folder is planted, Save preset (and Ctrl+S) saves the sound into it rather than adding it to the browser's
+// My Presets; with none planted, Save preset is exactly what it was. Nothing here deletes from the browser store.
+// The web build never reaches any of this: every entry point is created only when isDesktop.
+// ============================================================================================
+const PLANT_RECENT_KEY = "crunchyfx.recentPlanted.v1", PLANT_RECENT_MAX = 8;
+const projFs = isDesktop && window.__TAURI__.fs ? plantTauriFs(window.__TAURI__.fs) : null;
+let project = null;                          // plant.js's P (plus .name) while a folder is planted
+let projQueue = Promise.resolve();
+const projUpdates = {};                      // slug → true when this version would export it differently
+let projSuite = [];                          // the suite view: the other Crunchy tools' planted assets here
+let projArmed = "";                          // a Save over ANOTHER sound of the same name, pressed once already
+let projSample = null;                       // { buf, key, value }: the sidecar audio the editor's sample came from
+var projOpened = "";                         // the slug the editor's sound was opened from or saved to (var: plantNameSync may run first)
+// File work runs ONE AT A TIME, in order: a save and its export never interleave with the next.
+function projDo(fn) {
+  const next = projQueue.then(fn).catch(function (e) {
+    console.warn("crunchysfx: planted —", e);
+    projStatus("Library: " + (e && e.message ? e.message : e));
+  });
+  projQueue = next;
+  return next;
+}
+function projStatus(text) {
+  const el = document.getElementById("plantMsg");
+  if (el) el.textContent = text || "";
+  library.status(text);
+}
+function projRecent() {
+  try { const r = JSON.parse(localStorage.getItem(PLANT_RECENT_KEY) || "[]"); return Array.isArray(r) ? r.filter((e) => e && typeof e.dir === "string") : []; }
+  catch (e) { return []; }
+}
+function projRemember(P) {
+  const r = projRecent().filter((e) => e.dir !== P.dir);
+  r.unshift({ name: P.name, dir: P.dir });
+  try { localStorage.setItem(PLANT_RECENT_KEY, JSON.stringify(r.slice(0, PLANT_RECENT_MAX))); } catch (e) { /* not essential */ }
+}
+function projForget(dir) {
+  try { localStorage.setItem(PLANT_RECENT_KEY, JSON.stringify(projRecent().filter((e) => e.dir !== dir))); } catch (e) { /* not essential */ }
+}
+function plantBase(dir) { return String(dir).replace(/[\/\\]+$/, "").split(/[\/\\]/).pop(); }
+
+// ---- one sound: its fields, its render, its WAV ----
+// A sample the editor holds is kept EXACTLY (Float32, `sampleF32`), so the planted WAV is byte for byte the one Export
+// WAV writes; one planted from My Presets keeps that store's own 16-bit form (`sample`), which is how My Presets plays it.
+function f32ToB64(buf) {
+  const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(bin);
+}
+function b64ToF32(b64) {
+  const bin = atob(b64), bytes = new Uint8Array(bin.length & ~3);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+function soundSampleOf(f) { return f.sampleF32 ? b64ToF32(f.sampleF32) : f.sample ? b64ToSample(f.sample) : null; }
+const usesSample = (wave) => { const w = Math.round(wave); return w === 9 || w === 11; };   // "sample", "granular"
+// The patch a sidecar's share string holds (decodePatch, dsp.js: the reader every ?s= link goes through).
+function soundPatch(f) { const o = decodePatch(f.s); return { snap: o.s || {}, norm: o.n !== 0, name: typeof o.t === "string" ? o.t : "" }; }
+// Render a planted sound as the editor would: its patch over the defaults, its own normalize setting, its own audio
+// (none when it has none: a sound never borrows the editor's loaded sample). The editor is left exactly as it was.
+function soundRender(f) {
+  const d = soundPatch(f), keepN = normalizeOut, keepS = sampleBuf;
+  normalizeOut = d.norm;
+  sampleBuf = soundSampleOf(f);
+  try { return withState(d.snap, () => render()); }
+  finally { normalizeOut = keepN; sampleBuf = keepS; }
+}
+// THE SAME BYTES Export WAV writes: downloadWav's encodeWav call, with the sound's format and title.
+function soundWav(r, fmt, title) {
+  return new Uint8Array(encodeWav(r.L, r.R, { rate: fmt.rate, depth: fmt.depth, channels: fmt.channels, loop: !!fmt.loop, title: title }));
+}
+function soundFiles(f) { return [{ path: f.wav, data: soundWav(soundRender(f), f.fmt, f.exportName) }]; }
+function soundPeaks(r) { return Array.from(thumbPeaks(r.L), (x) => Math.round(x * 1000) / 1000); }
+const fmtNow = () => ({ rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: !!exportFmt.loop });
+// ONLY a sound's own fields (a whole sidecar handed back by Update or Duplicate would carry stale bookkeeping)
+function soundOwn(f) {
+  const o = { s: f.s, fmt: f.fmt || fmtNow() };
+  ["sample", "sampleF32", "customIR", "categories", "from"].forEach((k) => { if (f[k] != null) o[k] = f[k]; });
+  return o;
+}
+// The sound in the editor, as fields. Its share string is encodePatch's, so it reopens the sound exactly.
+function editorFields(name) {
+  const f = { s: encodePatch(name), fmt: fmtNow() };
+  if (sampleBuf && usesSample(state.wave)) {
+    if (projSample && projSample.buf === sampleBuf) f[projSample.key] = projSample.value;   // unchanged since it was opened
+    else f.sampleF32 = f32ToB64(sampleBuf);
+  }
+  // A loaded impulse response is a session resource no preset, link or sidecar keeps (too large): say so, and never
+  // re-render such a sound behind the person's back (its re-render would lack the IR).
+  if (customIR && Math.round(state.convType) === 4 && state.convMix > 0) f.customIR = customIR.name || "a loaded impulse response";
+  return f;
+}
+// A browser preset (My Presets, or one in a .crunchysfx file) as fields: its state through the same encodePatch, its
+// riff with it, its own audio in its own form, and the names of the categories it is filed under.
+function presetFields(p, cats) {
+  const keepRiff = riffGetPatch;
+  riffGetPatch = () => (p.state && p.state.riff) || null;
+  let s;
+  try { s = withState(p.state, () => encodePatch(String(p.name || "My Sound"))); } finally { riffGetPatch = keepRiff; }
+  const f = { s: s, fmt: fmtNow() };
+  if (typeof p.sample === "string" && p.sample) f.sample = p.sample;
+  const names = (cats || []).filter((c) => c && Array.isArray(c.items) && c.items.some((i) => i && i.t === "u" && i.id === p.id)).map((c) => String(c.name || "Category"));
+  if (names.length) f.categories = names;
+  return f;
+}
+// SAVE one sound: its WAV and its sidecar, in place. Returns the asset.
+async function projPut(name, fields) {
+  const prev = plantFind(project, "sound", name);
+  const f = soundOwn(fields);
+  f.exportName = prev ? prev.data.exportName || prev.name : name;                        // the WAV's title, fixed
+  f.wav = prev && prev.data.wav ? prev.data.wav : plantSlug(f.exportName) + ".wav";      // and its file name, fixed
+  const r = soundRender(f);
+  f.peaks = soundPeaks(r);                                                               // the card's picture
+  const files = [{ path: f.wav, data: soundWav(r, f.fmt, f.exportName) }];
+  const a = await plantPut(project, { kind: "sound", name: name, fields: f, files: files, appVersion: APP_VERSION });
+  delete projUpdates[a.slug];
+  return a;
+}
+const resPath = (a) => project.rel + "/" + a.slug + "/" + a.data.wav;
+
+// ---- plant, open, close ----
+async function projOpen(dir) {
+  const P = await plantOpen(projFs, dir);
+  P.name = plantBase(dir);
+  project = P;
+  projRemember(P);
+  Object.keys(projUpdates).forEach((k) => { delete projUpdates[k]; });
+  projSuite = [];
+  projOpened = "";
+  projAfter();
+  const n = projFromBrowser().length;
+  projStatus("Planted in " + P.name + " (" + (P.engine === "godot" ? "a Godot project, " : P.engine === "unity" ? "a Unity project, " : "") +
+    P.assets.length + (P.assets.length === 1 ? " sound" : " sounds") + " in " + P.rel + ")." +
+    (P.skipped.length ? " Skipped, unreadable: " + P.skipped.join(", ") + "." : "") +
+    (n ? " Your browser's My Presets hold " + n + " sound" + (n === 1 ? "" : "s") + " not planted here: “Plant my presets” copies them in (the browser keeps them)." : ""));
+  projCheckUpdates();
+  projRefreshSuite();
+}
+async function pickFolder(title) {
+  const dir = await window.__TAURI__.dialog.open({ directory: true, multiple: false, title: title });
+  return Array.isArray(dir) ? dir[0] : dir;
+}
+async function projPlantPick() {
+  const dir = await pickFolder("Plant CrunchySFX in your game's folder (Godot or Unity), or any folder");
+  if (dir) await projOpen(dir);
+}
+async function projOpenRecent(dir) {
+  let yes = null;
+  try { yes = await projFs.exists(dir); } catch (e) { yes = null; }
+  if (yes === false) { projForget(dir); projStatus("That folder is gone (moved or deleted): " + dir); return; }
+  // refused rather than missing: outside the home folder, a folder is reachable once picked in the dialog
+  if (yes === null) { projStatus("Can't reach " + dir + " without picking it again: use Plant in a folder…"); return; }
+  await projOpen(dir);
+}
+function projClose() {
+  project = null;
+  projSuite = [];
+  projOpened = "";
+  projAfter();
+  projStatus("Closed. Save preset adds to this browser's My Presets again.");
+}
+function projAfter() { projBarSync(); library.refresh(); }
+
+// ---- saving the editor's sound ----
+function plantNameNow() {
+  const box = document.getElementById("plantName");
+  const typed = box ? box.value.trim().slice(0, 60) : "";
+  return typed || (seqLabel && seqLabel !== "Sound" ? seqLabel : "My Sound");
+}
+// Save the editor's sound into the planted folder. Saving over a DIFFERENT sound that already has the name asks for a
+// second press (it replaces that file in the game); the sound it was opened from is simply updated in place.
+function projSave() {
+  if (!project) { libraryShow(); projStatus("Plant CrunchySFX in a folder first: your game's, or any."); return false; }
+  const name = plantNameNow();
+  const prev = plantFind(project, "sound", name), key = name.toLowerCase();
+  if (prev && prev.slug !== projOpened && projArmed !== key) {
+    projArmed = key;
+    projStatus("“" + prev.name + "” is already planted. Save again to replace it in place (same file, so your game gets the new sound), or give this one another name.");
+    return false;
+  }
+  projArmed = "";
+  const fields = editorFields(name);
+  projDo(async function () {
+    const a = await projPut(name, fields);
+    projOpened = a.slug;
+    projAfter();
+    projStatus((prev ? "Updated " : "Saved ") + a.name + " in " + resPath(a) + (project.engine === "godot" ? " (res://" + resPath(a) + ")." : ".") +
+      (a.data.customIR ? " It uses the impulse response " + a.data.customIR + ", which a sidecar can't keep: load it again before saving it next time." : ""));
+  });
+  return true;
+}
+
+// ---- the browser's My Presets, and .crunchysfx files: copied in, never moved ----
+function projFromBrowser() {
+  if (!project) return [];
+  return userPresets.filter((p) => p && typeof p.state === "object" && !project.assets.some((a) => a.data.from === "my-presets:" + p.id));
+}
+async function projPlantList(list, cats, from) {
+  let n = 0;
+  for (const p of list) {
+    const base = String(p.name || "My Sound").trim().slice(0, 60) || "My Sound";
+    let name = base, k = 2;
+    while (plantFind(project, "sound", name)) name = base + " " + k++;                    // My Presets may repeat a name
+    projStatus("Planting " + (n + 1) + " of " + list.length + ": " + name + "…");
+    await projPut(name, Object.assign(presetFields(p, cats), { from: from + p.id }));
+    n++;
+  }
+  return n;
+}
+async function projPlantPresets() {
+  const list = projFromBrowser();
+  if (!list.length) { projStatus(userPresets.length ? "Every sound in My Presets is planted here already." : "My Presets is empty in this browser."); return; }
+  const n = await projPlantList(list, userCats, "my-presets:");
+  projAfter();
+  projStatus("Planted " + n + " of your presets in " + project.rel + ". My Presets in this browser is exactly as it was.");
+}
+// A .crunchysfx project file (v1.1's Save project; an older "crunchyfx" one too): its presets planted, the file and
+// this browser's store untouched (Open project, which LOADS a file into the browser, is unchanged beside it).
+function projectFileOk(d) { return !!d && (d.app === "crunchysfx" || d.app === "crunchyfx") && typeof d.editor === "object"; }
+async function projPlantFile() {
+  const T = window.__TAURI__;
+  let path = await T.dialog.open({ multiple: false, title: "Plant the sounds of a CrunchySFX project file", filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx", "crunchyfx"] }] });
+  path = Array.isArray(path) ? path[0] : path;
+  if (!path) return;
+  const data = JSON.parse(new TextDecoder().decode(new Uint8Array(await T.fs.readFile(path))));
+  if (!projectFileOk(data)) throw new Error(plantBase(path) + " is not a CrunchySFX project file.");
+  const from = "file:" + plantBase(path) + "#";
+  const all = (Array.isArray(data.userPresets) ? data.userPresets : []).filter((p) => p && typeof p.state === "object");
+  const list = all.filter((p) => !project.assets.some((a) => a.data.from === from + p.id));
+  const n = await projPlantList(list, Array.isArray(data.userCats) ? data.userCats : [], from);
+  projAfter();
+  projStatus("Planted " + n + " of the " + all.length + " sounds in " + plantBase(path) + (all.length - n ? " (" + (all.length - n) + " were planted already)" : "") + ". The file is untouched.");
+}
+
+// ---- "update available": this version of CrunchySFX would export a sound differently ----
+let projCheckRun = 0;
+function projCheckOne(a) {
+  if (a.data.customIR) return;                                    // its IR is not in the sidecar: never second-guessed
+  let files = null;
+  try { files = soundFiles(a.data); } catch (e) { return; }
+  if (plantNeedsUpdate(a, files)) projUpdates[a.slug] = true; else delete projUpdates[a.slug];
+}
+// all at once (the desktop suite: it must not yield to the browser), then the panel redrawn
+function projCheckUpdatesNow() { if (project) project.assets.forEach(projCheckOne); library.refresh(); }
+// in the background, one sound per tick, so the app stays responsive
+function projCheckUpdates() {
+  const run = ++projCheckRun, P = project, list = P ? P.assets.slice() : [];
+  (async function () {
+    for (const a of list) {
+      await new Promise((r) => setTimeout(r, 0));
+      if (run !== projCheckRun || project !== P) return;
+      projCheckOne(a);
+    }
+    if (run === projCheckRun) library.refresh();
+  })();
+}
+async function projUpdateOne(a) {
+  if (a.data.customIR) throw new Error(a.name + " uses the impulse response " + a.data.customIR + ", which a sidecar can't keep: open it, load the IR again, and save.");
+  return projPut(a.name, a.data);
+}
+function projUpdateAll() {
+  return projDo(async function () {
+    const list = project.assets.filter((a) => projUpdates[a.slug]);
+    let n = 0;
+    for (const a of list) {
+      projStatus("Updating " + (n + 1) + " of " + list.length + ": " + a.name + "…");
+      await projUpdateOne(a);
+      n++;
+    }
+    projAfter();
+    projStatus(n ? "Updated " + n + (n === 1 ? " sound" : " sounds") + " in " + project.rel + ", in place." : "Everything is up to date.");
+  });
+}
+
+// ---- open a planted sound in the editor ----
+function projOpenAsset(a) {
+  const d = soundPatch(a.data), smp = soundSampleOf(a.data);
+  if (smp) {
+    sampleBuf = smp; sampleName = a.name;
+    projSample = { buf: smp, key: a.data.sampleF32 ? "sampleF32" : "sample", value: a.data.sampleF32 || a.data.sample };
+    updateSampleUI();
+  } else if (usesSample(d.snap.wave) && sampleBuf) { sampleBuf = null; sampleName = ""; updateSampleUI(); }   // as planted: no audio
+  // its export format, so Save writes the same kind of file in place
+  const f = a.data.fmt || {};
+  [["fmtRate", f.rate], ["fmtDepth", f.depth], ["fmtChannels", f.channels]].forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (v != null && el.value !== String(v)) { el.value = String(v); el.dispatchEvent(new Event("change")); }
+  });
+  const loop = document.getElementById("fmtLoop");
+  if (f.loop != null && loop.checked !== !!f.loop) { loop.checked = !!f.loop; loop.dispatchEvent(new Event("change")); }
+  normalizeOut = d.norm; updateNormBtn();
+  const keepLock = waveLocked;
+  waveLocked = false;                                             // the planted sound exactly, whatever the lock says
+  try { applyPreset(d.snap, a.name); } finally { waveLocked = keepLock; }
+  projOpened = a.slug;
+  projStatus("Opened " + a.name + ". Save preset (Ctrl+S) re-exports it in place: " + resPath(a) + "." +
+    (a.data.customIR ? " It was made with the impulse response " + a.data.customIR + ": load it again (Space → Load IR…) to hear it as planted." : ""));
+}
+
+// ---- the bar above the Library: the name a save uses, and Save ----
+function projBarSync() {
+  const save = document.getElementById("plantSave"), cur = document.getElementById("plantWhere");
+  if (!save) return;
+  save.disabled = !project;
+  cur.textContent = project ? "Planted in " + project.name : "Not planted";
+  cur.title = project ? plantJoin(project.dir, project.rel) : "";
+  const mp = document.querySelector("#mypresets .mp-head > span");
+  if (mp) setIconLabel(mp, "star", project ? "My Presets (this browser)" : "My Presets");
+}
+
+// ---- the Library: a panel docked beside the History rail ----
+const libDock = isDesktop ? document.createElement("div") : null;
+if (libDock) {
+  libDock.id = "libDock";
+  libDock.innerHTML =
+    '<div class="plant-bar">' +
+      '<span id="plantWhere" class="hint">Not planted</span>' +
+      '<input id="plantName" type="text" maxlength="60" placeholder="Name (the current sound’s)" spellcheck="false" autocomplete="off" title="The name Save uses: the same name updates that sound in place">' +
+      '<button id="plantSave" class="primary" data-icon="save" title="Save this sound into the planted folder (Ctrl+S): the same name re-exports it in place">Save</button>' +
+    '</div>';
+  document.body.appendChild(libDock);
+}
+const library = libraryMount({
+  title: "Library",
+  dock: libDock,
+  startHint: "Plant CrunchySFX in your game: pick its folder (a Godot project, a Unity project), or any folder. Every sound you save " +
+    "lands in crunchy/sfx/ inside it: the WAV Export WAV would give, ready for the engine, with a small .crunchy file beside it " +
+    "that reopens the sound exactly. Saving the same name updates it in place, so your game's references keep working. " +
+    "Your browser's My Presets stay where they are; “Plant my presets” copies them in.",
+  emptyHint: "Nothing planted yet. Press Save above (or Save preset, Ctrl+S) to plant the sound in the editor, or “Plant my presets”.",
+  project: () => (project ? { name: project.name, dir: plantJoin(project.dir, project.rel) } : null),
+  start: [
+    { label: "Plant in a folder…", title: "Pick your game's folder (Godot or Unity), or any folder", run: () => projDo(projPlantPick) },
+  ],
+  recent: projRecent,
+  openRecent: (dir) => projDo(() => projOpenRecent(dir)),
+  commands: function () {
+    const n = project ? project.assets.filter((a) => projUpdates[a.slug]).length : 0;
+    const mine = projFromBrowser().length;
+    return (n ? [{ label: "Update all (" + n + ")", primary: true, title: "Re-export, in place, every sound this version of CrunchySFX would export differently", run: projUpdateAll }] : [])
+      .concat(mine ? [{ label: "Plant my presets (" + mine + ")", primary: !n, title: "Copy the sounds in this browser's My Presets into the planted folder (each once; the browser keeps them, unchanged)",
+        run: () => projDo(projPlantPresets) }] : [])
+      .concat([
+        { label: "Plant a project file…", title: "Plant the sounds of a .crunchysfx project file (the file, and this browser's My Presets, stay as they are)", run: () => projDo(projPlantFile) },
+        { label: "Close", title: "Stop saving into this folder (nothing in it is touched)", run: () => projDo(projClose) },
+      ]);
+  },
+  // the filter chips: the My Presets categories sounds were filed under when they were planted
+  kinds: function () {
+    if (!project) return [];
+    const seen = {}, out = [];
+    project.assets.forEach((a) => { const c = soundGroup(a); if (!seen[c]) { seen[c] = true; out.push({ key: c, label: c }); } });
+    return out.length > 1 ? out.sort((x, y) => (x.key === "Sounds") - (y.key === "Sounds") || x.key.localeCompare(y.key)) : [];
+  },
+  items: function () {
+    if (!project) return [];
+    return project.assets.slice().sort((x, y) => (soundGroup(x) === "Sounds") - (soundGroup(y) === "Sounds") || soundGroup(x).localeCompare(soundGroup(y)) || x.name.localeCompare(y.name))
+      .map(function (a) {
+        const badges = [];
+        if (projUpdates[a.slug]) badges.push({ hot: true, text: "update available", title: "This version of CrunchySFX would export it differently: Update re-exports it in place" });
+        const f = a.data.fmt || {};
+        badges.push({ text: (f.rate ? +(f.rate / 1000).toFixed(2) + " kHz" : "?") + " · " + (f.depth || "?") + "-bit" + (f.channels === 1 ? " · mono" : "") + (f.loop ? " · loop" : ""),
+                      title: resPath(a) });
+        if (a.data.sample || a.data.sampleF32) badges.push({ text: "♪ audio", title: "Plays imported or recorded audio, kept in its sidecar" });
+        if (a.data.customIR) badges.push({ text: "IR", title: "Made with the impulse response " + a.data.customIR + " (not kept: load it again before saving)" });
+        const at = new Date(a.data.modified || 0), when = isNaN(at) || !a.data.modified ? "" : at.toLocaleDateString();
+        return { id: a.slug, name: a.name, kind: soundGroup(a), group: soundGroup(a), meta: a.data.wav + (when ? " · " + when : ""), badges: badges, asset: a };
+      });
+  },
+  thumb: function (it, cv) {
+    cv.width = 192; cv.height = 64;
+    let peaks = it.asset.data.peaks;
+    if (!Array.isArray(peaks) || !peaks.length) peaks = soundPeaks(soundRender(it.asset.data));   // a sidecar without its picture
+    drawThumb(cv, peaks);
+  },
+  open: (it) => projOpenAsset(it.asset),
+  // THE NAME ONLY: the folder, the WAV's file name and its bytes all stay, so nothing in the game moves
+  rename: function (it, name) {
+    const a = it.asset;
+    return projDo(async function () {
+      const box = document.getElementById("plantName"), was = a.name;
+      await plantRename(project, a, name);
+      if (box && box.value.trim() === was) box.value = a.name;
+      if (seqLabel === was) seqLabel = a.name;
+      projAfter();
+      projStatus("Renamed to " + a.name + ". Its file keeps its path (" + resPath(a) + "), so your game is untouched.");
+    });
+  },
+  suite: function () {
+    return projSuite.map(function (s) {
+      const tool = CRUNCHY_SUITE.find((t) => t.id === s.key) || { name: s.key };
+      const kinds = Object.keys(s.kinds).map((k) => s.kinds[k] + " " + k + (s.kinds[k] === 1 ? "" : "s")).join(", ");
+      const url = tool.web || tool.desktop;
+      return { key: s.key, name: tool.name, summary: kinds + " in " + s.rel, title: url ? "Open " + tool.name : "",
+               open: url ? () => window.__TAURI__.opener.openUrl(url) : null };
+    });
+  },
+  actions: [
+    { label: "▶ Play", title: "Hear it", run: function (it) { const r = soundRender(it.asset.data); drawScope(r.L, r.R); playBuffer(r.L, r.R); } },
+    // REPLACE (AJ, 2026-10-11: "I would assume it would overwrite the saved sound with the one I currently have loaded in
+    // the editor"): the editor's sound into THIS card, same name, same file, so the game gets it. Two clicks, like Delete.
+    { label: "Replace", confirm: true, title: "Put the sound in the editor into this card: same name and same file, so your game gets the new sound",
+      run: (it) => projDo(async function () {
+        const f = editorFields(it.asset.name);
+        if (it.asset.data.categories && !f.categories) f.categories = it.asset.data.categories;     // still filed where it was
+        const a = await projPut(it.asset.name, f);
+        projOpened = a.slug;
+        projAfter();
+        projStatus("Replaced " + a.name + " with the editor's sound (" + resPath(a) + ").");
+      }) },
+    // RE-EXPORT: only where this version of CrunchySFX would render the saved sound differently ("update available")
+    { label: "Re-export", title: "This version of CrunchySFX would render it differently: re-export it from its saved settings, in place",
+      when: (it) => !!projUpdates[it.asset.slug],
+      run: (it) => projDo(async function () { await projUpdateOne(it.asset); projAfter(); projStatus("Re-exported " + it.name + " in place."); }) },
+    { label: "Duplicate", title: "A copy, named “… copy”, in its own folder with its own file",
+      run: (it) => projDo(async function () {
+        let name = it.name + " copy", n = 2;
+        while (plantFind(project, "sound", name)) name = it.name + " copy " + n++;
+        const b = await projPut(name, it.asset.data);            // a new name: its own exportName and file
+        projAfter(); projStatus("Made " + b.name + " (" + resPath(b) + ").");
+      }) },
+    { label: "Delete", confirm: true, title: "Delete it from the planted folder: the WAV it exported and its .crunchy (nothing else)",
+      run: (it) => projDo(async function () {
+        await plantDelete(project, it.asset);
+        delete projUpdates[it.asset.slug];
+        if (projOpened === it.asset.slug) projOpened = "";
+        projAfter(); projStatus("Deleted " + it.name + " and its WAV." + (project.engine === "godot" ? " Godot's .import for it went too." : ""));
+      }) },
+  ],
+});
+function soundGroup(a) { const c = a.data.categories; return Array.isArray(c) && c.length && typeof c[0] === "string" ? c[0] : "Sounds"; }
+function projRefreshSuite() {
+  if (!project) { projSuite = []; return; }
+  const P = project;
+  plantSuiteView(P).then((v) => { if (project === P) { projSuite = v; library.refresh(); } }).catch(() => { projSuite = []; });
+}
+function libraryShow() { if (!library.isOpen()) { library.open(); projRefreshSuite(); } }
+function libraryToggle() { if (library.isOpen()) library.close(); else libraryShow(); }
+if (isDesktop) {
+  const libBtn = document.createElement("button");
+  libBtn.id = "libraryBtn"; libBtn.className = "viewtoggle"; libBtn.dataset.desktop = "";
+  libBtn.title = "The Library: your sounds planted in your game's folder (Ctrl+L)";
+  setIconLabel(libBtn, "book", "Library");
+  libBtn.addEventListener("click", libraryToggle);
+  document.getElementById("suiteBtn").before(libBtn);
+  const msg = document.createElement("span");
+  msg.id = "plantMsg"; msg.className = "hint plant-msg"; msg.setAttribute("aria-live", "polite");
+  document.querySelector(".controls-right").appendChild(msg);
+  document.getElementById("plantSave").addEventListener("click", projSave);
+  document.getElementById("plantName").addEventListener("keydown", (e) => { if (e.key === "Enter") projSave(); });
+  addEventListener("keydown", function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    if (e.key === "s" || e.key === "S") { e.preventDefault(); if (project) projSave(); else { libraryShow(); projStatus("Plant CrunchySFX in a folder first: your game's, or any."); } }
+    else if (e.key === "l" || e.key === "L") { e.preventDefault(); libraryToggle(); }
+  });
+  iconsIn(libDock);
+  projBarSync();
+  // REOPEN THE LAST PLANTED FOLDER, quietly: if it moved, it is simply not open (the Library's recent list says so).
+  const last = projRecent()[0];
+  if (last) projDo(() => projFs.exists(last.dir).then((yes) => { if (yes) return projOpen(last.dir); }));
+}
+// The name box follows the sound in the editor: a preset, a link, an undo or a planted sound loads → its name.
+// (Called by applyPreset and restoreEdit; declared as a function so it can be called before this block runs.)
+function plantNameSync() {
+  projOpened = "";
+  const box = document.getElementById("plantName");
+  if (box) box.value = seqLabel && seqLabel !== "Sound" ? seqLabel : "";
+}
+
 if (isDesktop) {
   mpPanel.hidden = false;
-  userCatsBox.hidden = false;   // enable custom categories (premium organizer)
+  userCatsBox.hidden = false;   // enable custom categories (the desktop's organizer)
   document.getElementById("mpSave").addEventListener("click", saveCurrentUserPreset);
   document.getElementById("mpExportAll").addEventListener("click", batchExportUserPresets);
   loadUserPresets();
@@ -3559,55 +4068,24 @@ if (isDesktop) {
     dragOutWav(L, R, (seqLabel && seqLabel !== "Sound") ? seqLabel : "crunchysfx-sound", seqLabel);
   });
   cbar.appendChild(dragChip);
-} else {
-  // ---------- WEB-ONLY: "Get the Desktop app" CTA + premium-features modal (Coming soon) -------
-  // Free web build advertises the paid desktop tier. No store link yet — the button just opens
-  // a modal listing what the desktop app adds, badged COMING SOON. Hidden entirely on desktop
-  // (that build already HAS these features). Purely presentational; touches no audio/state.
-  const steamBtn = document.createElement("button");
-  steamBtn.id = "steambtn";
-  steamBtn.className = "primary";
-  setIconLabel(steamBtn, "monitor", "Get the Desktop app");
-  steamBtn.title = "Get the desktop app on itch.io";
-
-  const steamModal = document.createElement("div");
-  steamModal.className = "modal";
-  steamModal.hidden = true;
-  steamModal.innerHTML =
-    '<div class="modal-box steam-box">' +
-      '<div class="modal-head">' +
-        '<h2 data-icon="monitor">CrunchySFX Desktop</h2>' +
-        '<span class="steam-badge">Available now</span>' +
-        '<span class="hint">The web version stays free — the desktop app adds a pro workflow.</span>' +
-        '<button id="steamClose" data-icon="close">Close</button>' +
-      '</div>' +
-      '<div class="steam-body">' +
-        '<ul class="steam-feats">' +
-          '<li><b><span data-icon="star"></span>My Presets library</b> — save, name, and organize your own sounds; persists on disk.</li>' +
-          '<li><b><span data-icon="download"></span>Batch export</b> — render your whole library to WAV files in one click, into a folder you pick.</li>' +
-          '<li><b><span data-icon="package"></span>Project files</b> — save &amp; reopen your entire workspace (editor sound, library, sequence) as a <code>.crunchysfx</code> file.</li>' +
-          '<li><b><span data-icon="folder"></span>Native import / export</b> — real system Save/Open dialogs, and import WAVs straight into your library.</li>' +
-          '<li><b><span data-icon="unlock"></span>One-time purchase</b> — no account, no subscription; supports development.</li>' +
-        '</ul>' +
-        '<p class="steam-note">Everything you make in the free web version is CC0 and yours to keep. The desktop app is about workflow, not locking up your sounds.</p>' +
-      '</div>' +
-      '<div class="modal-foot">' +
-        '<button class="primary" id="steamGet">Get it on itch.io ↗</button>' +
-        '<span class="hint">One-time purchase on itch.io. Coming to Steam later too.</span>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(steamModal);
-
-  const ITCH_URL = "https://sevi66.itch.io/crunchysfx"; 
-  const openSteam = () => { steamModal.hidden = false; };
-  const closeSteam = () => { steamModal.hidden = true; };
-  steamBtn.addEventListener("click", openSteam);
-  steamModal.querySelector("#steamGet").addEventListener("click", () => window.open(ITCH_URL, "_blank", "noopener"));
-  steamModal.querySelector("#steamClose").addEventListener("click", closeSteam);
-  steamModal.addEventListener("click", (e) => { if (e.target === steamModal) closeSteam(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !steamModal.hidden) closeSteam(); });
-  document.querySelector(".controls-right").appendChild(steamBtn);
 }
+
+// ============================================================================================
+// THE DESKTOP GATE (crunchyCore desktop.js; crunchyTile TILE-DESIGN.md §108): on the web, the ONE "Get the desktop
+// app" button (it appears because suite.js carries SFX's itch link) and its dialog, saying plainly what the desktop
+// ADDS. The web makes every sound, free and CC0; the desktop keeps them, organises them and plants them in your game.
+// (Replaces SFX's own web CTA and its "Coming soon" modal.)
+// ============================================================================================
+desktopMount("sfx", {
+  place: document.querySelector(".controls-right"),
+  adds: [
+    ["Planted in your game.", "Point it at your game's folder once (Godot, Unity, or any folder): every sound you save lands in crunchy/sfx/ as the WAV Export gives, with a small file beside it that reopens the sound exactly."],
+    ["Updated in place.", "Saving the same name re-exports it under the same path, so your game's references keep working; a newer CrunchySFX marks what it would export differently, and Update all brings them up to date."],
+    ["The Library.", "Every sound you planted, as waveforms you can play, beside the editor, with what your other Crunchy tools planted in the same game (Ctrl+L)."],
+    ["My Presets and categories.", "Keep, name and organise your own sounds; plant them into a game in one go; export them all to a folder; save and open .crunchysfx project files."],
+    ["Native files.", "Real Save and Open dialogs, recording and imports kept with your sounds, and dragging a WAV straight out into your editor or engine."],
+  ],
+});
 
 // initial draw — or load a shared sound from the URL, if one is present
 // ---------- Welcome tour (first-visit guided spotlight) ----------
@@ -3683,7 +4161,6 @@ tourEl.querySelector(".tour-next").addEventListener("click", () => { if (tourIdx
 tourEl.querySelector(".tour-prev").addEventListener("click", () => showTourStep(tourIdx - 1));
 tourEl.querySelector(".tour-skip").addEventListener("click", () => endTour(true));
 document.addEventListener("keydown", (e) => { if (tourEl.hidden) return; if (e.key === "Escape") endTour(true); else if (e.key === "ArrowRight") tourEl.querySelector(".tour-next").click(); else if (e.key === "ArrowLeft") showTourStep(tourIdx - 1); });
-{ const rb = document.getElementById("tourReplay"); if (rb) rb.addEventListener("click", () => { settingsModal.hidden = true; startTour(); }); }
 
 // Share-link first-timers came for THE sound, not a tutorial — don't hijack them with the full
 // tour. Instead show a small dismissible offer once they've landed (and they must press Play to
