@@ -3543,7 +3543,7 @@ if (isDesktop) {
 // (the one holding project.godot, or a Unity project's Assets/ + ProjectSettings/) or any folder. Every sound you save
 // lands in crunchy/sfx/<sound>/ inside it (Unity: Assets/Crunchy/SFX/<sound>/): exactly the WAV Export WAV writes for
 // it, beside a small <sound>.crunchy that reopens it exactly (its share string; its imported audio, if it plays some).
-// Saving the same name re-exports IN PLACE (same path, so the game's references hold); a rename changes the name only
+// Save always plants a NEW asset (plant.js 5); a card's Replace re-exports IN PLACE (same path, so the game's references hold); a rename changes the name only
 // (`exportName` and `wav` are fixed at the first save). The Library is a panel docked beside the History rail, and
 // lists what the other Crunchy tools planted in the same game.
 //
@@ -3559,7 +3559,7 @@ let project = null;                          // plant.js's P (plus .name) while 
 let projQueue = Promise.resolve();
 const projUpdates = {};                      // slug → true when this version would export it differently
 let projSuite = [];                          // the suite view: the other Crunchy tools' planted assets here
-let projArmed = "";                          // a Save over ANOTHER sound of the same name, pressed once already
+const projPending = [];                       // names of saves still waiting in the queue: taken too (plantFreeName)
 let projSample = null;                       // { buf, key, value }: the sidecar audio the editor's sample came from
 var projOpened = "";                         // the slug the editor's sound was opened from or saved to (var: plantNameSync may run first)
 // File work runs ONE AT A TIME, in order: a save and its export never interleave with the next.
@@ -3656,6 +3656,7 @@ function presetFields(p, cats) {
   return f;
 }
 // SAVE one sound: its WAV and its sidecar, in place. Returns the asset.
+let projUsedArmed = "";                                    // a save or delete that removes files the game uses, pressed once
 async function projPut(name, fields) {
   const prev = plantFind(project, "sound", name);
   const f = soundOwn(fields);
@@ -3664,6 +3665,12 @@ async function projPut(name, fields) {
   const r = soundRender(f);
   f.peaks = soundPeaks(r);                                                               // the card's picture
   const files = [{ path: f.wav, data: soundWav(r, f.fmt, f.exportName) }];
+  // FILES THE GAME USES (crunchyCore plant.js 4): a save that would remove one says which, and saves on the second press
+  if (prev) {
+    const used = await plantUsersOf(project, prev.slug, await plantStale(project, { kind: "sound", name: name, files: files })), key = "save/" + name.toLowerCase();
+    if (used.length && projUsedArmed !== key) { projUsedArmed = key; throw new Error(plantUsedMessage(used)); }
+  }
+  projUsedArmed = "";
   const a = await plantPut(project, { kind: "sound", name: name, fields: f, files: files, appVersion: APP_VERSION });
   delete projUpdates[a.slug];
   return a;
@@ -3719,25 +3726,29 @@ function plantNameNow() {
   const typed = box ? box.value.trim().slice(0, 60) : "";
   return typed || (seqLabel && seqLabel !== "Sound" ? seqLabel : "My Sound");
 }
-// Save the editor's sound into the planted folder. Saving over a DIFFERENT sound that already has the name asks for a
-// second press (it replaces that file in the game); the sound it was opened from is simply updated in place.
+// A name free of every planted sound AND of every save still queued (two quick presses never pick the same one).
+function projFreeName(kind, name) {
+  return plantFreeName({ assets: project.assets.concat(projPending.map((n) => ({ kind: kind, name: n }))) }, kind, name);
+}
+// Save the editor's sound into the planted folder as a NEW sound. SAVE NEVER OVERWRITES (crunchyCore plant.js 5; AJ,
+// 2026-10-12): a taken name gets the next number, and only a card's Replace (or Re-export) writes over a planted sound.
+// The name is settled NOW, because the share string carries it.
 function projSave() {
   if (!project) { libraryShow(); projStatus("Plant CrunchySFX in a folder first: your game's, or any."); return false; }
-  const name = plantNameNow();
-  const prev = plantFind(project, "sound", name), key = name.toLowerCase();
-  if (prev && prev.slug !== projOpened && projArmed !== key) {
-    projArmed = key;
-    projStatus("“" + prev.name + "” is already planted. Save again to replace it in place (same file, so your game gets the new sound), or give this one another name.");
-    return false;
-  }
-  projArmed = "";
+  const typed = plantNameNow(), name = projFreeName("sound", typed);
+  const box = document.getElementById("plantName");
+  if (box && name !== typed) box.value = name;
   const fields = editorFields(name);
+  projPending.push(name);
   projDo(async function () {
-    const a = await projPut(name, fields);
-    projOpened = a.slug;
-    projAfter();
-    projStatus((prev ? "Updated " : "Saved ") + a.name + " in " + resPath(a) + (project.engine === "godot" ? " (res://" + resPath(a) + ")." : ".") +
-      (a.data.customIR ? " It uses the impulse response " + a.data.customIR + ", which a sidecar can't keep: load it again before saving it next time." : ""));
+    try {
+      const a = await projPut(name, fields);
+      projOpened = a.slug;
+      projAfter();
+      projStatus("Saved " + a.name + " in " + resPath(a) + (project.engine === "godot" ? " (res://" + resPath(a) + ")." : ".") +
+        (name !== typed ? " (“" + typed + "” was taken: Replace on its card updates that one.)" : "") +
+        (a.data.customIR ? " It uses the impulse response " + a.data.customIR + ", which a sidecar can't keep: load it again before saving it next time." : ""));
+    } finally { projPending.splice(projPending.indexOf(name), 1); }
   });
   return true;
 }
@@ -3845,7 +3856,7 @@ function projOpenAsset(a) {
   waveLocked = false;                                             // the planted sound exactly, whatever the lock says
   try { applyPreset(d.snap, a.name); } finally { waveLocked = keepLock; }
   projOpened = a.slug;
-  projStatus("Opened " + a.name + ". Save preset (Ctrl+S) re-exports it in place: " + resPath(a) + "." +
+  projStatus("Opened " + a.name + ". Replace on its card updates it in place (Save makes a new one): " + resPath(a) + "." +
     (a.data.customIR ? " It was made with the impulse response " + a.data.customIR + ": load it again (Space → Load IR…) to hear it as planted." : ""));
 }
 
@@ -3867,8 +3878,8 @@ if (libDock) {
   libDock.innerHTML =
     '<div class="plant-bar">' +
       '<span id="plantWhere" class="hint">Not planted</span>' +
-      '<input id="plantName" type="text" maxlength="60" placeholder="Name (the current sound’s)" spellcheck="false" autocomplete="off" title="The name Save uses: the same name updates that sound in place">' +
-      '<button id="plantSave" class="primary" data-icon="save" title="Save this sound into the planted folder (Ctrl+S): the same name re-exports it in place">Save</button>' +
+      '<input id="plantName" type="text" maxlength="60" placeholder="Name (the current sound’s)" spellcheck="false" autocomplete="off" title="The name Save uses. A taken name gets the next number (Save never overwrites); Replace on a card updates that sound">' +
+      '<button id="plantSave" class="primary" data-icon="save" title="Save this sound into the planted folder (Ctrl+S), always as a new one: Replace on a card updates one already planted">Save</button>' +
     '</div>';
   document.body.appendChild(libDock);
 }
@@ -3878,7 +3889,7 @@ const library = libraryMount({
   dock: libDock,
   startHint: "Plant CrunchySFX in your game: pick its folder (a Godot project, a Unity project), or any folder. Every sound you save " +
     "lands in crunchy/sfx/ inside it: the WAV Export WAV would give, ready for the engine, with a small .crunchy file beside it " +
-    "that reopens the sound exactly. Saving the same name updates it in place, so your game's references keep working. " +
+    "that reopens the sound exactly. Replace on a card updates it in place, so your game's references keep working. " +
     "Your browser's My Presets stay where they are; “Plant my presets” copies them in.",
   emptyHint: "Nothing planted yet. Press Save above (or Save preset, Ctrl+S) to plant the sound in the editor, or “Plant my presets”.",
   project: () => (project ? { name: project.name, dir: plantJoin(project.dir, project.rel) } : null),
@@ -3986,6 +3997,9 @@ const library = libraryMount({
       }) },
     { label: "Delete", confirm: true, title: "Delete it from the planted folder: the WAV it exported and its .crunchy (nothing else)",
       run: (it) => projDo(async function () {
+        const used = await plantUsersOf(project, it.asset.slug, it.asset.data.files), key = "delete/" + it.asset.slug;
+        if (used.length && projUsedArmed !== key) { projUsedArmed = key; throw new Error(plantUsedMessage(used, "delete")); }
+        projUsedArmed = "";
         await plantDelete(project, it.asset);
         delete projUpdates[it.asset.slug];
         if (projOpened === it.asset.slug) projOpened = "";
@@ -4093,7 +4107,7 @@ desktopMount("sfx", {
   place: document.querySelector(".controls-right"),
   adds: [
     ["Planted in your game.", "Point it at your game's folder once (Godot, Unity, or any folder): every sound you save lands in crunchy/sfx/ as the WAV Export gives, with a small file beside it that reopens the sound exactly."],
-    ["Updated in place.", "Saving the same name re-exports it under the same path, so your game's references keep working; a newer CrunchySFX marks what it would export differently, and Update all brings them up to date."],
+    ["Updated in place.", "Replace on a card re-exports it under the same path, so your game's references keep working; a newer CrunchySFX marks what it would export differently, and Update all brings them up to date."],
     ["The Library.", "Every sound you planted, as waveforms you can play, beside the editor, with what your other Crunchy tools planted in the same game (Ctrl+L)."],
     ["My Presets and categories.", "Keep, name and organise your own sounds; plant them into a game in one go; export them all to a folder; save and open .crunchysfx project files."],
     ["Native files.", "Real Save and Open dialogs, recording and imports kept with your sounds, and dragging a WAV straight out into your editor or engine."],

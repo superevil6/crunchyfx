@@ -193,27 +193,49 @@
     return ok(d && typeof d.sampleF32 === "string" && !d.sample && d.fmt.rate === 48000 && d.fmt.depth === 24 && d.fmt.channels === 1 && d.fmt.loop === true &&
               same(b64ToF32(d.sampleF32), s) && eq, JSON.stringify(d && d.fmt));
   });
-  await t("save/the-sound-opened-from-updates-in-place", async function () {
+  // SAVE NEVER OVERWRITES (crunchyCore plant.js 5; AJ, 2026-10-12): a taken name gets the next number, and only a card's
+  // Replace updates a sound. Each row removes its extra sound and makes the update the old row made, by Replace, so the
+  // rows after see the same folder as before.
+  const dropSound = async function (name) {
+    await projDo(async function () { await plantDelete(project, plantFind(project, "sound", name)); });
+    projAfter(); await settle();
+  };
+  const replaceCard = async function (name) {
+    cardButton(name, "Replace").click();
+    const c = cardButton(name, "Replace");
+    if (c && /Really/.test(c.textContent)) c.click();
+    await settle();
+  };
+  await t("save/the-sound-opened-from-saves-as-a-new-one", async function () {
     card("Coin").querySelector(".lib-pic").click();
     await settle();
     state.freq = state.freq * 1.5;
-    const before = M.list(ROOT + "/").length;
+    const was = M.text(ROOT + "/coin/coin.crunchy");
     document.getElementById("plantSave").click();
     await settle();
+    const two = sidecar("coin-2");
+    const pass = M.text(ROOT + "/coin/coin.crunchy") === was && two && two.s === encodePatch("Coin 2") && /“Coin” was taken/.test(status()) &&
+                 document.getElementById("plantName").value === "Coin 2";
+    const msg = status();
+    await dropSound("Coin 2");
+    document.getElementById("plantName").value = "Coin";
+    await replaceCard("Coin");                                  // the update, the way it is made now
     const d = sidecar("coin");
-    return ok(d.s === encodePatch("Coin") && project.assets.length === 2 && M.list(ROOT + "/").length === before && /^Updated Coin/.test(status()), status());
+    return ok(pass && d.s === encodePatch("Coin") && project.assets.length === 2 && /Replaced Coin/.test(status()), msg + " / " + status());
   });
-  await t("save/over-another-sound-of-that-name-needs-a-second-press", async function () {
+  await t("save/a-taken-name-gets-the-next-number", async function () {
     applyPreset(PRESETS["Laser"] || PRESETS[Object.keys(PRESETS)[7]], "Laser");
     document.getElementById("plantName").value = "Coin";
     const was = M.text(ROOT + "/coin/coin.crunchy");
     document.getElementById("plantSave").click();
     await settle();
-    const held = M.text(ROOT + "/coin/coin.crunchy") === was && /already planted\. Save again/.test(status());
-    document.getElementById("plantSave").click();
-    await settle();
+    const pass = M.text(ROOT + "/coin/coin.crunchy") === was && !!sidecar("coin-2");
+    const msg = status();
+    await dropSound("Coin 2");
+    document.getElementById("plantName").value = "Coin";
+    await replaceCard("Coin");
     const d = sidecar("coin");
-    return ok(held && d.s === encodePatch("Coin") && d.exportName === "Coin" && /^Updated Coin/.test(status()), status());
+    return ok(pass && d.s === encodePatch("Coin") && d.exportName === "Coin" && /Replaced Coin/.test(status()), msg + " / " + status());
   });
   await t("save/ctrl-s-saves-and-save-preset-goes-to-the-library-not-the-browser", async function () {
     applyPreset(PRESETS[Object.keys(PRESETS)[20]], "Ctrl one");
@@ -315,13 +337,12 @@
               exportFmt.rate === 48000 && exportFmt.channels === 1 && exportFmt.loop === true &&
               same(soundWav(r, d.fmt, d.exportName), M.bytes(ROOT + "/boom-take/boom-take.wav")) && /Opened Boom take/.test(status()), status());
   });
-  await t("open/save-again-keeps-the-same-file-byte-for-byte", async function () {
+  await t("open/replace-keeps-the-same-file-byte-for-byte", async function () {
     const before = M.bytes(ROOT + "/boom-take/boom-take.wav");
-    document.getElementById("plantSave").click();
-    await settle();
+    await replaceCard("Boom take");
     ["fmtRate", "fmtDepth", "fmtChannels"].forEach(function (id, i) { const el = document.getElementById(id); el.value = ["44100", "16", "2"][i]; el.dispatchEvent(new Event("change")); });
     const loop = document.getElementById("fmtLoop"); loop.checked = false; loop.dispatchEvent(new Event("change"));
-    return ok(same(before, M.bytes(ROOT + "/boom-take/boom-take.wav")) && /^Updated Boom take/.test(status()), status());
+    return ok(same(before, M.bytes(ROOT + "/boom-take/boom-take.wav")) && /Replaced Boom take/.test(status()), status());
   });
   await t("rename/the-name-only-the-path-and-bytes-stay", async function () {
     const before = M.list(ROOT + "/coin/"), wav = M.bytes(ROOT + "/coin/coin.wav");
@@ -527,6 +548,27 @@
   });
 
   // ---- safety ----
+  // crunchyCore plant.js 4 (the guard): a delete whose files a SCENE uses says so by name, and deletes on the next press
+  await t("guard/a-delete-whose-files-a-scene-uses-asks-first", async function () {
+    if (!project) await projDo(function () { return projOpen(GODOT); });
+    if (!library.isOpen()) library.open();
+    const s0 = lib().querySelector(".lib-search"); if (s0 && s0.value) { s0.value = ""; s0.dispatchEvent(new Event("input")); }
+    const a = project.assets.find(function (x) { return x.data.files.length > 0 && card(x.name); });
+    if (!a) return ok(false, "no planted asset with files on screen");
+    const scene = GODOT + "/scenes/uses-" + a.slug + ".tscn";
+    M.put(scene, 'path="res://' + project.rel + "/" + a.slug + "/" + a.data.files[0] + '"');
+    const msg = function () { const s = lib().querySelector(".lib-status"); return (s ? s.textContent : "") + " " + status(); };
+    const press = async function () {
+      cardButton(a.name, "Delete").click();
+      const b = cardButton(a.name, "Delete"); if (b && /Really/.test(b.textContent)) b.click();
+      await settle();
+    };
+    await press();
+    const held = !!sidecar(a.slug) && /Press again to delete/.test(msg()) && msg().indexOf("uses-" + a.slug + ".tscn") >= 0;
+    await press();
+    M.files.delete(scene);
+    return ok(held && !sidecar(a.slug) && !card(a.name), msg());
+  });
   await t("safety/nothing-written-outside-crunchy-sfx", function () {
     const allowed = [ROOT + "/", UNITY + "/Assets/Crunchy/SFX/", PLAIN + "/crunchy/sfx/",
       "/home/aj/Downloads/", "/home/aj/round.crunchysfx"];                  // the last two: the suite's own Save dialogs

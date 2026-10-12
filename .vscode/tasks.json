@@ -64,6 +64,18 @@
       "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
     },
     {
+      // crunchyCore, then EVERY app (crunchyCore tools/core-sync.mjs, AJ 2026-10-12): commits and pushes the core, then in
+      // Tile, UI, SFX, VFX and BGM pulls it and commits ONLY what the pull changed (the copies, the hook, index.html's
+      // wants), with the core's message. Your own changes in each app stay uncommitted; an app with anything already
+      // staged is skipped. Asks once whether to push the apps too. CrunchyCharacter (Dowel's) is left out.
+      "label": "Commit crunchyCore and every app",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/core-sync.mjs\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+    },
+    {
       // Static file server for the web version. Used as the preLaunchTask for the
       // "Web app (browser)" launch config; the background matcher below lets VS Code
       // know the server is ready (when python prints "Serving HTTP ...").

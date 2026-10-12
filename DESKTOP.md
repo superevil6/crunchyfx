@@ -128,3 +128,14 @@ available". The Save bar is unchanged. Each app's desktop suite proves both.
 
 **Proved by hand (AJ, 2026-10-11, the real desktop app and native dialogs):** planted, saved sounds, replaced one from
 the editor, and the card buttons: "Worked exactly as expected."
+
+**The removal guard (crunchyCore plant.js 4, 2026-10-12; crunchyTile TILE-DESIGN §115):** a save of an existing asset
+(Save, Replace, Re-export, Update all) or a Delete that would remove a file one of the game's scenes or resources uses
+(Godot: its `res://` path in a .tscn/.tres/.gd/…; Unity: its GUID) stops and names the file and its users; the same press
+again goes through. Found when AJ's player_test.tscn lost a Tile decoration a later save no longer made. The desktop
+suite has a delete-guard row.
+
+**Save never overwrites (crunchyCore plant.js 5, 2026-10-12; crunchyTile TILE-DESIGN §117).** AJ, testing CrunchyCharacter:
+opening a planted asset, changing to another and saving replaced the first. Save now always plants a NEW asset; a taken
+name gets the next number ("… 2", then "… 3"), and only a card's Replace (two clicks), Re-export and Update all write over a
+planted one. The desktop suite's same-name rows prove it and make their update through Replace.
