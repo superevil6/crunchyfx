@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 0176591 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 93a6d8f9d29d972f0b99a4ab4daf6a6c6a16c163a4be1d6784ffbf0d27d50404
+// GENERATED from crunchyCore/plant.js @ 77dcdb2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 4e80aafa544f663fcc91d7722ee78738fbeeffa7109b9dfee9c17d8fea1cd9f2
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -21,7 +21,8 @@
 //   wrote: re-export removes what it no longer makes and NEVER touches anything else. `hash` fingerprints the exported
 //   bytes, so an app update that would change them can be shown as "update available" (plantNeedsUpdate).
 //
-// SAFETY, the same promises as project.js: nothing is written outside this app's child folder; nothing is removed that
+// SAFETY, the same promises as project.js: nothing is written outside this app's child folder (but GAME FILES, below:
+// only where an app names an engine's own asset folders); nothing is removed that
 // a sidecar does not list (and a listed path that would escape the asset's folder is ignored), with ONE companion: in a
 // Godot project a removed file's own `<file>.import` goes with it, because Godot keeps serving a deleted texture from
 // its import cache while that file remains (found by tests/godot-plant.mjs: the game still loaded a deleted asset); a sidecar is written
@@ -32,12 +33,21 @@
 // (the Tauri fs plugin fits as is, see plantTauriFs; tests pass an in-memory one):
 //   exists(path) → bool   readTextFile(path) → string   readDir(path) → [{ name, isDirectory }]
 //   mkdir(path, { recursive })   writeTextFile(path, text)   writeFile(path, Uint8Array)   remove(path)
-// The app supplies PROJECT_APP (its project-app.js): id, name, suite (its key below), kinds, valid(kind, d).
+// The app supplies PROJECT_APP (its project-app.js): id, name, suite (its key below), kinds, valid(kind, d), and
+// optionally gameDirs (below).
+//
+// GAME FILES (build 6, CrunchyCharacter's RPG Maker planting; AJ, 2026-10-12: "the manual export sucked"). An engine
+// that only loads assets from ITS OWN folders (RPG Maker MV/MZ: img/characters/, img/faces/ …) cannot use files kept in
+// crunchy/. There, and only for the folders the app names in PROJECT_APP.gameDirs[engine], a file path may be
+// "@game/<folder>/<file>": written into the game's folder, listed in the sidecar like any other, removed on a re-export
+// that no longer makes it and on delete. The promises that keep this safe: only a named folder, only a file directly in
+// it (no subfolders, no ".."), NEVER a file that is already there unless this asset wrote it (another asset's, or the
+// person's own, stops the save with its name), and a game folder itself is never removed or pruned.
 //
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 5;
+const PLANT_BUILD = 6;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -69,12 +79,30 @@ function plantSlug(name) {
 }
 
 // ---- where -------------------------------------------------------------------------------------------------------
-// The engine of a chosen folder: Godot (project.godot), Unity (Assets/ and ProjectSettings/), or a plain folder.
+// The engine of a chosen folder: Godot (project.godot), Unity (Assets/ and ProjectSettings/), RPG Maker MZ / MV
+// (game.rmmzproject / Game.rpgproject; build 6), or a plain folder. RPG Maker keeps its sidecars in crunchy/ as a plain
+// folder does; only an app with gameDirs.rpgmaker writes into its img/ folders.
 async function plantEngineOf(fs, dir) {
   if (await fs.exists(plantJoin(dir, "project.godot"))) return "godot";
   if (await fs.exists(plantJoin(dir, "Assets")) && await fs.exists(plantJoin(dir, "ProjectSettings"))) return "unity";
+  if (await fs.exists(plantJoin(dir, "game.rmmzproject")) || await fs.exists(plantJoin(dir, "Game.rpgproject"))) return "rpgmaker";
   return "plain";
 }
+// ---- game files (build 6) ----------------------------------------------------------------------------------------
+const PLANT_GAME = "@game/";
+// The path inside the GAME folder of a "@game/…" file, or null for a file in the asset's own folder.
+function plantGameRel(path) { return typeof path === "string" && path.indexOf(PLANT_GAME) === 0 ? path.slice(PLANT_GAME.length) : null; }
+// A game file this app may write here: a file directly in one of the folders it names for this engine.
+function plantGameOk(P, rel) {
+  const dirs = PROJECT_APP.gameDirs && PROJECT_APP.gameDirs[P.engine];
+  if (!Array.isArray(dirs) || !plantSafeRel(rel)) return false;
+  return dirs.some(function (d) { return rel.indexOf(d) === 0 && rel.length > d.length && rel.slice(d.length).indexOf("/") < 0; });
+}
+// A listed path this app may remove: any file in the asset's folder; a game file only where it may write one (a
+// sidecar copied into another engine's game never removes from that game's folders).
+function plantWritable(P, path) { const g = plantGameRel(path); return g === null || plantGameOk(P, g); }
+// Where a listed file lives on disk: in the asset's folder, or (a game file) in the game's.
+function plantFileAt(P, dir, path) { const g = plantGameRel(path); return g === null ? plantJoin(dir, path) : plantJoin(P.dir, g); }
 function plantRootRel(engine) { return engine === "unity" ? "Assets/Crunchy" : "crunchy"; }
 function plantChildRel(engine, key) {
   const c = PLANT_SUITE[key];
@@ -232,6 +260,20 @@ const PLANT_REF_MAX = 20000;                                    // files read at
 // .meta. A plain folder has no game to break: always []. Read-only.
 async function plantUsersOf(P, slug, paths) {
   if (P.engine === "plain" || !paths.length) return [];
+  // RPG MAKER (build 6): the Database (data/*.json) names an image by its file name without ".png" ("$Hero", "Hero")
+  if (P.engine === "rpgmaker") {
+    const imgs = paths.map(function (p) { const g = plantGameRel(p); return g === null ? null : { path: p, needle: JSON.stringify(g.split("/").pop().replace(/\.png$/i, "")) }; })
+      .filter(Boolean);
+    const data = plantJoin(P.dir, "data"), by = {};
+    if (!imgs.length || !(await P.fs.exists(data))) return [];
+    for (const e of await P.fs.readDir(data)) {
+      if (e.isDirectory || !/\.json$/i.test(e.name)) continue;
+      let text = "";
+      try { text = await P.fs.readTextFile(plantJoin(data, e.name)); } catch (err) { continue; }
+      imgs.forEach(function (w) { if (text.indexOf(w.needle) >= 0) (by[w.path] = by[w.path] || []).push("data/" + e.name); });
+    }
+    return imgs.filter(function (w) { return by[w.path]; }).map(function (w) { return { path: w.path, by: by[w.path] }; });
+  }
   const fs = P.fs, dir = plantJoin(P.dir, P.rel, slug), want = [];
   for (const p of paths) {
     if (P.engine === "godot") want.push({ path: p, needle: "res://" + plantJoin(P.rel, slug, p) });
@@ -280,13 +322,25 @@ async function plantPut(P, req) {
   if (!plantSidecarValid(probe)) throw new Error("plantPut: not a valid " + req.kind);
   (req.files || []).forEach(function (f) {
     if (!plantSafeRel(f.path) || f.path.slice(-PLANT_EXT.length) === PLANT_EXT) throw new Error("plantPut: refused path " + f.path);
+    const g = plantGameRel(f.path);
+    if (g !== null && !plantGameOk(P, g)) throw new Error("plantPut: refused game path " + f.path);
   });
   const fs = P.fs, prev = plantFind(P, req.kind, req.name);
+  // GAME FILES are never written over unless THIS asset wrote them: checked for every one before anything is written
+  const mine = {};
+  if (prev) prev.data.files.forEach(function (f) { mine[f] = true; });
+  for (const f of req.files) {
+    const g = plantGameRel(f.path);
+    if (g === null || mine[f.path] || !(await fs.exists(plantJoin(P.dir, g)))) continue;
+    const other = P.assets.find(function (a) { return a.data.files.indexOf(f.path) >= 0; });
+    throw new Error(g + " is already in the game" + (other ? ", written for " + other.name : ", and " + PROJECT_APP.name + " did not write it") +
+      ": give this one another name" + (other ? ", or Replace that one" : ", or move that file") + ".");
+  }
   const slug = await plantSlugFor(P, req.kind, req.name);
   const dir = plantJoin(P.dir, P.rel, slug);
   await fs.mkdir(dir, { recursive: true });
   for (const f of req.files) {
-    const at = plantJoin(dir, f.path);
+    const at = plantFileAt(P, dir, f.path);
     const parent = at.slice(0, at.lastIndexOf("/"));
     if (parent !== dir) await fs.mkdir(parent, { recursive: true });
     if (typeof f.data === "string") await fs.writeTextFile(at, f.data); else await fs.writeFile(at, f.data);
@@ -294,7 +348,7 @@ async function plantPut(P, req) {
   const keep = {};
   req.files.forEach(function (f) { keep[f.path] = true; });
   if (prev) {
-    for (const old of prev.data.files) if (!keep[old] && plantSafeRel(old)) await plantRemoveWritten(P, plantJoin(dir, old));
+    for (const old of prev.data.files) if (!keep[old] && plantSafeRel(old) && plantWritable(P, old)) await plantRemoveWritten(P, plantFileAt(P, dir, old));
     await plantPrune(P, dir);                                         // subfolders the old export had and this one does not
   }
   const side = plantSidecar(req.kind, req.name, fields, req.files, req.appVersion, prev ? prev.data.created : null);
@@ -322,7 +376,7 @@ async function plantRename(P, a, name) {
 // is in it. Anything else in it (the person's own file, Unity's .meta, which Unity clears itself) keeps the folder.
 async function plantDelete(P, a) {
   const fs = P.fs, dir = plantAssetDir(P, a);
-  for (const f of a.data.files) if (plantSafeRel(f)) await plantRemoveWritten(P, plantJoin(dir, f));
+  for (const f of a.data.files) if (plantSafeRel(f) && plantWritable(P, f)) await plantRemoveWritten(P, plantFileAt(P, dir, f));
   const side = plantJoin(dir, a.slug + PLANT_EXT);
   if (await fs.exists(side)) await fs.remove(side);
   await plantPrune(P, dir);                                           // the export's own subfolders, now empty
