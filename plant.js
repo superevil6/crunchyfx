@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 6565560 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 940151e004bb5a0bdc7bc36fea79e0b68d5c6faae05c7d957da4c739c86e7529
+// GENERATED from crunchyCore/plant.js @ 0176591 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 93a6d8f9d29d972f0b99a4ab4daf6a6c6a16c163a4be1d6784ffbf0d27d50404
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -37,7 +37,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 4;
+const PLANT_BUILD = 5;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -155,6 +155,17 @@ async function plantScan(P) {
 function plantFind(P, kind, name) {
   const low = String(name).trim().toLowerCase();
   return P.assets.find(function (a) { return a.kind === kind && a.name.toLowerCase() === low; }) || null;
+}
+// A NAME NO ASSET OF THIS KIND HAS YET: the name itself, or the next of its numbered series ("Hero" taken → "Hero 2";
+// "Hero 2" taken → "Hero 3", never "Hero 2 2"). SAVE NEVER OVERWRITES (AJ, 2026-10-12, in CrunchyCharacter: opening a
+// planted character, picking another and saving replaced the first): an app's Save plants under this name, and only a
+// card's Replace (or Re-export) writes over an asset that is already there.
+function plantFreeName(P, kind, name) {
+  if (!plantFind(P, kind, name)) return name;
+  const base = String(name).replace(/\s+\d+$/, "") || String(name);
+  let n = 2;
+  while (plantFind(P, kind, base + " " + n)) n++;
+  return base + " " + n;
 }
 function plantSearch(P, q, kind) {
   const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
