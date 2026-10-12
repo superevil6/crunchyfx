@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ d8c8083 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/crunchy-icons.js @ 6565560 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 40af477eb195ab6a63f56c3f42389a9bdd0387fcd6adb3f0830728d74255580a
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
