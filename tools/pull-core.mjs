@@ -3,6 +3,9 @@
 //   node tools/pull-core.mjs                 pull from a COMMITTED crunchyCore (a dirty one is refused)
 //   node tools/pull-core.mjs --wip           a trial pull of the core's uncommitted work (the core's author, testing)
 //   node tools/pull-core.mjs --migrated      pull past a MIGRATION the changelog names, once you have done it
+//   node tools/pull-core.mjs --stage         also STAGE exactly what the pull changed (crunchyCore tools/core-sync.mjs):
+//                                            the copies, this puller, the hook, and in index.html ONLY the moved wants,
+//                                            applied to the staged/committed index.html so the app's own edits stay out
 //   node tools/pull-core.mjs --check         the app's suite: fails ONLY when a copy is CORRUPT
 //   node tools/pull-core.mjs --check --pinned  a commit (the app's pre-commit hook): also fails on a TRIAL copy, so an
 //                                              app is never committed holding bytes that exist in no core commit
@@ -53,7 +56,7 @@ const core = process.env.CRUNCHYCORE_DIR || join(app, "..", "crunchyCore");
 const SELF = "tools/pull-core.mjs";
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const args = process.argv.slice(2), has = (f) => args.includes(f);
-const check = has("--check"), strict = has("--strict"), pinnedOnly = has("--pinned"), guard = has("--guard"), precommit = has("--precommit"), wip = has("--wip"), migrated = has("--migrated");
+const check = has("--check"), strict = has("--strict"), pinnedOnly = has("--pinned"), guard = has("--guard"), precommit = has("--precommit"), wip = has("--wip"), migrated = has("--migrated"), stage = has("--stage");
 
 const list = JSON.parse(readFileSync(join(here, "core-files.json"), "utf8"));
 if (!Array.isArray(list) || !list.every((f) => typeof f === "string")) throw new Error("tools/core-files.json must be a list of file names");
@@ -183,6 +186,8 @@ if (!haveCore) { console.error("pull-core: no crunchyCore at " + core + " (set C
   }
 }
 
+if (stage && wip) { console.error("pull-core: --stage takes a committed core only (a trial pull is never committed)"); process.exit(1); }
+
 let commit;
 try {
   commit = git("rev-parse", "--short", "HEAD").trim();
@@ -241,14 +246,44 @@ const moved = followWants(list.filter((f) => existsSync(join(core, f))));
 const hookState = appGit("rev-parse", "--git-dir") === null ? "none" : writeHook();
 if (hookState === "written") moved.push(HOOK + ": written (the suite's pre-commit guard)");
 if (bad.length) { console.error("pull-core: " + bad.join("; ")); process.exit(1); }
+if (stage) stageChanges(list.filter((f) => existsSync(join(core, f))), hookState);
 console.log(`pull-core: ${list.length} files from crunchyCore @ ${commit}` + (moved.length ? "\n  " + moved.join("\n  ") : "") + guardNote());
 if (changes.length) console.log("\nWhat changed (crunchyCore/CHANGELOG.md):\n" + changes.join("\n"));
 process.exit(0);
 
 function followWants(files) {
-  const page = join(app, "index.html"), notes = [], unchecked = [];
-  if (!existsSync(page)) return notes;
-  const lines = readFileSync(page, "utf8").split("\n");
+  const page = join(app, "index.html");
+  if (!existsSync(page)) return [];
+  const r = wantsIn(readFileSync(page, "utf8"), files);
+  if (r.changed) writeFileSync(page, r.text);
+  // one line, not one per file: an app may simply not check stamps (SFX); the stamps are listed for its own guard
+  if (r.unchecked.length) r.notes.push(`index.html checks no stamp for: ${r.unchecked.join(", ")} (add a want, or ignore if this app has no stamp checks)`);
+  return r.notes;
+}
+
+// --stage: put exactly this pull's change in git's index, nothing of the app's own. The copies, the puller and the hook
+// are wholly the core's, so they are added whole; index.html may hold the app's own unstaged work, so the want moves
+// are applied to the version already in the index (HEAD's, when nothing is staged) and that blob is staged instead.
+function stageChanges(files, hookState) {
+  const ok = (...a) => spawnSync("git", a, { cwd: app, encoding: "utf8" });
+  if (appGit("rev-parse", "--git-dir") === null) { console.error("pull-core --stage: this app is not a git checkout"); process.exit(1); }
+  const whole = [...files, SELF, ...(hookState === "own" ? [] : [HOOK])].filter((f) => existsSync(join(app, f)));
+  if (ok("add", "--", ...whole).status !== 0) { console.error("pull-core --stage: git add failed"); process.exit(1); }
+  const staged = ok("ls-files", "-s", "--", "index.html").stdout.trim();            // "<mode> <sha> <stage>\tindex.html"
+  if (!staged) return;
+  const mode = staged.split(" ")[0], was = ok("show", ":index.html").stdout;
+  const r = wantsIn(was, files);
+  if (!r.changed) return;
+  const blob = spawnSync("git", ["hash-object", "-w", "--stdin"], { cwd: app, input: r.text, encoding: "utf8" });
+  if (blob.status !== 0 || ok("update-index", "--cacheinfo", `${mode},${blob.stdout.trim()},index.html`).status !== 0) {
+    console.error("pull-core --stage: could not stage index.html's wants"); process.exit(1);
+  }
+}
+
+// The want moves as a pure text edit: the same on the working file and on the staged blob.
+function wantsIn(text, files) {
+  const notes = [], unchecked = [];
+  const lines = text.split("\n");
   let changed = false;
   for (const f of files) {
     const n = stampOf(f, readFileSync(join(core, f), "utf8"));
@@ -275,8 +310,5 @@ function followWants(files) {
     changed = true;
     notes.push(`${f}: index.html want ${was ? was[1] : "?"} -> ${n}`);
   }
-  if (changed) writeFileSync(page, lines.join("\n"));
-  // one line, not one per file: an app may simply not check stamps (SFX); the stamps are listed for its own guard
-  if (unchecked.length) notes.push(`index.html checks no stamp for: ${unchecked.join(", ")} (add a want, or ignore if this app has no stamp checks)`);
-  return notes;
+  return { text: lines.join("\n"), changed, notes, unchecked };
 }

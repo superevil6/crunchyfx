@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/tools/core-commit.mjs @ b41dd27 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 b6c4079c03f7d6fa0bd316b85e7e3a47cad91b4948e079e2f0356a4e737a33de
+// GENERATED from crunchyCore/tools/core-commit.mjs @ d8c8083 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 deccaf9ece810103e952fc24578d58ec6b5e5765ad5ca1d1ad7024c0cf2ed21c
 // core-commit — commit and push crunchyCore, then pull it into this app: the core-first order in one step.
 //
 //   node tools/core-commit.mjs          (the VS Code task "Commit crunchyCore, then pull it here" runs this)
@@ -24,7 +24,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const app = join(here, "..");
 const core = process.env.CRUNCHYCORE_DIR || join(app, "..", "crunchyCore");
 
-const run = (cmd, args, cwd, quiet) => spawnSync(cmd, args, { cwd, encoding: "utf8", stdio: quiet ? "pipe" : "inherit" });
+// git's pager (less) would wait for a keypress in the task terminal and stall the run (AJ, 2026-10-12): never page.
+const NOPAGER = { ...process.env, GIT_PAGER: "cat", PAGER: "cat" };
+const run = (cmd, args, cwd, quiet) => spawnSync(cmd, args, { cwd, encoding: "utf8", env: NOPAGER, stdio: quiet ? "pipe" : "inherit" });
 const out = (cmd, args, cwd) => { const r = run(cmd, args, cwd, true); return r.status === 0 ? r.stdout.trim() : null; };
 const stop = (why) => { console.error("\n✗ " + why); process.exit(1); };
 const step = (s) => console.log("\n── " + s);

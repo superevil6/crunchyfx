@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ b41dd27 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 1553994825b16465f91d74473e323b875a8ebf489f7c32aab912c593ad582abf
+// GENERATED from crunchyCore/plant.js @ d8c8083 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 940151e004bb5a0bdc7bc36fea79e0b68d5c6faae05c7d957da4c739c86e7529
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -37,7 +37,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 3;
+const PLANT_BUILD = 4;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -198,6 +198,71 @@ async function plantSlugFor(P, kind, name) {
   while (P.assets.some(function (a) { return a.slug === slug; }) || await P.fs.exists(plantJoin(P.dir, P.rel, slug))) slug = base + "-" + n++;
   return slug;
 }
+// ---- the guard: a save or delete must not silently break the game -------------------------------------------------
+// A re-export removes the files its last export wrote and this one does not; a delete removes them all. If the GAME
+// uses one (a scene that placed a decoration sprite: AJ's player_test.tscn lost cable-1-ceiling.png when a re-save made
+// one cable fewer), the app warns by name and asks again. These find what would go and who uses it; the app asks.
+//
+// plantStale(P, req) → [path inside the asset folder] that plantPut(P, req) would remove (none for a new asset)
+async function plantStale(P, req) {
+  const prev = plantFind(P, req.kind, req.name);
+  if (!prev) return [];
+  const keep = {};
+  (req.files || []).forEach(function (f) { keep[f.path] = true; });
+  return prev.data.files.filter(function (f) { return !keep[f] && plantSafeRel(f); });
+}
+// The game's own files that may refer to an asset's files, by engine. Skipped: the engine's caches and imports, the VCS,
+// and the planted folder itself (an asset's files are its own business, and a re-export rewrites them together).
+const PLANT_REF_EXT = { godot: /\.(tscn|tres|gd|cs|gdshader|godot|cfg)$/i, unity: /\.(unity|prefab|asset|mat|controller|anim|overrideController|playable|spriteatlas)$/i };
+const PLANT_REF_SKIP = /^(\.godot|\.import|\.git|\.svn|\.hg|node_modules|Library|Temp|Logs|obj|build|addons\/godot-git-plugin)$/;
+const PLANT_REF_MAX = 20000;                                    // files read at most: a guard, not an indexer
+// plantUsersOf(P, slug, paths) → [{ path, by: [game file relative to the game folder] }], only the paths something uses.
+// Godot: a text resource or script that names the file's res:// path. Unity: an asset that names the GUID in the file's
+// .meta. A plain folder has no game to break: always []. Read-only.
+async function plantUsersOf(P, slug, paths) {
+  if (P.engine === "plain" || !paths.length) return [];
+  const fs = P.fs, dir = plantJoin(P.dir, P.rel, slug), want = [];
+  for (const p of paths) {
+    if (P.engine === "godot") want.push({ path: p, needle: "res://" + plantJoin(P.rel, slug, p) });
+    else {
+      const meta = plantJoin(dir, p) + ".meta";
+      if (!(await fs.exists(meta))) continue;                    // Unity never imported it: nothing can refer to it
+      const m = /^guid:\s*([0-9a-f]{32})/m.exec(await fs.readTextFile(meta));
+      if (m) want.push({ path: p, needle: m[1] });
+    }
+  }
+  if (!want.length) return [];
+  const ext = PLANT_REF_EXT[P.engine], plantedRoot = plantJoin(P.dir, plantRootRel(P.engine));
+  const by = {};
+  let read = 0;
+  const walk = async function (d, rel) {
+    if (read > PLANT_REF_MAX || d === plantedRoot) return;
+    let entries = [];
+    try { entries = await fs.readDir(d); } catch (e) { return; }
+    for (const e of entries) {
+      if (read > PLANT_REF_MAX) return;
+      const r = rel ? rel + "/" + e.name : e.name, full = plantJoin(d, e.name);
+      if (e.isDirectory) { if (!PLANT_REF_SKIP.test(e.name) && !PLANT_REF_SKIP.test(r)) await walk(full, r); continue; }
+      if (!ext.test(e.name)) continue;
+      read++;
+      let text = "";
+      try { text = await fs.readTextFile(full); } catch (err) { continue; }
+      want.forEach(function (w) { if (text.indexOf(w.needle) >= 0) (by[w.path] = by[w.path] || []).push(r); });
+    }
+  };
+  await walk(P.dir, "");
+  return want.filter(function (w) { return by[w.path]; }).map(function (w) { return { path: w.path, by: by[w.path] }; });
+}
+// One plain sentence for the app's status line: what would go, and what in the game uses it.
+function plantUsedMessage(used, verb) {
+  const n = used.length, first = used.slice(0, 3).map(function (u) {
+    return u.path.split("/").pop() + " (used by " + u.by.slice(0, 2).join(", ") + (u.by.length > 2 ? " and " + (u.by.length - 2) + " more" : "") + ")";
+  }).join(", ");
+  return "This " + (verb || "save") + " removes " + n + " file" + (n === 1 ? "" : "s") + " your game uses: " + first +
+    (n > 3 ? " and " + (n - 3) + " more" : "") + ". Press again to " + (verb || "save") + " anyway; those scenes will lose " +
+    (n === 1 ? "it" : "them") + ".";
+}
+
 async function plantPut(P, req) {
   const fields = Object.assign({}, req.fields);
   const probe = Object.assign({ format: PLANT_FORMAT, files: [] }, fields, { kind: req.kind, name: String(req.name || "") });
