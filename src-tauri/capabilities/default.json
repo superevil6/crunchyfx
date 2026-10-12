@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core defaults plus WAV export (Save dialog + write), batch export to a chosen folder (Open dialog, directory), project files (Open dialog + read), drag-out (native drag of a temp WAV into the OS / an engine), the Crunchy suite dialog opening its links in the OS browser (opener, scoped to the suite hosts), and THE PLANTED LIBRARY (crunchyCore plant.js, DESKTOP-ROADMAP.md): a folder picker, reading a game's folder (exists, read dir, read text), and writing each planted sound into crunchy/sfx/ inside it (mkdir, write file, write text file), removing only files a sidecar says this app wrote (remove). writeFile and writeTextFile are DIFFERENT permissions (CrunchyBGM shipped unable to save by granting only one); both are granted. Scope: the home folder and the usual places; a folder picked in the dialog is added for the session by the dialog plugin.",
+  "description": "Core defaults plus WAV export (Save dialog + write), batch export to a chosen folder (Open dialog, directory), project files (Open dialog + read), drag-out (native drag of a temp WAV into the OS / an engine), the Crunchy suite dialog opening its links in the OS browser (opener, scoped to the suite hosts), and THE PLANTED LIBRARY (crunchyCore plant.js, DESKTOP-ROADMAP.md): a folder picker, reading a game's folder (exists, read dir, read text), and writing each planted sound into crunchy/sfx/ inside it (mkdir, write file, write text file), removing only files a sidecar says this app wrote (remove). writeFile and writeTextFile are DIFFERENT permissions (CrunchyBGM shipped unable to save by granting only one); both are granted. Scope: the home folder and the usual places; a folder picked in the dialog is added for the session by the dialog plugin. The feedback dialog (feedback.js) opens a mailto: link in the person's own mail app.",
   "windows": [
     "*"
   ],
@@ -41,6 +41,9 @@
         },
         {
           "url": "https://crunchybgm.com/*"
+        },
+        {
+          "url": "mailto:*"
         }
       ]
     },

@@ -139,3 +139,27 @@ suite has a delete-guard row.
 opening a planted asset, changing to another and saving replaced the first. Save now always plants a NEW asset; a taken
 name gets the next number ("… 2", then "… 3"), and only a card's Replace (two clicks), Re-export and Update all write over a
 planted one. The desktop suite's same-name rows prove it and make their update through Replace.
+
+**Suite links (crunchyCore SUITE-LINKS.md §4, 2026-10-12).** A CrunchyVFX effect in the same game can use a planted sound
+WHERE IT IS: its Godot scene plays `res://crunchy/sfx/<sound>/<file>.wav`, so a Replace here reaches the game with nothing
+re-exported in VFX. A card says "used by 1 effect" (the linkers, read from the other tools' sidecars; the title names
+them), and Delete (or a re-export that would remove the WAV) names the scene and the effect and asks again: crunchyCore
+plant.js 7's guard now looks inside other tools' `crunchy/` folders and at their links. Proved by the desktop suite (48).
+
+## Feedback, by the person's own email (2026-10-12)
+
+**Why:** the suite needs a feedback loop, and no telemetry (AJ: "no telemetry. I hate it myself"). SFX's one network
+call stays the opt-in version check; a report goes only when the person sends it from their own mail app. The canonical
+write-up is CrunchyTile's TILE-DESIGN.md §118; this is SFX's adoption.
+
+**What:** crunchyCore `feedback.js` (build 1; `crunchy-base.css` 7 for its `fb-*` look, `crunchy-icons.js` 8 for `mail`),
+pulled like the other core files and registered in index.html, `src-tauri/build.rs`, the CI workflow's `cp` and (by not
+being matched) `.assetsignore`. A **Feedback** button in the header, just before ⚙ Settings, opens it. The lines it
+shows, each untickable: the app and version, web or desktop, the sound in the editor (its label and waveform), the planted
+folder and its sound count, the browser, the last status lines (`feedback.note`, fed by `projStatus`, memory only), and the
+Share dialog's own link (`buildShareUrl`, always `https://crunchysfx.com/?s=…`), OFF unless ticked. The desktop's opener
+may open `mailto:*` (capabilities). SFX's index.html has no build-stamp checks, so feedback.js has no `want` here.
+
+**Proved:** the web suite (10/10 with `feedback/the-dialog-shows-what-would-be-sent-and-the-link-is-off`: the header
+button opens it with its mail icon, the Sound line is ticked, the link is shown but unticked, the earlier status line is
+under Recent, the subject is "[CrunchySFX] <first line>", Close closes), the desktop suite (48), audio identical, wiring.

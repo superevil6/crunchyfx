@@ -6,8 +6,8 @@
 # after the same file was written for CrunchyVFX and the omission here became obvious.
 #
 # The site is only: index.html, crunchy-base.css, styles.css, presets.js, dsp.js, synth.js, crunchy-icons.js,
-# suite.js, project-app.js, plant.js, library.js, settings.js, desktop.js (the planted Library, Settings and the
-# desktop gate: the web build loads them too, and they must stay unmatched below), the icons, og.png — and
+# suite.js, project-app.js, plant.js, library.js, settings.js, desktop.js, feedback.js (the planted Library, Settings, the
+# desktop gate and the feedback dialog: the web build loads them too, and they must stay unmatched below), the icons, og.png — and
 # version.json, which the desktop app's update check FETCHES, so it must never be listed here.
 #
 # LOCAL RUNS NEED flatpak/ CLEANED FIRST. This file filters the asset list AFTER wrangler has walked

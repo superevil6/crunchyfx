@@ -35,6 +35,7 @@
   <span class="tag">a from-scratch sound effect generator</span>
   <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true" data-icon="folder">Presets</button>
   <button id="suiteBtn" class="viewtoggle" title="The other Crunchy tools: tiles, game UI, sprite effects and music" data-icon="star">Crunchy suite</button>
+  <button id="feedbackBtn" class="viewtoggle" data-icon="mail" title="Tell the person who makes CrunchySFX what happened, or an idea: from your own mail app, and you see everything it includes">Feedback</button>
   <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings" data-icon="cog"></button>
 </header>
 
@@ -162,6 +163,8 @@
 <script src="library.js"></script>
 <script src="settings.js"></script>
 <script src="desktop.js"></script>
+<!-- Feedback (DESKTOP.md "Feedback"; crunchyCore, CrunchyTile TILE-DESIGN §118): a DOM component like settings.js. -->
+<script src="feedback.js"></script>
 <script>
 "use strict";
 
@@ -3558,6 +3561,9 @@ const projFs = isDesktop && window.__TAURI__.fs ? plantTauriFs(window.__TAURI__.
 let project = null;                          // plant.js's P (plus .name) while a folder is planted
 let projQueue = Promise.resolve();
 const projUpdates = {};                      // slug → true when this version would export it differently
+// SUITE LINKS (crunchyCore SUITE-LINKS.md §4): slug → the other tools' assets that use this sound where it is (a
+// CrunchyVFX effect whose Godot scene plays it), so a card says "used by 2 effects" before you change or delete it
+let projLinkers = {};
 let projSuite = [];                          // the suite view: the other Crunchy tools' planted assets here
 const projPending = [];                       // names of saves still waiting in the queue: taken too (plantFreeName)
 let projSample = null;                       // { buf, key, value }: the sidecar audio the editor's sample came from
@@ -3575,6 +3581,7 @@ function projStatus(text) {
   const el = document.getElementById("plantMsg");
   if (el) el.textContent = text || "";
   library.status(text);
+  if (feedback) feedback.note(text);                       // the feedback dialog's "Recent" (memory only)
 }
 function projRecent() {
   try { const r = JSON.parse(localStorage.getItem(PLANT_RECENT_KEY) || "[]"); return Array.isArray(r) ? r.filter((e) => e && typeof e.dir === "string") : []; }
@@ -3718,7 +3725,20 @@ function projClose() {
   projAfter();
   projStatus("Closed. Save preset adds to this browser's My Presets again.");
 }
-function projAfter() { projBarSync(); library.refresh(); }
+function projAfter() { projBarSync(); library.refresh(); projLinkersRefresh(); }
+// Who links to each planted sound, read from the other tools' sidecars here; the panel is redrawn only on a change.
+function projLinkersRefresh() {
+  const P = project;
+  if (!P) { projLinkers = {}; return Promise.resolve(); }
+  return Promise.all(P.assets.map((a) => plantLinkersOf(P, a.slug).then((l) => [a.slug, l]))).then((pairs) => {
+    if (project !== P) return;
+    const next = {};
+    pairs.forEach((x) => { if (x[1].length) next[x[0]] = x[1]; });
+    const changed = JSON.stringify(next) !== JSON.stringify(projLinkers);
+    projLinkers = next;
+    if (changed) library.refresh();
+  }).catch(() => {});
+}
 
 // ---- saving the editor's sound ----
 function plantNameNow() {
@@ -3922,6 +3942,9 @@ const library = libraryMount({
       .map(function (a) {
         const badges = [];
         if (projUpdates[a.slug]) badges.push({ hot: true, text: "update available", title: "This version of CrunchySFX would export it differently: Update re-exports it in place" });
+        const users = projLinkers[a.slug];
+        if (users) badges.push({ text: "used by " + users.length + " " + (users.every((u) => u.kind === users[0].kind) ? users[0].kind + (users.length === 1 ? "" : "s") : "assets"),
+          title: "Other Crunchy tools use this sound where it is (a Replace here reaches them; a delete warns first):\n" + users.map((u) => u.label).join("\n") });
         const f = a.data.fmt || {};
         badges.push({ text: (f.rate ? +(f.rate / 1000).toFixed(2) + " kHz" : "?") + " · " + (f.depth || "?") + "-bit" + (f.channels === 1 ? " · mono" : "") + (f.loop ? " · loop" : ""),
                       title: resPath(a) });
@@ -4045,6 +4068,19 @@ function plantNameSync() {
   const box = document.getElementById("plantName");
   if (box) box.value = seqLabel && seqLabel !== "Sound" ? seqLabel : "";
 }
+
+// FEEDBACK (DESKTOP.md "Feedback"; crunchyCore feedback.js, CrunchyTile TILE-DESIGN §118; no telemetry): the person
+// writes, sees every line that would go with it (untick any; the link to the sound is OFF unless they tick it), and sends
+// from their own mail app. Nothing is sent by the app. `var`: projStatus may run first.
+var feedback = feedbackMount({
+  app: "CrunchySFX", version: APP_VERSION, button: document.getElementById("feedbackBtn"),
+  details: () => [["Build", isDesktop ? "desktop" : "web"],
+                  ["Sound", (seqLabel || "Sound") + " (" + (WAVES[state.wave] || state.wave) + ")"]]
+    .concat(project ? [["Planted", (project.engine === "godot" ? "a Godot project" : project.engine === "unity" ? "a Unity project" : "a folder") + ", " + project.assets.length + " sounds"]] : []),
+  // the Share dialog's own link (buildShareUrl), always the web build's: what anyone can open
+  share: () => buildShareUrl(encodePatch(seqLabel && seqLabel !== "Sound" ? seqLabel : ""), true, WEB_BASE_URL, location.href),
+  openUrl: isDesktop && window.__TAURI__.opener ? (u) => window.__TAURI__.opener.openUrl(u) : null,
+});
 
 if (isDesktop) {
   mpPanel.hidden = false;

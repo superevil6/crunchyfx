@@ -123,6 +123,34 @@
     return ok(now.every(function (v, i) { return v === atBoot[i]; }) && localStorage.getItem("crunchyfx.recentPlanted.v1") === null);
   });
 
+  // FEEDBACK (DESKTOP.md "Feedback"; crunchyCore feedback.js, CrunchyTile TILE-DESIGN §118): the header button opens the
+  // core's dialog; every detail is shown and can be unticked; the link to the sound is OFF unless ticked; a status line
+  // said earlier is under Recent. (Send is never pressed here: on the web it navigates to a mailto: link.)
+  t("feedback/the-dialog-shows-what-would-be-sent-and-the-link-is-off", function () {
+    projStatus("Saved Coin");                                  // a status line it should remember
+    document.getElementById("feedbackBtn").click();
+    const root = feedback.root(), dets = Array.from(root.querySelectorAll(".fb-det"));
+    const label = function (d) { return d.querySelector("b").textContent; };
+    const link = dets.find(function (d) { return /Link to what was on screen/.test(label(d)); });
+    const snd = dets.find(function (d) { return /^Sound/.test(label(d)); });
+    const recent = dets.find(function (d) { return /^Recent/.test(label(d)); });
+    const open = feedback.isOpen() && !!root.querySelector(".fb-title .pxi") && !!document.querySelector("#feedbackBtn .pxi");
+    const ta = root.querySelectorAll("textarea");
+    ta[0].value = "Make a coin sound"; ta[1].value = "It sounded great\nand more";
+    const r = feedbackReport({ app: "CrunchySFX", trying: ta[0].value, happened: ta[1].value, details: [["Sound", snd ? snd.querySelector(".fb-val").textContent : ""]] });
+    feedback.close();
+    const bad = [];
+    if (!open) bad.push("the header button (with its mail icon) did not open the dialog with a mail icon in its title");
+    if (!snd || !snd.querySelector("input").checked) bad.push("no ticked 'Sound' line");
+    if (!link) bad.push("no link line");
+    else if (link.querySelector("input").checked) bad.push("the link is ticked by default");
+    else if (!/^https:\/\/crunchysfx\.com\/\?s=/.test(link.querySelector(".fb-val").textContent)) bad.push("the link is not crunchysfx.com's ?s= form");
+    if (!recent || !/Saved Coin/.test(recent.querySelector(".fb-val").textContent)) bad.push("the earlier status line is not under Recent");
+    if (r.subject !== "[CrunchySFX] It sounded great") bad.push("subject: " + r.subject);
+    if (feedback.isOpen()) bad.push("close left it open");
+    return bad.length ? bad.join(" · ") + " (" + dets.map(label).join("|") + ")" : { pass: true, detail: dets.map(label).join("|") };
+  });
+
   scrollTo(0, 0);
   const failed = rows.filter(function (r) { return !r.pass; });
   const b = document.getElementById("dombanner");

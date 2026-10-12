@@ -569,6 +569,28 @@
     M.files.delete(scene);
     return ok(held && !sidecar(a.slug) && !card(a.name), msg());
   });
+  // SUITE LINKS (crunchyCore SUITE-LINKS.md §4): a CrunchyVFX effect in the same game plays "Coin" where it is
+  await t("links/a-card-says-which-effects-use-the-sound-and-delete-names-them", async function () {
+    if (!project || project.dir !== GODOT) await projDo(function () { return projOpen(GODOT); });
+    const coin = project.assets.find(function (a) { return a.data.files.some(function (f) { return /\.wav$/.test(f); }); });
+    if (!coin) return ok(false, "no sound planted");
+    const nm = coin.name;
+    const wav = coin.data.files.find(function (f) { return /\.wav$/.test(f); });
+    const V = GODOT + "/crunchy/vfx/sparkle";
+    M.put(V + "/sparkle.crunchy", JSON.stringify({ format: "crunchy-asset", version: 1, app: "crunchyvfx", suite: "vfx", kind: "effect", name: "Sparkle", s: "x",
+      files: ["sparkle.tscn"], links: [{ suite: "sfx", slug: coin.slug, kind: "sound", name: nm, file: wav, mode: "reference", hash: coin.data.hash }], hash: "2:0" }));
+    M.put(V + "/sparkle.tscn", '[ext_resource type="AudioStream" path="res://crunchy/sfx/' + coin.slug + "/" + wav + '" id="3"]\n');
+    await projLinkersRefresh();
+    const badge = Array.from(card(nm).querySelectorAll(".lib-badge")).find(function (b) { return /used by 1 effect$/.test(b.textContent); });
+    const press = async function () { cardButton(nm, "Delete").click(); const b = cardButton(nm, "Delete"); if (b && /Really/.test(b.textContent)) b.click(); await settle(); };
+    await press();
+    const held = !!M.text(ROOT + "/" + coin.slug + "/" + coin.slug + ".crunchy") && /Press again to delete/.test(status()) &&
+      /crunchy\/vfx\/sparkle\/sparkle\.tscn/.test(status()) && /CrunchyVFX's effect “Sparkle”/.test(status());
+    // not deleted: the rows after still use Coin. Disarm by pressing nothing; remove the effect
+    M.files.delete(V + "/sparkle.crunchy"); M.files.delete(V + "/sparkle.tscn"); projUsedArmed = "";
+    await projLinkersRefresh();
+    return ok(badge && /Sparkle/.test(badge.title) && held && !card(nm).querySelector(".lib-badge[title*='Sparkle']"), status());
+  });
   await t("safety/nothing-written-outside-crunchy-sfx", function () {
     const allowed = [ROOT + "/", UNITY + "/Assets/Crunchy/SFX/", PLAIN + "/crunchy/sfx/",
       "/home/aj/Downloads/", "/home/aj/round.crunchysfx"];                  // the last two: the suite's own Save dialogs

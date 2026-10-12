@@ -1,13 +1,13 @@
 // CrunchySFX ships as index.html + presets.js + dsp.js + synth.js + crunchy-icons.js + suite.js + project-app.js +
-// plant.js + library.js + settings.js + desktop.js + crunchy-base.css + styles.css at the repo root, THIRTEEN files
-// (crunchy-icons.js, suite.js, plant.js, library.js, settings.js, desktop.js and crunchy-base.css are pulled from
+// plant.js + library.js + settings.js + desktop.js + feedback.js + crunchy-base.css + styles.css at the repo root, FOURTEEN files
+// (crunchy-icons.js, suite.js, plant.js, library.js, settings.js, desktop.js, feedback.js and crunchy-base.css are pulled from
 // crunchyCore; project-app.js is SFX's own part of the planted Library) — the
 // SAME files the web version serves. Tauri wants a frontend directory, so before compiling we copy them
 // into ../dist/ (the configured frontendDist). Runs on every build via cargo, on every
 // platform, with no external tooling. Keeps web + desktop in sync.
 fn main() {
     let _ = std::fs::create_dir_all("../dist");
-    for f in ["index.html", "presets.js", "dsp.js", "synth.js", "crunchy-icons.js", "suite.js", "project-app.js", "plant.js", "library.js", "settings.js", "desktop.js", "crunchy-base.css", "styles.css"] {
+    for f in ["index.html", "presets.js", "dsp.js", "synth.js", "crunchy-icons.js", "suite.js", "project-app.js", "plant.js", "library.js", "settings.js", "desktop.js", "feedback.js", "crunchy-base.css", "styles.css"] {
         std::fs::copy(format!("../{f}"), format!("../dist/{f}"))
             .unwrap_or_else(|e| panic!("build.rs: could not copy ../{f} -> ../dist/{f}: {e}"));
         // rebuild if the frontend changes
