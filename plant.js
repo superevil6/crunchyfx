@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ e631975 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 56515127de9034ce921a26bc9a8ec36ddf602ea13d08ae701d04cd410a1a41fd
+// GENERATED from crunchyCore/plant.js @ 5513b98 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 62bf64ab5394a181ba55f29f1325d4efbf0b1e85ea9b8235afa40a6812a826fa
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -35,7 +35,8 @@
 //   exists(path) → bool   readTextFile(path) → string   readDir(path) → [{ name, isDirectory }]
 //   mkdir(path, { recursive })   writeTextFile(path, text)   writeFile(path, Uint8Array)   remove(path)
 // The app supplies PROJECT_APP (its project-app.js): id, name, suite (its key below), kinds, valid(kind, d), and
-// optionally gameDirs (below).
+// optionally gameDirs (below) and generated: { <engine>: ["<folder>"] }, an asset's subfolder that the app's own
+// engine-side tool builds (CrunchyCharacter's Unity importer: "Unity"), removed whole with the asset (build 8).
 //
 // GAME FILES (build 6, CrunchyCharacter's RPG Maker planting; AJ, 2026-10-12: "the manual export sucked"). An engine
 // that only loads assets from ITS OWN folders (RPG Maker MV/MZ: img/characters/, img/faces/ …) cannot use files kept in
@@ -48,7 +49,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 7;
+const PLANT_BUILD = 9;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -214,16 +215,41 @@ async function plantPrune(P, dir) {
     if (!e.isDirectory) continue;
     const sub = plantJoin(dir, e.name);
     await plantPrune(P, sub);
-    if ((await P.fs.readDir(sub)).length === 0) await P.fs.remove(sub);
+    await plantRemoveEmptyDir(P, sub);
   }
+}
+// A folder that is now EMPTY, and in Unity its own `<folder>.meta` beside it (build 8): Unity keeps a folder's identity
+// in that file, and a left-over one brought the empty folder back on its next refresh.
+async function plantRemoveEmptyDir(P, dir) {
+  if (await P.fs.exists(dir)) {
+    if ((await P.fs.readDir(dir)).length) return false;
+    await P.fs.remove(dir);
+  }
+  // a folder already gone (or never made) leaves no orphan .meta behind either
+  if (P.engine === "unity" && await P.fs.exists(dir + ".meta")) await P.fs.remove(dir + ".meta");
+  return true;
+}
+// EVERYTHING under a folder an app's own ENGINE-SIDE tool generates for an asset (PROJECT_APP.generated[engine], e.g.
+// CrunchyCharacter's importer builds `<asset>/Unity/` in a Unity project), then the folder: removed with its asset,
+// because the tool that made it may be going at the same moment (the app's last asset takes its support files with it,
+// and the importer with them, so it could never clean up after itself; found by Character's live Unity check).
+async function plantRemoveTree(P, dir) {
+  if (!(await P.fs.exists(dir))) return;
+  for (const e of await P.fs.readDir(dir)) {
+    const sub = plantJoin(dir, e.name);
+    if (e.isDirectory) await plantRemoveTree(P, sub); else await P.fs.remove(sub);
+  }
+  await plantRemoveEmptyDir(P, dir);
 }
 // Remove one file this app wrote, and in Godot its companions: `.import` (see SAFETY above), and `.uid`, which Godot
 // 4.4+ writes beside every script and shader (found by CrunchyVFX's Godot check, 2026-10-12: the combined scene's
 // `.gd` left `<base>.gd.uid` behind, so a deleted effect's folder could not go).
+// In Unity (build 8) its `.meta` goes with it: Unity would clear an orphan one itself on its next refresh, but only then,
+// and the folder it sits in could not be removed before.
 async function plantRemoveWritten(P, path) {
   if (await P.fs.exists(path)) await P.fs.remove(path);
-  if (P.engine !== "godot") return;
-  for (const c of [".import", ".uid"]) if (await P.fs.exists(path + c)) await P.fs.remove(path + c);
+  const companions = P.engine === "godot" ? [".import", ".uid"] : P.engine === "unity" ? [".meta"] : [];
+  for (const c of companions) if (await P.fs.exists(path + c)) await P.fs.remove(path + c);
 }
 
 // ---- write -------------------------------------------------------------------------------------------------------
@@ -239,8 +265,61 @@ async function plantSlugFor(P, kind, name) {
   if (prev) return prev.slug;
   const base = plantSlug(name);
   let slug = base, n = 2;
-  while (P.assets.some(function (a) { return a.slug === slug; }) || await P.fs.exists(plantJoin(P.dir, P.rel, slug))) slug = base + "-" + n++;
+  // a slug never takes a SUPPORT folder's name (build 8: "editor" for Unity's Editor/, on a case-blind disk too)
+  while (P.assets.some(function (a) { return a.slug === slug; }) || PLANT_SUPPORT_RESERVED.indexOf(slug) >= 0 ||
+         await P.fs.exists(plantJoin(P.dir, P.rel, slug))) slug = base + "-" + n++;
   return slug;
+}
+
+// ---- SUPPORT FILES (build 8): an app's files that serve EVERY asset of it in this game, written once ---------------------
+// A Unity project needs an editor script to turn a planted export into ready-made assets (CrunchyCharacter's importer
+// slices the sheet and builds clips, an Animator and a prefab). One copy per game: a copy in each asset's folder would
+// be the same class twice, which Unity refuses. So an app may keep support files in its child folder, outside every
+// asset folder (Unity needs editor scripts under a folder named "Editor": `Editor/<Name>.cs`), listed in a small
+// `_support.crunchy` beside them (build 9: it was `.crunchy-support`, and the desktop's file scope ($HOME/**) does not
+// match a name starting with a dot, so AJ's first real save was refused; the `.crunchy` extension keeps Godot from
+// importing it, Unity gives it a harmless .meta, and no slug can start with "_"). plantSupport writes them when they
+// differ, removes ones it listed before and no longer makes, and plantDelete removes them all with the app's LAST
+// asset here. Nothing else in the folder is touched.
+const PLANT_SUPPORT_FILE = "_support" + PLANT_EXT, PLANT_SUPPORT_RESERVED = ["editor"];
+function plantSupportOk(rel) {
+  return plantSafeRel(rel) && rel.slice(-PLANT_EXT.length) !== PLANT_EXT && PLANT_SUPPORT_RESERVED.indexOf(rel.split("/")[0].toLowerCase()) >= 0 && rel.indexOf("/") > 0;
+}
+async function plantSupportRead(P) {
+  const side = plantJoin(P.dir, P.rel, PLANT_SUPPORT_FILE);
+  try { const d = (await P.fs.exists(side)) ? JSON.parse(await P.fs.readTextFile(side)) : null; return d && Array.isArray(d.files) ? d : null; }
+  catch (e) { return null; }
+}
+// files: [{ path: "Editor/X.cs", data }] (paths under a reserved support folder only) → true when anything was written
+async function plantSupport(P, files) {
+  files.forEach(function (f) { if (!plantSupportOk(f.path)) throw new Error("plantSupport: refused path " + f.path); });
+  const fs = P.fs, base = plantJoin(P.dir, P.rel), prev = await plantSupportRead(P), hash = plantHash(files);
+  if (prev && prev.hash === hash && prev.files.length === files.length) {
+    let all = true;
+    for (const f of files) if (!(await fs.exists(plantJoin(base, f.path)))) { all = false; break; }
+    if (all) return false;                                           // already there, byte for byte: Unity is not poked
+  }
+  for (const f of files) {
+    const at = plantJoin(base, f.path);
+    await fs.mkdir(at.slice(0, at.lastIndexOf("/")), { recursive: true });
+    if (typeof f.data === "string") await fs.writeTextFile(at, f.data); else await fs.writeFile(at, f.data);
+  }
+  const keep = {};
+  files.forEach(function (f) { keep[f.path] = true; });
+  if (prev) for (const old of prev.files) if (!keep[old] && plantSupportOk(old)) await plantRemoveWritten(P, plantJoin(base, old));
+  await fs.writeTextFile(plantJoin(base, PLANT_SUPPORT_FILE), JSON.stringify({ format: "crunchy-support", app: PROJECT_APP.id, files: files.map(function (f) { return f.path; }), hash: hash }, null, 2) + "\n");
+  return true;
+}
+// Remove every support file (and the list), then their emptied folders. Called by plantDelete with the app's last asset.
+async function plantSupportClear(P) {
+  const prev = await plantSupportRead(P), base = plantJoin(P.dir, P.rel);
+  if (!prev) return;
+  for (const f of prev.files) if (plantSupportOk(f)) await plantRemoveWritten(P, plantJoin(base, f));
+  await plantRemoveWritten(P, plantJoin(base, PLANT_SUPPORT_FILE));
+  for (const top of PLANT_SUPPORT_RESERVED.concat(prev.files.map(function (f) { return f.split("/")[0]; }))) {
+    const d = plantJoin(base, top);
+    if (await P.fs.exists(d)) { await plantPrune(P, d); await plantRemoveEmptyDir(P, d); }
+  }
 }
 // ---- the guard: a save or delete must not silently break the game -------------------------------------------------
 // A re-export removes the files its last export wrote and this one does not; a delete removes them all. If the GAME
@@ -387,11 +466,13 @@ async function plantRename(P, a, name) {
 async function plantDelete(P, a) {
   const fs = P.fs, dir = plantAssetDir(P, a);
   for (const f of a.data.files) if (plantSafeRel(f) && plantWritable(P, f)) await plantRemoveWritten(P, plantFileAt(P, dir, f));
-  const side = plantJoin(dir, a.slug + PLANT_EXT);
-  if (await fs.exists(side)) await fs.remove(side);
+  await plantRemoveWritten(P, plantJoin(dir, a.slug + PLANT_EXT));
+  const gen = PROJECT_APP.generated && PROJECT_APP.generated[P.engine];
+  if (Array.isArray(gen)) for (const g of gen) if (plantSafeRel(g) && g.indexOf("/") < 0) await plantRemoveTree(P, plantJoin(dir, g));
   await plantPrune(P, dir);                                           // the export's own subfolders, now empty
-  if (await fs.exists(dir) && (await fs.readDir(dir)).length === 0) await fs.remove(dir);
+  await plantRemoveEmptyDir(P, dir);
   P.assets = P.assets.filter(function (x) { return x.slug !== a.slug; });
+  if (!P.assets.length) await plantSupportClear(P);                  // build 8: the app's last asset here takes its support
 }
 
 // ---- keeping it current ------------------------------------------------------------------------------------------
