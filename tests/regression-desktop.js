@@ -453,7 +453,8 @@
     document.getElementById("varName").value = "step";
     seedVariations();
     const zipped = packZipFiles(buildPackFiles());
-    zipped.forEach(function (f) { M.put(ROOT + "/" + f.name, f.data); });
+    // the zip's crunchy-library/ folders, copied into crunchy/sfx/ as its README says (the flat WAVs + README stay out)
+    zipped.forEach(function (f) { if (/^crunchy-library\//.test(f.name)) M.put(ROOT + "/" + f.name.replace(/^crunchy-library\//, ""), f.data); });
     await projDo(function () { return projOpen(GODOT); });
     await settle();
     projCheckUpdatesNow();

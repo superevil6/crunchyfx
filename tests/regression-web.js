@@ -89,34 +89,165 @@
     normalizeOut = true; updateNormBtn();
     return ok(JSON.stringify(got) === JSON.stringify(V.links.map(function (l) { return l.audio; })), got.join(","));
   });
-  t("zip/a-variation-pack-carries-a-sidecar-per-sound-and-the-same-wavs", function () {
+  // THE PACK (2026-10-14 usability round): the WAVs flat at the top (for Godot's AudioStreamRandomizer), a README, and the
+  // Library form (a folder per sound: its WAV beside its .crunchy) under crunchy-library/. The WAVs are the same bytes.
+  t("zip/a-variation-pack-is-flat-wavs-a-readme-and-the-library-form-in-a-subfolder", function () {
     applyPreset(PRESETS["Coin"], "Coin");
     document.getElementById("varName").value = "footstep";
     seedVariations();
     const files = buildPackFiles(), zipped = packZipFiles(files);
-    const wavs = zipped.filter(function (f) { return /\.wav$/.test(f.name); }), sides = zipped.filter(function (f) { return /\.crunchy$/.test(f.name); });
+    const top = zipped.filter(function (f) { return f.name.indexOf("/") < 0; });
     const good = files.every(function (f, i) {
-      const stem = f.name.replace(/\.wav$/, ""), w = zipped.find(function (z) { return z.name === stem + "/" + f.name; });
-      const sc = zipped.find(function (z) { return z.name === stem + "/" + stem + ".crunchy"; });
+      const stem = f.name.replace(/\.wav$/, ""), w = zipped.find(function (z) { return z.name === f.name; });
+      const lw = zipped.find(function (z) { return z.name === "crunchy-library/" + stem + "/" + f.name; });
+      const sc = zipped.find(function (z) { return z.name === "crunchy-library/" + stem + "/" + stem + ".crunchy"; });
       const d = sc && JSON.parse(new TextDecoder().decode(sc.data));
-      return w && same(w.data, f.data) && d && plantSidecarValid(d) && d.kind === "sound" && d.name === "footstep " + (i + 1) && d.wav === f.name &&
-             d.exportName === "footstep " + (i + 1) && JSON.stringify(d.files) === JSON.stringify([f.name]) && d.hash === plantHash([{ path: f.name, data: f.data }]) &&
-             same(soundFiles(d)[0].data, f.data);                     // the desktop re-renders the very same bytes
+      return w && same(w.data, f.data) && lw && same(lw.data, f.data) && d && plantSidecarValid(d) && d.kind === "sound" && d.name === "footstep " + (i + 1) &&
+             d.wav === f.name && d.exportName === "footstep " + (i + 1) && JSON.stringify(d.files) === JSON.stringify([f.name]) &&
+             d.hash === plantHash([{ path: f.name, data: f.data }]) && same(soundFiles(d)[0].data, f.data);   // the desktop re-renders the very same bytes
     });
-    // and the zip itself: a real one, every entry in it
+    const readme = zipped.find(function (z) { return z.name === "README.txt"; });
+    const rt = readme ? new TextDecoder().decode(readme.data) : "";
     const zip = makeZip(zipped), names = [];
     const dv = new DataView(zip.buffer);
     for (let o = 0; dv.getUint32(o, true) === 0x04034b50;) { const n = dv.getUint16(o + 26, true), sz = dv.getUint32(o + 18, true); names.push(new TextDecoder().decode(zip.subarray(o + 30, o + 30 + n))); o += 30 + n + sz; }
     document.getElementById("varClose").click();
-    return ok(files.length === 8 && wavs.length === 8 && sides.length === 8 && good && names.length === 16 && names[0] === "footstep_01/footstep_01.wav", names.slice(0, 2).join(","));
+    return ok(files.length === 8 && top.length === 9 && top.filter(function (f) { return /^footstep_0[1-8]\.wav$/.test(f.name); }).length === 8 && good &&
+              /AudioStreamRandomizer/.test(rt) && /crunchy-library/.test(rt) && names.length === 25 && names[0] === "footstep_01.wav", names.slice(0, 3).join(",") + " " + top.length);
   });
-  t("zip/a-sequence-pack-stays-wavs-only", function () {
+  t("zip/a-sequence-pack-stays-wavs-and-a-readme", function () {
     sequence = [{ genome: genomeFromState(), label: "a" }, { genome: genomeFromState(), label: "b" }];
     seedVariations();
     const files = buildPackFiles(), zipped = packZipFiles(files);
     sequence = []; renderSeq();
     document.getElementById("varClose").click();
-    return ok(zipped === files && zipped.every(function (f) { return /^[^/]+\.wav$/.test(f.name); }));
+    return ok(zipped.length === files.length + 1 && zipped.every(function (f) { return /^[^/]+\.(wav|txt)$/.test(f.name); }));
+  });
+
+  // ---- the usability round (2026-10-14): one naming rule, a sound keeps its name, the tools' click rule, Variations ----
+  const capture = function (fn) {          // the file names the app would save (downloadWav's and an <a download>'s)
+    const got = [], keepDl = window.downloadWav, keepClick = HTMLAnchorElement.prototype.click, keepPlay = window.playBuffer;
+    window.downloadWav = function (L, R, name) { got.push(name); return Promise.resolve(name); };
+    HTMLAnchorElement.prototype.click = function () { if (this.download) got.push(this.download); };
+    window.playBuffer = function () { return { stop: function () {} }; };
+    try { fn(); } finally { window.downloadWav = keepDl; HTMLAnchorElement.prototype.click = keepClick; window.playBuffer = keepPlay; }
+    return got;
+  };
+  t("naming/one-rule-export-history-save-preset-and-pack-all-named-from-the-sound", function () {
+    const box = document.getElementById("soundName");
+    const got = capture(function () {
+      applyPreset(PRESETS["Jump"], "Jump");
+      exportWav();
+      box.value = "Big Jump"; box.dispatchEvent(new Event("input"));
+      exportWav();
+      play("Edit");
+      document.querySelector('#histlist .hist-item [data-a="wav"]').click();
+      savePreset();
+      varNameEl.value = ""; varCountEl.value = "3"; seedVariations();
+      exportPack();
+      document.getElementById("varClose").click();
+    });
+    const want = ["jump.wav", "big_jump.wav", "big_jump.wav", "big_jump.json", "big_jump_pack.zip"];
+    return ok(JSON.stringify(got) === JSON.stringify(want) && document.getElementById("soundFile").textContent === "big_jump.wav" &&
+              fileStem("Punch / Kick") === "punch_kick" && fileStem("") === "sound" && fileStem("Feu ✨ été") === "feu_ete", got.join(","));
+  });
+  t("name/quick-shape-and-the-tools-keep-the-sound-s-name", function () {
+    const box = document.getElementById("soundName"), bad = [];
+    capture(function () {
+      applyPreset(PRESETS["Jump"], "Jump");
+      const m = document.querySelector('#macros input[type=range], .macro input[type=range], input[data-macro]') || document.querySelectorAll('input[type=range]')[0];
+      m.value = String(Math.min(+m.max, +m.value + 0.2)); m.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("change"));
+      if (soundName() !== "Jump" || box.value !== "Jump") bad.push("quick shape: " + soundName());
+      if (histItems[0].name !== "Jump") bad.push("history: " + histItems[0].name + "/" + histItems[0].label);
+      document.getElementById("breed").click(); breedNext(); adoptGenome(breedGenomes[1]);
+      if (soundName() !== "Jump") bad.push("breed: " + soundName());
+      document.getElementById("variations").click(); varGrid.querySelectorAll(".breed-cell")[1].querySelector(".tile-use").click();
+      if (soundName() !== "Jump") bad.push("variation: " + soundName());
+      document.getElementById("foundry").click();
+      document.querySelector("#fndGrid .breed-cell .tile-use").click();
+      if (/foundry/i.test(soundName()) || !soundName()) bad.push("foundry: " + soundName());
+    });
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("tools/click-hears-double-click-or-use-loads-in-breed-variations-and-foundry", function () {
+    const bad = [];
+    capture(function () {
+      applyPreset(PRESETS["Coin"], "Coin");
+      let heard = 0; const keep = window.playBuffer; window.playBuffer = function () { heard++; return { stop: function () {} }; };
+      try {
+        [["breed", "#breedGrid", breedModal], ["variations", "#varGrid", varModal], ["foundry", "#fndGrid", foundryModal]].forEach(function (x) {
+          document.getElementById(x[0]).click();
+          const cells = document.querySelectorAll(x[1] + " .breed-cell"), h0 = heard;
+          cells[1].click();
+          if (heard !== h0 + 1 || !cells[1].classList.contains("heard")) bad.push(x[0] + ": click did not play");
+          if (x[2].hidden) bad.push(x[0] + ": click closed it");
+          if (!/Click a sound to hear it/.test(x[2].querySelector(".modal-head .hint").textContent)) bad.push(x[0] + ": no click rule in its hint");
+          cells[1].dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+          if (!x[2].hidden) bad.push(x[0] + ": double-click did not use it");
+          x[2].hidden = true;
+        });
+      } finally { window.playBuffer = keep; }
+    });
+    const tour = TOUR.find(function (s) { return /Breed/.test(s.body); });
+    if (!tour || /Breed[^.]*variation/i.test(tour.body)) bad.push("tour: " + (tour && tour.body));
+    ["rand", "breed", "foundry", "variations"].forEach(function (id) { const b = document.getElementById(id); if (!b.querySelector("small") || !b.title) bad.push(id + ": no description"); });
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("breed/use-is-off-until-a-sound-is-heard-and-says-why", function () {
+    const bad = [];
+    capture(function () {
+      applyPreset(PRESETS["Coin"], "Coin");
+      document.getElementById("breed").click();
+      const use = document.getElementById("breedAdopt"), hint = document.getElementById("breedUseHint");
+      if (!use.disabled || !hint.textContent) bad.push("fresh batch: enabled");
+      breedGrid.querySelectorAll(".breed-cell")[2].click();
+      if (use.disabled) bad.push("after a click: disabled");
+      breedNext();
+      if (!use.disabled || !hint.textContent) bad.push("after breeding: enabled with nothing heard");
+      breedGrid.querySelectorAll(".breed-cell")[3].click(); use.click();
+      if (!breedModal.hidden) bad.push("Use did nothing");
+    });
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("variations/count-takes-any-number-2-to-16", function () {
+    applyPreset(PRESETS["Hit"], "Hit"); varNameEl.value = "";
+    const counts = [3, 5, 16, 1, 40].map(function (n) { varCountEl.value = String(n); varCountEl.dispatchEvent(new Event("change")); return varGenomes.length; });
+    const tag = varGrid.querySelectorAll(".breed-tag")[2].textContent;
+    varCountEl.value = "8"; seedVariations(); document.getElementById("varClose").click();
+    return ok(JSON.stringify(counts) === "[3,5,16,2,16]" && /^hit_03\.wav/.test(tag) && varCountEl.type === "number", counts + " " + tag);
+  });
+  // MEASURED (tests/ measure, the worklog): with Normalize loudness on, a pack's takes match (gated RMS) and stay under -3 dBFS.
+  t("variations/loudness-matched-within-1-db-and-no-peak-near-full-scale", function () {
+    const out = [];
+    ["Coin", "Hit", "Footstep", "Cancel", "Jump", "Explosion"].forEach(function (n) {
+      applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+      const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+      const spread = Math.max.apply(null, m.map(function (x) { return x.rms; })) - Math.min.apply(null, m.map(function (x) { return x.rms; }));
+      out.push({ n: n, spread: spread, pk: Math.max.apply(null, m.map(function (x) { return x.pk; })) });
+    });
+    document.getElementById("varClose").click();
+    return ok(out.every(function (o) { return o.spread <= 1 && o.pk <= -2.9; }), out.map(function (o) { return o.n + " " + o.spread.toFixed(2) + "dB pk " + o.pk.toFixed(1); }).join(", "));
+  });
+  t("variations/no-take-is-cut-off-louder-than-the-original-ends", function () {
+    const bad = [];
+    ["Coin", "Laser", "Explosion", "Footstep", "Jump"].forEach(function (n) {
+      applyPreset(PRESETS[n], n); varAmtEl.value = "0.5"; varCountEl.value = "8"; seedVariations();
+      const ends = varGenomes.map(function (g) { return Math.max(-60, 20 * Math.log10(tailLevel(renderVariation(g).L) + 1e-12)); });
+      ends.slice(1).forEach(function (e, i) { if (e > Math.max(-40, ends[0] + 3)) bad.push(n + " #" + (i + 2) + " " + e.toFixed(0) + " vs " + ends[0].toFixed(0)); });
+    });
+    varAmtEl.value = "0.2"; document.getElementById("varClose").click();
+    return ok(!bad.length, bad.join(", "));
+  });
+  t("search/word-starts-and-a-game-dev-vocabulary", function () {
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
+    const back = find("back"), menu = find("menu"), hit = find("hit"), coin = find("coin");
+    presetSearch.value = ""; filterPresets();
+    return ok(back.indexOf("Cancel") >= 0 && menu.indexOf("Cursor Move") >= 0 && hit.indexOf("Chittering Chirp") < 0 && hit.indexOf("8-Bit Hit") >= 0 && coin.indexOf("Coin") >= 0,
+              [back.length, menu.length, hit.length, hit.indexOf("Chittering Chirp")].join(","));
+  });
+  t("presets/game-dev-sections-first", function () {
+    const heads = Array.from(document.querySelectorAll("#presets details > summary")).map(function (s) { return s.textContent; });
+    return ok(/Retro \/ Arcade/.test(heads[0]) && /\bUI\b/.test(heads[1]) && heads.length === PRESET_CATEGORIES.length, heads.slice(0, 4).join(" | "));
   });
   t("legacy/the-v1.1-store-is-left-as-it-was", function () {
     const now = STATIC.map(function (k) { return localStorage.getItem(k); });

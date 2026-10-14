@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/settings.js @ fd37d16 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 64348fe814efff432d84df0d18f8c42354e0f3483b45e2f4820e523c93e577fb
+// GENERATED from crunchyCore/settings.js @ eb28e11 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 661aad65e8a71a7faf584f94ec313fd83d89b4bf626c5e077a6eab77d3fe9508
 "use strict";
 // THE SETTINGS DIALOG — one ⚙ Settings for every Crunchy tool (CONSOLIDATION-PLAN.md §2; crunchyTile TILE-DESIGN.md
 // §93.1, from CrunchyBGM's preferences dialog). PREFERENCES, which follow the person, not the design: never in a
@@ -19,9 +19,11 @@
 //            `id` names the checkbox (so a test can find it); `sub` is the plain-text explanation under the label.
 //   hint     the line beside the title (default: what preferences are)
 //   id       the overlay's id (default "setModal")
+//   tour     (build 3) the LAST row is "What does the desktop app add?", opening desktop.js's tour, whenever desktop.js is
+//            loaded: `tour` is the tool's suite id (default PROJECT_APP.suite); false leaves the row out
 // refresh() re-reads every check's get(): call it when a preference changes elsewhere. open() refreshes first.
 
-const SETTINGS_BUILD = 2;
+const SETTINGS_BUILD = 3;
 
 function settingsMount(opts) {
   opts = opts || {};
@@ -33,6 +35,13 @@ function settingsMount(opts) {
     if (text != null) e.textContent = text;
     return e;
   };
+  function tourRow() {                                            // build 3: the desktop tour, from every app's Settings
+    const self = opts.tour !== undefined ? opts.tour : typeof PROJECT_APP !== "undefined" && PROJECT_APP ? PROJECT_APP.suite : null;
+    if (!self || typeof desktopTourOpen !== "function") return null;
+    return { type: "button", label: "What does the desktop app add?", text: "Show me",
+             sub: "A short look at the desktop app in action: planted in your game, saved into it, updated in place, and the Library.",
+             run: function () { close(); desktopTourOpen(self); } };
+  }
   function build() {
     root = el("div", "set-overlay");
     root.id = opts.id || "setModal";
@@ -52,7 +61,8 @@ function settingsMount(opts) {
     x.addEventListener("click", close);
     head.appendChild(x);
     panel.appendChild(head);
-    (opts.rows || []).forEach(function (r) {
+    const tour = tourRow();
+    (opts.rows || []).concat(tour ? [tour] : []).forEach(function (r) {
       const row = el("div", "setrow"), lbl = el("div", "setlbl", r.label);
       if (r.sub) lbl.appendChild(el("span", "setsub", r.sub));
       row.appendChild(lbl);

@@ -53,6 +53,22 @@
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
     },
     {
+      "label": "Run desktop: CrunchyItems",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" items",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run desktop: CrunchyShader",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/run-app.mjs\" shader",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
       // crunchyCore first, then this app (crunchyTile TILE-DESIGN.md §111): shows what changed in crunchyCore, runs its
       // tests, asks for the CORE's commit message and a yes, commits and pushes the core, then pulls it in here.
       // This app is never committed by it: commit it afterwards as usual. The script is a core file (tools/core-commit.mjs).

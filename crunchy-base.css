@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ fd37d16 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 56771a821e72bd3665f1ab44ed8a22c1f742e157cf343949097e318c3bb61e89 */
+/* GENERATED from crunchyCore/crunchy-base.css @ eb28e11 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 de03149f7dd63efd4fcafebceb82e75ab64ed259aa682900317cd489e9545606 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 7;
+  --base-build: 8;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -257,3 +257,110 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .desk-note { margin: 12px 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel2); font-size: 12.5px; }
 .desk-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .desk-hint { font-size: 12px; color: var(--muted); }
+
+/* THE DESKTOP TOUR (desktop.js build 2): four panels, each a live miniature drawn in the page. The stage is a picture
+   (inert); the Library in it is the real library.js, docked. Prefixed dtour-: an app's own first-run tour keeps tour-. */
+.dtour-overlay { position: fixed; inset: 0; z-index: 270; background: rgba(8, 7, 12, 0.82); display: flex;
+                 align-items: center; justify-content: center; padding: 16px; }
+.dtour-panel { width: min(760px, 100%); max-height: 100%; overflow: auto; background: var(--panel); border: 2px solid var(--line2);
+               box-shadow: var(--lift); padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+.dtour-head { display: flex; align-items: center; gap: 10px; }
+.dtour-kicker { flex: 1; display: inline-flex; align-items: center; gap: 6px; font: 700 11px/1.5 var(--head);
+                text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.dtour-step { font: 11px/1.5 var(--head); color: var(--muted); }
+.dtour-x { font-size: 16px; line-height: 1; padding: 4px 9px; }
+.dtour-title { margin: 0; font: 700 19px/1.3 var(--head); text-transform: uppercase; letter-spacing: .03em; color: var(--accent); }
+.dtour-line { margin: 0; color: var(--ink); font-size: 13.5px; min-height: 3em; }
+.dtour-stage { position: relative; height: 350px; overflow: hidden; background: var(--bg); border: 2px solid var(--line2);
+               padding: 12px; display: flex; gap: 12px; align-items: stretch; user-select: none; }
+.dtour-end[hidden] { display: none !important; }
+.dtour-end { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel2); }
+.dtour-closing { margin: 0; font-size: 13.5px; color: var(--ink); }
+.dtour-getrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dtour-soon { font-size: 12px; color: var(--muted); }
+.dtour-coming { font: 700 12px/1.5 var(--head); text-transform: uppercase; letter-spacing: .05em; color: var(--accent);
+                border: 1px dashed var(--accent); padding: 3px 9px; }
+.dtour-foot { display: flex; align-items: center; gap: 10px; }
+.dtour-dots { flex: 1; display: flex; justify-content: center; gap: 8px; }
+.dtour-dot { width: 12px; height: 12px; padding: 0; box-shadow: none; background: var(--bg); border: 2px solid var(--line2); }
+.dtour-dot.on { background: var(--accent); border-color: var(--accent); }
+.dtour-link { border-color: var(--accent); color: var(--accent); }
+/* the miniatures */
+.dtour-btn { display: inline-block; padding: 3px 12px; font-size: 12px; border: 1px solid var(--line2); background: var(--panel2);
+             box-shadow: var(--step) var(--step) 0 var(--drop); transition: transform .08s, box-shadow .08s; }
+.dtour-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700;
+                     box-shadow: var(--step) var(--step) 0 var(--accent-dk); }
+.dtour-btn.press { transform: translate(var(--step), var(--step)); box-shadow: 0 0 0 var(--drop); outline: 2px solid var(--ink); }
+.dtour-fic { display: inline-block; width: 10px; height: 8px; margin-right: 6px; background: var(--line2); flex: none; }
+.dtour-dlg { flex: 1; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line2);
+             box-shadow: var(--lift); transition: opacity .4s, transform .4s; }
+.dtour-dlg.done { opacity: .25; transform: translateY(6px); }
+.dtour-dlgbar { padding: 6px 10px; font: 700 11px/1.5 var(--head); text-transform: uppercase; letter-spacing: .05em;
+                color: var(--muted); border-bottom: 1px solid var(--line); }
+.dtour-dlgbody { flex: 1; display: flex; min-height: 0; }
+.dtour-places { flex: 0 0 120px; padding: 8px 6px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--muted); }
+.dtour-place { padding: 3px 8px; }
+.dtour-place.on { color: var(--ink); background: var(--panel2); }
+.dtour-dlglist { flex: 1; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.dtour-dlgrow { display: flex; align-items: center; gap: 4px; padding: 5px 8px; font-size: 13px; border: 1px solid transparent; }
+.dtour-dlgrow .dtour-fic { background: var(--info); }
+.dtour-dlgrow.sel { background: var(--panel2); border-color: var(--accent); }
+.dtour-dlgname { flex: 1; }
+.dtour-dlgtag { font: 10px/1.5 var(--head); color: var(--muted); border: 1px solid var(--line2); padding: 0 5px; }
+.dtour-dlgfoot { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); }
+.dtour-dlgpath { flex: 1; font: 12px/1.5 var(--head); color: var(--muted); background: var(--bg); border: 1px solid var(--line2); padding: 2px 6px; }
+.dtour-result { position: absolute; left: 50%; top: 50%; width: min(420px, calc(100% - 32px)); transform: translate(-50%, -40%);
+                opacity: 0; transition: opacity .35s, transform .35s; display: flex; flex-direction: column; gap: 4px;
+                background: var(--panel2); border: 2px solid var(--accent); box-shadow: var(--lift); padding: 12px 14px; font-size: 13px; }
+.dtour-result.on { opacity: 1; transform: translate(-50%, -50%); }
+.dtour-result b { color: var(--accent); font: 700 14px/1.4 var(--head); text-transform: uppercase; }
+.dtour-mute { color: var(--muted); font-size: 12px; }
+.dtour-editor { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.dtour-big { flex: 1; min-height: 0; width: 100%; object-fit: contain; image-rendering: pixelated; background: var(--panel); border: 1px solid var(--line2); }
+.dtour-saverow { display: flex; gap: 8px; align-items: center; }
+.dtour-input { flex: 1; min-height: 1.8em; font-size: 13px; background: var(--bg); border: 1px solid var(--line2); padding: 3px 7px; }
+.dtour-input::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 1px; vertical-align: -2px; background: var(--ink); }
+.dtour-tree { flex: 1.3; min-width: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line2);
+              font: 12px/1.6 var(--head); padding-bottom: 6px; }
+.dtour-treebar { padding: 4px 8px; margin-bottom: 4px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); }
+.dtour-file { display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 6px; }
+.dtour-file.dir .dtour-fic { background: var(--info); }
+.dtour-file.new { animation: dtour-in .5s steps(4) both; }
+.dtour-file.new:not(.dir) .dtour-fic { background: var(--accent); }
+.dtour-file.side { color: var(--muted); }
+@keyframes dtour-in { from { background: var(--accent); color: var(--on-accent); } to { background: transparent; } }
+.dtour-dock { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line2); }
+.dtour-dock .lib-dock { border-left: 0; }
+.dtour-dock .lib-panel { padding: 8px 10px; gap: 6px; }
+.dtour-dock .lib-grid { overflow: hidden; min-height: 0; }
+.dtour-library .lib-acts { display: none; }
+.dtour-dock .lib-cards { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.dtour-dock .lib-pic { height: 64px; }
+.dtour-dock .lib-acts:empty, .dtour-dock .lib-badges:empty { display: none; }
+.dtour-dock .lib-close { display: none; }
+.dtour-dock .lib-badge.hot { animation: dtour-in .6s steps(3) both; }
+.dtour-dock .lib-acts button.press { transform: translate(1px, 1px); box-shadow: none; outline: 2px solid var(--accent); }
+.dtour-guard { flex: 0 0 34%; align-self: flex-end; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; font-size: 12.5px;
+               background: var(--panel2); border: 2px solid var(--bad); box-shadow: var(--lift); opacity: 0; transform: translateY(8px);
+               transition: opacity .35s, transform .35s; }
+.dtour-guard.on { opacity: 1; transform: none; }
+.dtour-guard b { color: var(--bad); font: 700 12px/1.4 var(--head); text-transform: uppercase; letter-spacing: .04em; }
+@media (max-width: 620px) {
+  .dtour-panel { padding: 12px; }
+  .dtour-title { font-size: 16px; }
+  .dtour-stage { height: 330px; padding: 8px; flex-direction: column; }
+  .dtour-places { display: none; }
+  .dtour-dock .lib-path, .dtour-dock .lib-suite-row button { display: none; }
+  .dtour-dock .lib-cards { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+  .dtour-dock .lib-pic { height: 48px; padding: 3px; }
+  .dtour-dock .lib-card .lib-meta { display: none; }
+  .dtour-dock .lib-cards > :nth-child(n+4) { display: none; }
+  .dtour-update .dtour-guard { position: absolute; left: 8px; right: 8px; bottom: 8px; }
+  .dtour-save .dtour-editor { flex: 0 0 auto; flex-direction: row; align-items: stretch; }
+  .dtour-save .dtour-big { flex: 0 0 64px; width: 64px; height: 64px; }
+  .dtour-save .dtour-saverow { flex: 1; align-self: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dtour-file.new, .dtour-dock .lib-badge.hot { animation: none; }
+  .dtour-dlg, .dtour-result, .dtour-guard, .dtour-btn { transition: none; }
+}

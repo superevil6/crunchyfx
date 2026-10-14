@@ -46,10 +46,10 @@
   <button class="primary" id="play" data-icon="play">Play <kbd>space</kbd></button>
   <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" disabled></button>
   <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" disabled></button>
-  <button id="rand" class="accent2" data-icon="dice">Randomize</button>
-  <button id="breed" class="accent2" data-icon="breed">Breed</button>
-  <button id="foundry" class="accent2" title="Generate original sounds procedurally, keep the ones you like, export them as presets" data-icon="hammer">Foundry</button>
-  <button id="variations" class="accent2" title="Generate a pack of variations of the current sound — or your whole sequence — and export them all" data-icon="package">Variations</button>
+  <button id="rand" class="accent2 tool" data-icon="dice" title="Randomize: a brand-new random sound (replaces the one in the editor)">Randomize<small>a new sound</small></button>
+  <button id="breed" class="accent2 tool" data-icon="breed" title="Breed: nine offspring of this sound; keep the ones you like and breed again to evolve it somewhere new">Breed<small>mix &amp; evolve</small></button>
+  <button id="foundry" class="accent2 tool" title="Foundry: build original sounds by kind (jump, coin, hit…) and console style, keep the ones you like" data-icon="hammer">Foundry<small>build by kind</small></button>
+  <button id="variations" class="accent2 tool" title="Variations: the same sound, slightly different, as a pack (jump_01.wav …) so a repeated sound doesn't repeat exactly" data-icon="package">Variations<small>same sound, for repeats</small></button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
       <option value="22050">22 kHz</option>
@@ -78,6 +78,16 @@
   <button id="share" title="Copy a link that recreates this exact sound" data-icon="link">Share link</button>
   <span id="samplename" class="hint"></span>
   <!-- JS injects the desktop IO buttons (Save/Open project, Drag out) or the web "Get the Desktop app" CTA here -->
+  </div>
+  <!-- THE SOUND IN THE EDITOR (2026-10-14 usability round): its name (editable; every file is named from it), the file
+       Export WAV writes, a mini waveform that stays in view while you tweak (this bar is sticky), and what just happened. -->
+  <div class="nowbar">
+    <label class="now-name" title="The sound's name. Export WAV, History downloads, Save preset and Variation packs all name their files from it.">Sound
+      <input type="text" id="soundName" placeholder="untitled" autocomplete="off" spellcheck="false" maxlength="60"></label>
+    <canvas id="miniScope" width="360" height="40" title="The sound in the editor (the big waveform is below)"></canvas>
+    <span class="now-file hint">Export WAV saves <b id="soundFile">sound.wav</b> · <span id="soundFmt">44.1 kHz 16-bit stereo</span>
+      <button type="button" id="soundFmtBtn" class="linkish" title="Sample rate, bit depth, mono/stereo and loop for every WAV export (Settings)">change format</button></span>
+    <span id="nowStatus" class="now-status" role="status" aria-live="polite"></span>
   </div>
   <input type="file" id="loadfile" accept="application/json" hidden>
   <input type="file" id="wavfile" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden>
@@ -450,7 +460,11 @@ function playBuffer(L, R) {
     src.start();
   } else {
     ctx.resume().then(() => src.start()).catch(() => { try { src.start(); } catch (e) {} });
+    // Still not running a moment later = the browser is blocking sound (autoplay policy, a muted tab): SAY so,
+    // instead of a silent Play (2026-10-14 usability round).
+    setTimeout(() => { if (ctx.state !== "running") nowSay("Sound is blocked by the browser: click anywhere on the page, then Play", "warn"); }, 700);
   }
+  nowPlaying(L.length / SR);
   armIdleSuspend(L.length / SR);   // (re)schedule idle auto-suspend from the end of THIS sound
   return src;   // callers may keep it to stop playback (the riff sequencer does)
 }
@@ -504,7 +518,7 @@ function restoreEdit(entry) {
   state.customWaveB = entry.s.customWaveB || "";
   state.speechText = entry.s.speechText || "";
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
-  plantNameSync();
+  plantNameSync(); nowSync();
   customIR = "ir" in entry ? entry.ir : customIR;
   updateSampleUI(); updateIRUI(); updateNormBtn(); syncUI();
   const { L, R, rawPeak } = render();                        // re-render/play WITHOUT addHistory or re-commit
@@ -563,7 +577,7 @@ async function downloadWav(L, R, name, title) {
     try {
       const path = await T.dialog.save({ defaultPath: name, filters: [{ name: "WAV audio", extensions: ["wav"] }] });
       if (path) await T.fs.writeFile(path, new Uint8Array(buffer));   // user cancelled -> path is null
-      return;
+      return path ? String(path).split(/[\\/]/).pop() : false;      // what was saved (the export confirmation names it)
     } catch (e) { console.warn("crunchysfx: native save failed, falling back to browser download —", e); }
   }
   const a = document.createElement("a");
@@ -571,12 +585,83 @@ async function downloadWav(L, R, name, title) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  return name;
 }
 
+// THE ONE NAMING RULE (2026-10-14 usability round): every file the app names comes from the SOUND'S NAME, snake_case,
+// the way game projects name assets: "Jump" → jump.wav, "Punch / Kick" → punch_kick.wav, a pack → hit_01.wav … ,
+// Save preset → jump.json. Export WAV, History downloads, Save preset, the sequence and Variation packs all use it
+// (it was a timestamp, "crunchysfx-jump-4.wav", "Foundry.json" and "Coin_01.wav": four rules). Letters of any script
+// are kept; a sound with no name is "sound". The planted Library keeps its own slugs (plant.js, fixed at first save).
+function fileStem(name) {
+  const s = String(name == null ? "" : name).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 60).replace(/_+$/, "");
+  return s || "sound";
+}
+// The sound's display name ("" when it has none). seqLabel's "Sound" is the old unnamed marker.
+function soundName() { return seqLabel && seqLabel !== "Sound" ? seqLabel : ""; }
 function exportWav() {
   const { L, R } = render();
-  downloadWav(L, R, "crunchysfx-" + Date.now() + ".wav");
+  const name = soundName(), file = fileStem(name) + ".wav";
+  downloadWav(L, R, file, name || "sound").then((saved) => { if (saved) nowSay("Saved " + saved + (isDesktopShell() ? "" : " (downloads)")); });
 }
+// ---------- The now bar (the sound in the editor: name, file, mini waveform, status) ----------
+function nowFmtText() {
+  return (exportFmt.rate === 44100 ? "44.1" : exportFmt.rate / 1000) + " kHz " + exportFmt.depth + "-bit " + (exportFmt.channels === 1 ? "mono" : "stereo") + (exportFmt.loop ? " loop" : "");
+}
+function nowSync() {
+  const box = document.getElementById("soundName");
+  if (!box) return;
+  if (document.activeElement !== box) box.value = soundName();
+  document.getElementById("soundFile").textContent = fileStem(box.value) + ".wav";
+  document.getElementById("soundFmt").textContent = nowFmtText();
+}
+let nowTimer = null;
+function nowSay(text, kind) {
+  const el = document.getElementById("nowStatus");
+  if (!el) return;
+  el.textContent = text; el.className = "now-status" + (kind ? " " + kind : "");
+  if (nowTimer) clearTimeout(nowTimer);
+  nowTimer = setTimeout(() => { el.textContent = ""; el.className = "now-status"; }, kind === "warn" ? 6000 : 2600);
+}
+// The PLAYING state: a pulse on the status while a sound plays (the length of the sound).
+let playTimer = null;
+function nowPlaying(sec) {
+  const el = document.getElementById("nowStatus");
+  if (!el || /warn/.test(el.className)) return;
+  if (nowTimer) { clearTimeout(nowTimer); nowTimer = null; }
+  el.textContent = "playing"; el.className = "now-status playing";
+  if (playTimer) clearTimeout(playTimer);
+  playTimer = setTimeout(() => { if (el.textContent === "playing") { el.textContent = ""; el.className = "now-status"; } }, Math.max(250, sec * 1000));
+}
+function drawMiniScope(L) {
+  const cv = document.getElementById("miniScope");
+  if (!cv || !L) return;
+  const c = cv.getContext("2d"), w = cv.width, h = cv.height, step = L.length / w;
+  c.clearRect(0, 0, w, h);
+  c.fillStyle = "#ff7a45";
+  for (let x = 0; x < w; x++) {                             // min/max per column: a filled envelope, readable at 40 px
+    let lo = 0, hi = 0;
+    for (let i = Math.floor(x * step), e = Math.floor((x + 1) * step); i < e; i++) { const v = L[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    const y0 = h / 2 - hi * (h / 2 - 1), y1 = h / 2 - lo * (h / 2 - 1);
+    c.fillRect(x, y0, 1, Math.max(1, y1 - y0));
+  }
+}
+{
+  const box = document.getElementById("soundName");
+  box.addEventListener("input", () => {
+    seqLabel = box.value.trim() || "Sound";
+    const pn = document.getElementById("plantName"); if (pn) pn.value = soundName();   // the Library's name box follows
+    if (histItems.length && sameState(histItems[0].state, snapshotState())) {           // the History entry of THIS sound follows too
+      histItems[0].name = soundName(); renderHistory(); saveHistory();
+    }
+    nowSync();
+  });
+  box.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === "Escape") box.blur(); });
+  box.addEventListener("blur", nowSync);
+  document.getElementById("soundFmtBtn").addEventListener("click", () => { settingsDialog.open(); settingsExtras(); const r = document.getElementById("settingsFmtRow"); if (r) r.scrollIntoView({ block: "nearest" }); });
+}
+function isDesktopShell() { const T = window.__TAURI__; return !!(T && T.dialog && T.fs); }
 
 // ---------- Drag-out (DESKTOP-ONLY) ----------
 // Drag a rendered sound straight out of the app into a file explorer or game engine as a .wav.
@@ -653,8 +738,11 @@ function thumbPeaks(L) {
 function addHistory(label, L, audible = true) {
   const snap = snapshotState();
   if (histItems.length && sameState(histItems[0].state, snap)) return; // skip exact repeats
+  // `name` is the SOUND's name (what it is; the download is named from it), `label` what just happened to it
+  // ("Pitch", "Bred", "Play"). Before 2026-10-14 the label was all there was, so a Quick Shape tweak renamed it.
+  const name = soundName();
   histItems.unshift({
-    id: ++histSeq, label, state: snap, peaks: thumbPeaks(L), silent: !audible,
+    id: ++histSeq, name, label: label === name ? "" : label, state: snap, peaks: thumbPeaks(L), silent: !audible,
     time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   });
   if (histItems.length > HIST_MAX) histItems.pop();
@@ -678,8 +766,9 @@ function drawThumb(canvas, peaks) {
 function replaySnapshot(snap) {
   withState(snap, () => { const { L, R } = render(); drawScope(L, R); playBuffer(L, R); });
 }
-function loadSnapshot(snap) {
+function loadSnapshot(snap, name) {
   const keepWave = state.wave;
+  if (name != null) { seqLabel = name || "Sound"; plantNameSync(); nowSync(); }
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
   if (waveLocked) state.wave = keepWave;
   syncUI();
@@ -703,23 +792,25 @@ function renderHistory() {
         '<button data-a="wav" title="Download WAV">⬇</button>' +
         (window.__TAURI__ ? '<button data-a="drag" class="dragchip" draggable="true" title="Drag out as .wav">⤓</button>' : '') +
       '</div>';
-    el.querySelector(".hist-label").textContent = item.label + (item.silent ? " ⚠" : "");
+    const hname = histName(item);
+    el.querySelector(".hist-label").textContent = (hname || "untitled") + (item.silent ? " ⚠" : "");
     el.querySelector(".hist-sub").textContent =
-      Math.round(item.state.freq) + " Hz · " + (+item.state.duration).toFixed(2) + "s · " +
-      (item.silent ? "silent" : item.time);
+      (item.label && item.label !== hname ? item.label + " · " : "") +
+      (+item.state.duration).toFixed(2) + "s · " + (item.silent ? "silent" : item.time);
+    el.title = "Download saves " + fileStem(hname) + ".wav";
     drawThumb(el.querySelector("canvas"), item.peaks);
     el.querySelector('[data-a="play"]').addEventListener("click", () => replaySnapshot(item.state));
-    el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state));
+    el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state, hname));
     el.querySelector('[data-a="wav"]').addEventListener("click", () => withState(item.state, () => {
       const { L, R } = render();
-      const slug = item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      downloadWav(L, R, "crunchysfx-" + (slug || "sound") + "-" + item.id + ".wav");
+      const file = fileStem(hname) + ".wav";
+      downloadWav(L, R, file, hname || "sound").then((saved) => { if (saved) nowSay("Saved " + saved + (isDesktopShell() ? "" : " (downloads)")); });
     }));
     const histDrag = el.querySelector('[data-a="drag"]');
     if (histDrag) histDrag.addEventListener("dragstart", (e) => {
       e.preventDefault();
       const r = withState(item.state, () => render());
-      dragOutWav(r.L, r.R, item.label || "crunchysfx-sound", item.label);
+      dragOutWav(r.L, r.R, fileStem(hname), hname || "sound");
     });
     histList.appendChild(el);
   }
@@ -727,10 +818,19 @@ function renderHistory() {
 // Persist history so it survives closing the app. In the desktop (Tauri) build this
 // store lives on the user's disk in the app's data folder, so history carries over
 // between launches; on the web it persists per-browser. Best-effort — never throws.
+// An entry's sound name. Entries saved before 2026-10-14 have only a label: an action word ("Pitch", "Edit") is not a
+// name, anything else (a preset's name) is.
+const HIST_ACTIONS = new Set(["Edit", "Play", "Random", "Bred", "Variation", "Foundry", "Loaded", "Preset", "Sample", "Speech", "Say", "Custom wave", "Shared", "Project"]);
+const HIST_MACRO_WORDS = /^(Crunchiness|Brightness|Space|Punch|Length|Thickness|Metallic|Pitch|Glide|Air|Wobble|Swirl)$/;   // Quick Shape's (MACROS loads later)
+function histName(it) {
+  if (it.name != null) return it.name;
+  const l = it.label || "";
+  return HIST_ACTIONS.has(l) || HIST_MACRO_WORDS.test(l) || /^Note |^IR: /.test(l) ? "" : l;
+}
 function saveHistory() {
   try {
     const data = histItems.map((it) => ({
-      id: it.id, label: it.label, state: it.state, silent: it.silent, time: it.time,
+      id: it.id, name: it.name, label: it.label, state: it.state, silent: it.silent, time: it.time,
       peaks: Array.from(it.peaks, (v) => +(+v).toFixed(3)),   // shrink thumbnails
     }));
     localStorage.setItem(HIST_KEY, JSON.stringify(data));
@@ -743,7 +843,7 @@ function loadHistory() {
   histItems.length = 0;
   for (const it of data) {
     if (!it || typeof it.state !== "object" || !it.state) continue;
-    histItems.push({ id: it.id || 0, label: it.label || "Sound", state: it.state,
+    histItems.push({ id: it.id || 0, name: typeof it.name === "string" ? it.name : undefined, label: it.label || "", state: it.state,
       peaks: it.peaks || [], silent: !!it.silent, time: it.time || "" });
   }
   histSeq = histItems.reduce((m, it) => Math.max(m, it.id || 0), 0);   // avoid id collisions
@@ -760,6 +860,7 @@ let scopeMode = "wave";                 // "wave" (amplitude/time) or "xy" (Liss
 let lastScopeL = null, lastScopeR = null;   // remember the last buffer so a mode switch can redraw it
 function drawScope(L, R) {
   lastScopeL = L; lastScopeR = R;
+  drawMiniScope(L);
   if (scopeMode === "xy") return drawScopeXY(L, R);
   const w = scope.width, h = scope.height;
   sctx.clearRect(0, 0, w, h);
@@ -1501,18 +1602,21 @@ function varyPreset(preset) {
   return out;
 }
 
-function applyPreset(obj, label) {
+// `label` is the sound's NAME (seqLabel); `action`, when given, is what happened to it (the History line: "Bred",
+// "Variation"), so a tool keeps the name of the sound it worked on. Keys starting "_" are metadata, never state.
+function applyPreset(obj, label, action) {
   // reset to defaults first, then overlay (ignore any _vary metadata)
   const keepWave = state.wave;
   for (const p of PARAMS) state[p[0]] = p[5];
   state.customWave = ""; state.customWaveB = ""; state.speechText = "";   // reset drawn waves + speech text (overlaid below if present)
-  for (const [k, v] of Object.entries(obj)) if (k !== "_vary") state[k] = v;
+  for (const [k, v] of Object.entries(obj)) if (k[0] !== "_") state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
   plantNameSync();                         // the Library's name box follows it (desktop)
   riffSetPatch(obj.riff);                  // load this patch's riff, or clear it (reset-then-overlay)
   syncUI();
-  play(label || "Preset");
+  nowSync();
+  play(action || label || "Preset");
 }
 
 // ---------- Preset categories (collapsible sections) ----------
@@ -1571,13 +1675,39 @@ document.querySelector(".presetsearch").insertAdjacentElement("afterend", famLeg
 // (first section open, rest closed).
 const presetSearch = document.getElementById("presetSearch");
 const presetCount = document.getElementById("presetCount");
+// SEARCH BY WORD STARTS, WITH A GAME-DEV VOCABULARY (2026-10-14 usability round): "hit" finds 8-Bit Hit, not
+// cHITtering; "back" finds Cancel, "menu" the UI sounds. Every query word must start a word of the preset's name, of
+// its section's name, or be an alias of one (SEARCH_ALIASES: the words a game dev types → the words presets use).
+const SEARCH_ALIASES = {
+  back: ["cancel", "close", "return"], menu: ["ui", "cursor", "select", "confirm", "cancel", "click", "blip"],
+  select: ["confirm", "cursor", "click"], ok: ["confirm", "accept"], accept: ["confirm"], deny: ["error", "cancel", "buzz"],
+  hurt: ["hit", "damage", "pain", "ouch"], damage: ["hit", "hurt"], pain: ["hurt", "ouch"],
+  pickup: ["coin", "collect", "item", "gem"], collect: ["coin", "pickup", "gem"], item: ["pickup", "coin"],
+  death: ["die", "dead", "game"], die: ["death", "dead"], shoot: ["laser", "gun", "shot", "blaster", "pistol"],
+  gun: ["shot", "pistol", "rifle", "blaster", "shotgun"], attack: ["hit", "slash", "swing", "sword", "punch"],
+  explode: ["explosion", "boom", "blast"], boom: ["explosion", "blast"], powerup: ["power", "upgrade", "level"],
+  win: ["victory", "fanfare", "success", "level"], lose: ["fail", "game", "death"], error: ["wrong", "buzz", "deny"],
+  walk: ["footstep", "step"], step: ["footstep"], land: ["thud", "impact", "landing"], bounce: ["spring", "boing"],
+  hover: ["cursor", "tick"], open: ["door", "chest"], swing: ["whoosh", "swoosh"], dash: ["whoosh", "swoosh"],
+};
+const searchWords = (t) => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+function searchMatcher(q) {
+  const terms = searchWords(q).map((t) => [t].concat(SEARCH_ALIASES[t] || []));
+  if (!terms.length) return () => true;
+  return (text, extra) => {
+    const words = searchWords(text + " " + (extra || ""));
+    return terms.every((alts) => alts.some((a) => words.some((w) => w.startsWith(a))));
+  };
+}
 function filterPresets() {
   const q = presetSearch.value.trim().toLowerCase();
+  const matches = searchMatcher(q);
   let shown = 0;
   sections.forEach(({ details, buttons }, idx) => {
     let secShown = 0;
+    const secName = (details.querySelector("summary") || {}).textContent || "";
     for (const b of buttons) {
-      const match = !q || b.textContent.toLowerCase().includes(q);
+      const match = !q || matches(b.textContent, secName.replace(/\(\d+\)/, ""));
       b.style.display = match ? "" : "none";
       if (match) secShown++;
     }
@@ -1670,7 +1800,7 @@ async function savePreset() {
   // user reaches for. Web has no library, so it just downloads the JSON below.
   // While a folder is PLANTED, the library copy goes there instead (the browser's My Presets is left exactly as it is).
   if (isDesktop) { if (project) projSave(); else saveCurrentUserPreset(); }
-  const fname = (seqLabel && seqLabel !== "Sound") ? sanitizeFilename(seqLabel) : "crunchysfx-preset";
+  const fname = fileStem(soundName());       // the one naming rule (jump.json)
   const json = JSON.stringify(state, null, 2);
   const T = window.__TAURI__;
   // Desktop + "Prompt on save" pref ON: open a native Save-As dialog for the .json.
@@ -1695,7 +1825,7 @@ loadfile.addEventListener("change", () => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try { applyPreset(JSON.parse(reader.result), "Loaded"); }
+    try { applyPreset(JSON.parse(reader.result), file.name.replace(/\.json$/i, "") || "Loaded"); }
     catch (e) { alert("Could not read preset: " + e.message); }
   };
   reader.readAsText(file);
@@ -1851,6 +1981,7 @@ document.getElementById("save").addEventListener("click", () => {
     exportFmt.depth = +fmtDepth.value;
     exportFmt.channels = +fmtChannels.value;
     exportFmt.loop = fmtLoop.checked;
+    nowSync();
   };
   fmtRate.addEventListener("change", syncFmt);
   fmtDepth.addEventListener("change", syncFmt);
@@ -2250,7 +2381,7 @@ function riffPlay() {
 async function riffExport() {
   const built = buildRiffBuffer();
   if (!built) { riffMsg("Nothing to export — add some notes first."); return; }
-  await downloadWav(built.L, built.R, "riff.wav", (seqLabel && seqLabel !== "Sound" ? seqLabel : "riff") + " riff");
+  await downloadWav(built.L, built.R, fileStem(soundName()) + "_riff.wav", (seqLabel && seqLabel !== "Sound" ? seqLabel : "riff") + " riff");
 }
 function setRiffSteps(n) {
   const old = riffPattern; riffN = n; riffPattern = new Array(n).fill(null);
@@ -2471,8 +2602,27 @@ function breedChild(parents, amount) {
   return mutateGenome(parents[0], amount);
 }
 
+// ONE CLICK RULE in every "make more sounds" window (Breed, Variations, Foundry; 2026-10-14 usability round):
+// click a sound = HEAR it (and it becomes the one "Use" means); double-click, or its Use button = load it into the editor.
+const TOOL_CLICKS = "Click a sound to hear it · double-click (or Use) loads it into the editor.";
+// Wire a tile to the rule. hear() plays it; use() loads it; onPick (optional) learns which tile was heard last.
+function toolTile(cell, hear, use, onPick) {
+  cell.title = "Click to hear · double-click to use";
+  cell.addEventListener("click", () => {
+    cell.parentNode.querySelectorAll(".breed-cell.heard").forEach((c) => c.classList.remove("heard"));
+    cell.classList.add("heard");
+    hear();
+    if (onPick) onPick();
+  });
+  cell.addEventListener("dblclick", (e) => { e.preventDefault(); use(); });
+  const ub = cell.querySelector(".tile-use");
+  if (ub) ub.addEventListener("click", (e) => { e.stopPropagation(); use(); });
+  const pb = cell.querySelector(".breed-play");
+  if (pb) pb.addEventListener("click", (e) => { e.stopPropagation(); cell.click(); });
+}
 let breedGenomes = [];
 let breedGen = 1;
+let breedHeard = -1;   // the tile heard last: what "Use this sound" loads (none right after a new batch)
 
 const breedModal = document.createElement("div");
 breedModal.className = "modal";
@@ -2480,17 +2630,18 @@ breedModal.hidden = true;
 breedModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head">' +
-      '<h2 data-icon="breed">Breed sounds</h2>' +
-      '<span class="hint">Click the tiles you like → Breed. ▶ hears a tile · double-click loads it into the editor.</span>' +
+      '<h2 data-icon="breed">Breed</h2>' +
+      '<span class="hint">Mix and evolve: nine offspring of your sound. Mark the ones you like (♥ Keep), then Breed: their children mix those traits, and a few generations take it somewhere new. ' + TOOL_CLICKS + '</span>' +
       '<button id="breedClose" data-icon="close">Close</button>' +
     '</div>' +
     '<div id="breedGrid" class="breed-grid"></div>' +
     '<div class="modal-foot">' +
-      '<button id="breedNext" class="primary" data-icon="breed">Breed selected</button>' +
+      '<button id="breedNext" class="primary" data-icon="breed">Breed the kept</button>' +
       '<button id="breedReroll" data-icon="dice">New batch</button>' +
       '<span id="breedGen" class="hint"></span>' +
       '<span class="spacer"></span>' +
-      '<button id="breedAdopt">✓ Use selected</button>' +
+      '<span id="breedUseHint" class="hint">Click a sound to hear it, then Use it</span>' +
+      '<button id="breedAdopt" disabled>Use this sound</button>' +
     '</div>' +
   '</div>';
 document.body.appendChild(breedModal);
@@ -2527,15 +2678,27 @@ function renderBreedGrid() {
     cell.appendChild(cv);
     const bar = document.createElement("div");
     bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">gen ' + breedGen + ' · #' + (i + 1) + '</span>';
+    bar.innerHTML = '<button class="breed-play" title="Hear it">▶</button><button class="breed-keep" aria-pressed="false" title="Keep it as a parent for the next generation">♥ Keep</button>' +
+      '<span class="breed-tag">' + (breedGen === 1 && i === 0 ? "your sound" : "gen " + breedGen + " · #" + (i + 1)) + '</span><button class="tile-use">Use</button>';
     cell.appendChild(bar);
     breedGrid.appendChild(cell);
     drawMini(cv, L, R);
-    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = withState(g, () => render()); playBuffer(r.L, r.R); });
-    cell.addEventListener("click", () => cell.classList.toggle("sel"));
-    cell.addEventListener("dblclick", (e) => { e.preventDefault(); adoptGenome(g); });
+    const keep = bar.querySelector(".breed-keep");
+    keep.addEventListener("click", (e) => { e.stopPropagation(); const on = cell.classList.toggle("sel"); keep.setAttribute("aria-pressed", on); breedSync(); });
+    keep.addEventListener("dblclick", (e) => e.stopPropagation());
+    toolTile(cell, () => { const r = withState(g, () => render()); playBuffer(r.L, r.R); }, () => adoptGenome(g), () => { breedHeard = i; breedSync(); });
   });
-  breedGenEl.textContent = "Generation " + breedGen + " — 9 sounds";
+  breedHeard = -1;
+  breedSync();
+}
+// "Use this sound" loads the tile heard last; right after a new batch or a breed nothing is heard yet, so it is OFF
+// and says why (it used to load tile 1 silently, or nothing).
+function breedSync() {
+  const kept = breedGrid.querySelectorAll(".breed-cell.sel").length;
+  const adopt = breedModal.querySelector("#breedAdopt"), hint = breedModal.querySelector("#breedUseHint");
+  adopt.disabled = breedHeard < 0;
+  hint.textContent = breedHeard < 0 ? "Click a sound to hear it, then Use it" : "";
+  breedGenEl.textContent = "Generation " + breedGen + " · " + (kept ? kept + " kept: Breed mixes them" : "none kept: Breed mixes all nine");
 }
 function seedBreedGrid() {
   const seed = genomeFromState();
@@ -2552,12 +2715,12 @@ function breedNext() {
   breedGenomes = next; breedGen++;
   renderBreedGrid();
 }
-function adoptGenome(g) { applyPreset(g, "Bred"); breedModal.hidden = true; }
+function adoptGenome(g) { applyPreset(g, soundName(), "Bred"); breedModal.hidden = true; }
 
 document.getElementById("breed").addEventListener("click", () => { seedBreedGrid(); breedModal.hidden = false; });
 breedModal.querySelector("#breedNext").addEventListener("click", breedNext);
 breedModal.querySelector("#breedReroll").addEventListener("click", seedBreedGrid);
-breedModal.querySelector("#breedAdopt").addEventListener("click", () => adoptGenome(selectedGenomes()[0] || breedGenomes[0]));
+breedModal.querySelector("#breedAdopt").addEventListener("click", () => { if (breedHeard >= 0) adoptGenome(breedGenomes[breedHeard]); });
 breedModal.querySelector("#breedClose").addEventListener("click", () => { breedModal.hidden = true; });
 breedModal.addEventListener("click", (e) => { if (e.target === breedModal) breedModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !breedModal.hidden) breedModal.hidden = true; });
@@ -2605,16 +2768,17 @@ varModal.className = "modal";
 varModal.hidden = true;
 varModal.innerHTML =
   '<div class="modal-box">' +
-    '<div class="modal-head"><h2 data-icon="package">Variation pack</h2>' +
-      '<span class="hint">N takes on a sound — or your whole sequence — same character, slightly varied. ▶ hears one · double-click adopts it.</span>' +
+    '<div class="modal-head"><h2 data-icon="package">Variations</h2>' +
+      '<span class="hint">The same sound, slightly different: a pack for a sound your game repeats (footsteps, hits, coins), matched in loudness. ' + TOOL_CLICKS + '</span>' +
       '<span id="varMode" class="hint" style="color:var(--accent)"></span>' +
       '<button id="varClose" data-icon="close">Close</button></div>' +
     '<div class="var-ctl">' +
-      '<label>Count <select id="varCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select></label>' +
-      '<label>Variation <input id="varAmt" type="range" min="0.05" max="0.5" step="0.01" value="0.2"></label>' +
+      '<label title="How many takes (2 to 16), the original included">Count <input id="varCount" type="number" min="2" max="16" step="1" value="8" class="var-count"></label>' +
+      '<label title="How far each take strays from the original. Low: the same sound played again; high: a family of related sounds">How different <input id="varAmt" type="range" min="0.05" max="0.5" step="0.01" value="0.2"></label>' +
       '<button id="varRegen" data-icon="dice">Regenerate</button>' +
       '<span class="spacer"></span>' +
-      '<label>Name <input id="varName" type="text" class="var-name" placeholder="footstep" autocomplete="off"></label>' +
+      '<label title="The pack\'s files are named from this: name_01.wav, name_02.wav …">Name <input id="varName" type="text" class="var-name" placeholder="name the files" autocomplete="off"></label>' +
+      '<span id="varFiles" class="hint"></span>' +
       '<button id="varExport" class="primary" data-icon="download">Export pack</button>' +
     '</div>' +
     '<div id="varGrid" class="breed-grid"></div>' +
@@ -2640,18 +2804,102 @@ function renderVariation(item) {
   parts.forEach((r, i) => { L.set(r.L, off); R.set(r.R, off); off += r.L.length + (i < parts.length - 1 ? gapN : 0); });
   return { L, R };
 }
+// ---- Variations that stay the SAME sound (2026-10-14 usability round; measured in the worklog) ----
+// The pack used breedChild, Breed's jitter: it switched on things the sound did not have (noise, ring mod, reverb: a
+// coin grew noise bursts), moved pitch by up to ±5 semitones, cut every take at the original length and left loudness
+// to the peak normalizer (6–19 dB RMS apart). Now: varyGenome nudges only what the sound USES, by less; fitVariation
+// gives each take room for its tail and matches its loudness to the original's.
+const VARY_FIXED = new Set(["wave", "duration", "gain", "reverse", "repeat", "limiter", "transient"]);
+const VARY_TAILS = /decay|release|Decay|reverbSize|delayFb|convSize|Damp/;
+const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10]);   // engines whose sound is not laid out over the buffer's length
+function varyStretchable(g) { return VARY_STRETCH.has(Math.round(g.wave)) || (Math.round(g.wave) === 12 && !g.morphSweep); }
+function varyGenome(src, amount) {
+  const g = Object.assign({}, src), stretch = varyStretchable(src);
+  for (const p of PARAMS) {
+    const [k, , min, max, step, , , , kind] = p, base = src[k];
+    if (VARY_FIXED.has(k) || kind || step >= 1 || !base || Math.random() >= 0.7) continue;   // only what the sound USES
+    let r = (Math.random() * 2 - 1) * amount;
+    if (!stretch && VARY_TAILS.test(k)) r = -Math.abs(r);   // a tail that cannot be given room never grows (no new cut)
+    let v = k === "freq" ? base * Math.pow(2, r * 10 / 12)  // pitch: ±2 semitones at the default 0.2 (was ±4.8)
+                         : base * (1 + r * 0.75);           // everything else: ±15% of itself at 0.2
+    v = Math.min(max, Math.max(min, v));
+    g[k] = Math.round(v / step) * step;
+  }
+  return g;
+}
+// Gated loudness: RMS over 10 ms blocks, keeping the blocks within 30 dB of the loudest (a tail's silence does not
+// count). The measure the pack is matched on, and the one the worklog reports.
+function gatedRms(L, R) {
+  const B = 441, blocks = [];
+  for (let s = 0; s + B <= L.length; s += B) { let e = 0; for (let i = s; i < s + B; i++) { const m = 0.5 * (L[i] + R[i]); e += m * m; } blocks.push(e / B); }
+  if (!blocks.length) return 0;
+  let mx = 0; for (const b of blocks) if (b > mx) mx = b;
+  let sum = 0, n = 0; for (const b of blocks) if (b > mx * 1e-3) { sum += b; n++; }
+  return Math.sqrt(sum / Math.max(1, n));
+}
+function peakOf(L, R) { let p = 0; for (let i = 0; i < L.length; i++) { const a = Math.abs(L[i]), b = Math.abs(R[i]); if (a > p) p = a; if (b > p) p = b; } return p; }
+// How loud the end still is (max over the 20 ms before the closing 6 ms fade), relative to the peak: high = cut off.
+function tailLevel(L) {
+  const n = L.length; let e = 0, p = 1e-9;
+  for (let i = 0; i < n; i++) { const a = Math.abs(L[i]); if (a > p) p = a; }
+  for (let i = Math.max(0, n - 1147); i < n - 265; i++) { const a = Math.abs(L[i]); if (a > e) e = a; }
+  return e / p;
+}
+// Give a take room to end. A jittered envelope that no longer fits is lengthened to fit; then, while the end still
+// rings louder than the original's, the take grows (×1.25 a step, up to twice the length or 2 s). The pitch sweep and
+// filter envelope run over the length, so they are scaled with it (the same curve, continued), and a sustained sound's
+// release grows by the added time, so the note itself does not get longer: the tail fades instead of being cut.
+function fitTail(g, origTail) {
+  const out = Object.assign({}, g), d0 = g.duration;
+  if (!varyStretchable(g) || Math.round(g.repeat || 1) > 1) return out;
+  const setDur = (d) => {
+    const k = d / d0;
+    if (Math.abs(g.sweep * k) > 1 || Math.abs(g.filtEnv * k) > 1) return false;
+    out.duration = +d.toFixed(4); out.sweep = g.sweep * k; out.filtEnv = g.filtEnv * k;
+    out.release = g.sustain > 0 ? g.release + Math.max(0, d - Math.max(d0, g.attack + g.hold + g.decay + g.release)) : g.release;
+    return true;
+  };
+  const env = g.attack + g.hold + g.decay + (g.sustain > 0 ? g.release : 0);
+  if (env > d0 && !setDur(Math.min(2, env * 1.02))) return out;
+  const limit = Math.min(2, d0 * 2), want = Math.max(origTail * 1.4, 0.01);   // -40 dB, or no louder than the original's end
+  for (let t = 0; t < 4; t++) {
+    const r = withState(out, () => render());
+    if (tailLevel(r.L) <= want || out.duration >= limit) break;
+    if (!setDur(Math.min(limit, out.duration * 1.25))) break;
+  }
+  return out;
+}
+const VARY_CEILING = 0.708;   // -3 dBFS: no take peaks near full scale
+// Match every take's gated loudness to the original's (#1), through the `gain` param (so a take's sidecar re-renders
+// the same bytes). If a quiet take would need to go over the ceiling (or past gain 1), the whole pack comes down together.
+function matchLoudness(items) {
+  const meas = items.map((g) => { const r = withState(g, () => render()); return { rms: gatedRms(r.L, r.R), pk: peakOf(r.L, r.R) }; });
+  let target = meas[0].rms;
+  items.forEach((g, i) => { const m = meas[i]; if (m.rms > 0) target = Math.min(target, VARY_CEILING * m.rms / m.pk, m.rms / g.gain); });
+  return items.map((g, i) => { const m = meas[i]; return m.rms > 0 ? Object.assign({}, g, { gain: +(g.gain * target / m.rms).toFixed(4) }) : g; });
+}
+function makeVariations(seed, n, amt) {
+  const r0 = withState(seed, () => render()), origTail = tailLevel(r0.L);
+  const out = [seed];
+  for (let i = 1; i < n; i++) {
+    let g = null;
+    for (let t = 0; t < 10 && !g; t++) { const c = varyGenome(seed, amt); if (patchPeak(c) > AUDIBLE_FLOOR) g = c; }
+    out.push(fitTail(g || seed, origTail));
+  }
+  return normalizeOut ? matchLoudness(out) : out;   // Normalize loudness off: the takes keep their own levels
+}
 function seedVariations() {
-  const n = +varCountEl.value, amt = +varAmtEl.value;
+  const n = Math.max(2, Math.min(16, Math.round(+varCountEl.value) || 8)), amt = +varAmtEl.value;
+  varCountEl.value = n;
   if (sequence.length) {                                   // vary the whole SEQUENCE
     varGenomes = [sequence.map((s) => s.genome)];          // #1 = the sequence exactly as built
-    for (let i = 1; i < n; i++) varGenomes.push(sequence.map((s) => breedChild([s.genome], amt)));   // rest = every step jittered
+    for (let i = 1; i < n; i++) varGenomes.push(sequence.map((s) => varyGenome(s.genome, amt)));   // rest = every step nudged
   } else {                                                 // vary the single editor sound
-    const seed = genomeFromState();
-    varGenomes = [seed];
-    for (let i = 1; i < n; i++) varGenomes.push(breedChild([seed], amt));   // rest = same-engine jitters
+    varGenomes = makeVariations(genomeFromState(), n, amt);   // #1 = the original (gain-matched with the rest)
   }
   varModeEl.textContent = sequence.length ? "· varying your " + sequence.length + "-step sequence (each file = the whole sequence)" : "";
   renderVarGrid();
+  varFilesSync();
 }
 function renderVarGrid() {
   varGrid.innerHTML = "";
@@ -2661,26 +2909,31 @@ function renderVarGrid() {
     const cell = document.createElement("div"); cell.className = "breed-cell";
     const cv = document.createElement("canvas"); cv.width = 280; cv.height = 62; cell.appendChild(cv);
     const bar = document.createElement("div"); bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><span class="breed-tag">' + (seq ? "seq " : "#") + (i + 1) + (i === 0 ? " · original" : "") + '</span>';
+    bar.innerHTML = '<button class="breed-play" title="Hear it">▶</button><span class="breed-tag">' + varFileName(i) + (i === 0 ? " · original" : "") + '</span><button class="tile-use">Use</button>';
     cell.appendChild(bar); varGrid.appendChild(cell); drawMini(cv, L, R);
-    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); const r = renderVariation(item); playBuffer(r.L, r.R); });
-    cell.addEventListener("dblclick", () => {
+    toolTile(cell, () => { const r = renderVariation(item); playBuffer(r.L, r.R); }, () => {
       if (Array.isArray(item)) {                           // adopt a sequence variant → replace the built sequence
         sequence = item.map((g, idx) => ({ genome: g, label: (sequence[idx] && sequence[idx].label) || ("Step " + (idx + 1)) }));
         renderSeq(); varModal.hidden = true; playSequence();
-      } else { applyPreset(item, "Variation"); varModal.hidden = true; }
+      } else { applyPreset(item, soundName(), "Variation"); varModal.hidden = true; }
     });
   });
 }
+// The pack's name: the Name box, else the sound's name (the one naming rule: hit → hit_01.wav … hit_08.wav).
+function varBaseName() { return varNameEl.value.trim() || soundName() || (sequence.length ? "sequence" : "variation"); }
+function varFileName(i) { return fileStem(varBaseName()) + "_" + String(i + 1).padStart(Math.max(2, String(varGenomes.length).length), "0") + ".wav"; }
+function varFilesSync() {
+  const n = varGenomes.length;
+  varModal.querySelector("#varFiles").textContent = n ? varFileName(0) + " … " + varFileName(n - 1) : "";
+  varGrid.querySelectorAll(".breed-tag").forEach((t, i) => { t.textContent = varFileName(i) + (i === 0 ? " · original" : ""); });
+}
 function buildPackFiles() {
-  const seq = sequence.length > 0;
-  const base = sanitizeFilename(varNameEl.value || (seqLabel && seqLabel !== "Sound" ? seqLabel : (seq ? "sequence" : "variation")));
-  const pad = Math.max(2, String(varGenomes.length).length);
+  const base = varBaseName();
   return varGenomes.map((item, i) => {
     const { L, R } = renderVariation(item);
     const buf = encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: base + " " + (i + 1) });
-    // (title, item and L ride along for the web zip's sidecars, packZipFiles; the files themselves are unchanged)
-    return { name: base + "_" + String(i + 1).padStart(pad, "0") + ".wav", data: new Uint8Array(buf), title: base + " " + (i + 1), item: item, L: L };
+    // (title, item and L ride along for the web zip's sidecars, packZipFiles)
+    return { name: varFileName(i), data: new Uint8Array(buf), title: base + " " + (i + 1), item: item, L: L };
   });
 }
 // THE WEB ZIP CARRIES SIDECARS (crunchyCore DESKTOP-ROADMAP.md §6.4): each variation of a single sound IS a sound with a
@@ -2688,10 +2941,34 @@ function buildPackFiles() {
 // into a game's crunchy/sfx/, the desktop Library finds every one and re-renders the same bytes (its exportName is the
 // WAV's title, its wav the file's name). The WAVs themselves are byte-for-byte what they were. A SEQUENCE variation has
 // no share form (a list of sounds), so a sequence pack stays WAVs only, at the root, as before.
+//
+// THE ZIP'S LAYOUT (2026-10-14 usability round): the WAVs FLAT at the top (hit_01.wav … hit_08.wav, ready to select
+// together and drop into Godot's AudioStreamRandomizer), a README.txt, and the Library form above (a folder per sound,
+// its WAV beside its .crunchy) under crunchy-library/, where it is out of the way. The WAVs are copies: the same bytes.
+function packReadme(files, seq) {
+  const first = files[0].name, last = files[files.length - 1].name;
+  return [
+    varBaseName() + ": a variation pack from CrunchySFX (" + files.length + " sounds" + (seq ? ", each the whole sequence" : "") + ")",
+    "",
+    first + " … " + last + "  (" + nowFmtText() + ")",
+    "  The same sound, slightly different each time, matched in loudness (gated RMS), peaks at or below -3 dBFS.",
+    "",
+    "Godot 4: put the WAVs in your project, make an AudioStreamRandomizer (on an AudioStreamPlayer's Stream),",
+    "  and add each WAV to its Streams list (drag them from the FileSystem dock). Its Random Pitch and",
+    "  Random Volume Offset add more variety on top; leave them at 1 and 0 to play the takes as they are.",
+    "Unity: drop the WAVs into an AudioClip[] and play a random one.",
+    seq ? "" : "",
+    seq ? "" : "crunchy-library/: the same sounds as CrunchySFX desktop Library entries (a folder each, with its .crunchy).\n" +
+               "  Copy those folders into your game's crunchy/sfx/ to keep them editable in the Library; otherwise delete it.",
+    "",
+  ].join("\n");
+}
 function packZipFiles(files) {
-  if (files.some((f) => Array.isArray(f.item))) return files;
   const enc = new TextEncoder();
-  const out = [];
+  const seq = files.some((f) => Array.isArray(f.item));
+  const flat = files.map((f) => ({ name: f.name, data: f.data })).concat([{ name: "README.txt", data: enc.encode(packReadme(files, seq)) }]);
+  if (seq) return flat;                                          // a sequence has no share form: WAVs + README only
+  const out = flat;
   files.forEach(function (f) {
     const stem = f.name.replace(/\.wav$/, "");
     const keepRiff = riffGetPatch;
@@ -2702,7 +2979,7 @@ function packZipFiles(files) {
     if (sampleBuf && usesSample(f.item.wave)) fields.sampleF32 = f32ToB64(sampleBuf);
     if (customIR && Math.round(f.item.convType) === 4 && f.item.convMix > 0) fields.customIR = customIR.name || "a loaded impulse response";
     const side = plantSidecarFile(stem, plantSidecar("sound", f.title, fields, [{ path: f.name, data: f.data }], APP_VERSION));
-    out.push({ name: stem + "/" + f.name, data: f.data }, { name: stem + "/" + side.path, data: enc.encode(side.data) });
+    out.push({ name: "crunchy-library/" + stem + "/" + f.name, data: f.data }, { name: "crunchy-library/" + stem + "/" + side.path, data: enc.encode(side.data) });
   });
   return out;
 }
@@ -2713,20 +2990,24 @@ async function exportPack() {
     let dir; try { dir = await T.dialog.open({ directory: true, title: "Choose a folder for the variation pack" }); } catch (e) { return; }
     if (!dir) return;
     for (const f of files) await T.fs.writeFile(dir + "/" + f.name, f.data);
-    varMsg.textContent = "✓ Exported " + files.length + " files to the chosen folder";
+    varMsg.textContent = "✓ Exported " + files[0].name + " … " + files[files.length - 1].name + " to the chosen folder";
+    nowSay("Exported " + files.length + " variations");
   } else {                                                  // web: one .zip
-    const base = files[0].name.replace(/_\d+\.wav$/, "");
+    const base = fileStem(varBaseName());
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([makeZip(packZipFiles(files))], { type: "application/zip" }));
     a.download = base + "_pack.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    varMsg.textContent = "✓ Downloaded " + files.length + " sounds as " + base + "_pack.zip";
+    varMsg.textContent = "✓ Saved " + base + "_pack.zip to your downloads: " + files.length + " WAVs at its top (" + files[0].name + " …), a README, and crunchy-library/ for the desktop app";
+    nowSay("Saved " + base + "_pack.zip");
   }
 }
-document.getElementById("variations").addEventListener("click", () => { seedVariations(); varMsg.textContent = ""; varModal.hidden = false; });
+document.getElementById("variations").addEventListener("click", () => { varNameEl.value = soundName(); seedVariations(); varMsg.textContent = ""; varModal.hidden = false; });
+varNameEl.addEventListener("input", varFilesSync);
 varModal.querySelector("#varRegen").addEventListener("click", seedVariations);
 varCountEl.addEventListener("change", seedVariations);
+varAmtEl.addEventListener("change", seedVariations);   // hear the new amount at once
 varModal.querySelector("#varExport").addEventListener("click", exportPack);
 varModal.querySelector("#varClose").addEventListener("click", () => { varModal.hidden = true; });
 varModal.addEventListener("click", (e) => { if (e.target === varModal) varModal.hidden = true; });
@@ -2796,7 +3077,7 @@ function renderSequenceBuffers() {
   return { L, R };
 }
 function playSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); drawScope(L, R); playBuffer(L, R); }
-function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, "crunchysfx-sequence-" + sequence.length + "steps.wav"); }
+function exportSequence() { if (!sequence.length) return; const { L, R } = renderSequenceBuffers(); downloadWav(L, R, fileStem(soundName() || "sequence") + (soundName() ? "_sequence" : "") + ".wav"); }
 
 const seqGapInput = document.getElementById("seqGap");
 const seqGapVal = document.getElementById("seqGapVal");
@@ -3396,13 +3677,15 @@ function foundryGenerate(type, styleName) {
   const out = [];
   if (type === "mutate") {
     const seed = genomeFromState();
-    for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(() => shape(breedChild([seed], FOUNDRY_MUTATE_AMT))));
+    for (let i = 0; i < FOUNDRY_N; i++) out.push(Object.assign(audiblePatch(() => shape(breedChild([seed], FOUNDRY_MUTATE_AMT))), { _name: soundName() || "Foundry sound" }));
   } else if (type === "random") {
     for (let i = 0; i < FOUNDRY_N; i++) out.push(audiblePatch(() => shape(randomPatch())));
   } else {
     for (let i = 0; i < FOUNDRY_N; i++) {
       const arch = type === "any" ? pick(ARCHETYPES) : (archByName(type) || pick(ARCHETYPES));
-      out.push(audiblePatch(() => shape(varyPreset(arch.patch))));
+      // _name: the kind it was built as ("Jump / hop" → "Jump", "8-Bit Jump" with a console style), never "Foundry"
+      const kind = arch.name.split(" / ")[0];
+      out.push(Object.assign(audiblePatch(() => shape(varyPreset(arch.patch))), { _name: style.fn ? style.name + " " + kind : kind }));
     }
   }
   return out;
@@ -3414,7 +3697,7 @@ foundryModal.innerHTML =
   '<div class="modal-box">' +
     '<div class="modal-head">' +
       '<h2 data-icon="hammer">Foundry</h2>' +
-      '<span class="hint">Generate → ▶ audition → ✎ Edit Sound loads it into the editor to tweak &amp; export.' + (isDesktop ? ' Or ＋ Keep several and save them to My Presets.' : '') + ' All procedural + your ear — no AI.</span>' +
+      '<span class="hint">Build by kind: pick a kind (jump, coin, hit…) and a console style, and get brand-new sounds of that kind. ' + TOOL_CLICKS + (isDesktop ? ' ＋ Keep several to save them to My Presets.' : '') + ' All procedural, no AI.</span>' +
       '<button id="fndClose" data-icon="close">Close</button>' +
     '</div>' +
     '<div class="foundry-gen">' +
@@ -3455,7 +3738,7 @@ const fndMsg = foundryModal.querySelector("#fndMsg");
 
 function foundryPlay(genome) { const r = withState(genome, () => render()); playBuffer(r.L, r.R); }
 function foundryAddKeep(genome) {
-  foundryKeep.push({ id: ++foundryKeepSeq, name: "Foundry " + foundryKeepSeq, genome });
+  foundryKeep.push({ id: ++foundryKeepSeq, name: (genome._name || "Foundry sound") + " " + foundryKeepSeq, genome });
   renderFoundryKeep();
 }
 function renderFoundryGrid() {
@@ -3469,18 +3752,16 @@ function renderFoundryGrid() {
     cell.appendChild(cv);
     const bar = document.createElement("div");
     bar.className = "breed-cell-bar";
-    bar.innerHTML = '<button class="breed-play">▶</button><button class="fnd-editbtn" data-icon="edit">Edit Sound</button>' +
+    bar.innerHTML = '<button class="breed-play" title="Hear it">▶</button>' +
       (isDesktop ? '<button class="fnd-keepbtn" data-icon="plus">Keep</button>' : '') +
-      '<span class="breed-tag">#' + (i + 1) + '</span>';
+      '<span class="breed-tag">' + (g._name || "#" + (i + 1)) + '</span><button class="tile-use">Use</button>';
     iconsIn(bar);
     cell.appendChild(bar);
     fndGrid.appendChild(cell);
     drawMini(cv, L, R);
-    bar.querySelector(".breed-play").addEventListener("click", (e) => { e.stopPropagation(); foundryPlay(g); });
-    bar.querySelector(".fnd-editbtn").addEventListener("click", (e) => { e.stopPropagation(); applyPreset(g, "Foundry"); foundryModal.hidden = true; });   // adopt into the editor
+    toolTile(cell, () => foundryPlay(g), () => { applyPreset(g, g._name || "Foundry sound", "Foundry"); foundryModal.hidden = true; });   // Use = into the editor (named by its kind)
     const keepBtn = bar.querySelector(".fnd-keepbtn");
     if (keepBtn) keepBtn.addEventListener("click", (e) => { e.stopPropagation(); foundryAddKeep(g); });
-    cell.addEventListener("click", () => foundryPlay(g));   // click tile = audition
   });
   fndCount.textContent = foundryCands.length ? foundryCands.length + " candidates — click a tile to hear it" : "";
 }
@@ -4128,7 +4409,7 @@ if (isDesktop) {
   dragChip.addEventListener("dragstart", (e) => {
     e.preventDefault();   // suppress the webview's own (non-functional) HTML5 drag; use the native one
     const { L, R } = render();
-    dragOutWav(L, R, (seqLabel && seqLabel !== "Sound") ? seqLabel : "crunchysfx-sound", seqLabel);
+    dragOutWav(L, R, fileStem(soundName()), soundName() || "sound");
   });
   cbar.appendChild(dragChip);
 }
@@ -4157,11 +4438,10 @@ desktopMount("sfx", {
 // Shows once on a fresh visit (prefs.tourSeen); replayable from Settings. Skips on shared-link visits.
 const TOUR = [
   { target: null, title: "Welcome to CrunchySFX", body: "Make game & UI sound effects from scratch — coins, lasers, explosions, robot voices and more. Here's the 30-second workflow." },
-  { target: ".ws-browser", title: "1 · Start from a preset", body: "600+ ready-made sounds, grouped by type. Click any to hear it, or search by name." },
-  { target: "#play,#rand", title: "2 · Play, or roll the dice", body: "Press Play to hear the current sound — or Randomize to generate a fresh one from nothing." },
-  { target: "#foundry", title: "3 · Foundry — invent originals", body: "Foundry generates brand-new sounds procedurally. Make a batch and keep the ones you like." },
-  { target: "#breed", title: "4 · Breed — fine-tune by ear", body: "Pick a sound you like and Breed makes a grid of variations. Choose favorites and it evolves them toward what you're after." },
-  { target: "#export", title: "5 · Export a WAV", body: "Happy with it? Export drops a ready-to-use WAV straight into your game." },
+  { target: ".ws-browser", title: "1 · Start from a preset", body: "900+ ready-made sounds, game sounds first (Retro / Arcade, UI, Impacts…). Click any to hear it, or search: \"jump\", \"hit\", \"menu\"." },
+  { target: ".nowbar", title: "2 · Name it", body: "The sound in the editor, by name. Every file is named from it: Jump exports jump.wav, a pack jump_01.wav … Type to rename it." },
+  { target: "#rand,#breed,#foundry,#variations", title: "3 · Make more sounds", body: "Randomize: a new sound. Breed: mix and evolve this one somewhere new. Foundry: build sounds by kind (jump, coin, hit). Variations: the same sound, slightly different, for a sound your game repeats. In each: click a sound to hear it, double-click (or Use) to load it." },
+  { target: "#export", title: "4 · Export a WAV", body: "Happy with it? Export WAV saves it, named after the sound, ready for your game. Sample rate, mono or stereo: ⚙ Settings (or \"change format\" beside the name)." },
   { target: "#share", title: "Bonus · share a link", body: "Every sound is a URL — share it and the other person hears your exact sound, no file needed." },
   { target: null, title: "You're all set!", body: "Explore the panels to shape any sound in detail. Replay this tour anytime from ⚙ Settings. Now go make some noise." },
 ];
