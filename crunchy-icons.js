@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ 452cc1e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 5a7d74f57726eb9a00ec6057d7f509bd0e01fad9cc6950872d6cf44c6d05cb50
+// GENERATED from crunchyCore/crunchy-icons.js @ fd37d16 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 03e97d05dc991472b0423f0e0a34489b8c50a0a4bfeac3aa12401e65eea143f3
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
 // CANONICAL HERE; every Crunchy tool copies it unchanged, with crunchy-base.css (which styles `.pxi`). Emoji read
@@ -14,7 +14,7 @@
 // preview sheet shows them in); a name is never reused or removed. Add a batch per adoption round, not one per idea:
 // every stamp bump is a follow-up in every app that has pulled (pull-core moves the app's `want` for it).
 
-const CRUNCHY_ICONS_BUILD = 9;
+const CRUNCHY_ICONS_BUILD = 10;
 
 const CRUNCHY_ICONS = {
   // DOWNLOAD, LINK and GRID (build 2) — the three a header still needed an emoji for. Drawn for
@@ -749,6 +749,21 @@ const CRUNCHY_ICONS = {
     "..##........",
     ".#..#.......",
     "#...........",
+  ],
+  // CrunchyShader (2026-10-14, build 10): a dithered, lit sphere (the classic shading demo), its row in the suite dialog
+  shade: [
+    "....####....",
+    "..##....##..",
+    ".#......###.",
+    ".#.......##.",
+    "#.......####",
+    "#......#.#.#",
+    "#.......####",
+    "#.....#.#.##",
+    ".#..#.#.###.",
+    ".##.#.#####.",
+    "..########..",
+    "....####....",
   ],
 };
 
