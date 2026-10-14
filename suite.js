@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 0b318c2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 32fca458c0d134275c31b6d460e5fa398da8c026e93ba890f4957c24c93cec2a
+// GENERATED from crunchyCore/suite.js @ 452cc1e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 18d52d76ed2dd7b579e8ca827c8872527d74ad23807dcd955b44246b685d3c7a
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -23,7 +23,7 @@
 // each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
 // the hosts listed there. A link outside that scope does nothing on desktop.
 
-const SUITE_BUILD = 5;
+const SUITE_BUILD = 6;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -43,6 +43,10 @@ const CRUNCHY_SUITE = [
   // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. No domain or store page yet.
   { id: "character", name: "CrunchyCharacter", icon: "♟", pxi: "person", accent: "#ff5c8a",
     what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
+    web: "", desktop: "" },
+  // Added 2026-10-13 (build 6): CrunchyItems (SUITE-LINKS §5). No domain or store page yet.
+  { id: "items", name: "CrunchyItems", icon: "⚔", pxi: "sword", accent: "#a6e22e",
+    what: "Item icons for RPGs: swords, bows, potions, keys and gems at 16, 24 and 32 px, ready for Godot and RPG Maker.",
     web: "", desktop: "" },
 ];
 // The mission statement's one line (crunchy-suite.md §1). Quoted, never reworded.
