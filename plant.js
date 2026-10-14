@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 42c8711 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 62bf64ab5394a181ba55f29f1325d4efbf0b1e85ea9b8235afa40a6812a826fa
+// GENERATED from crunchyCore/plant.js @ 0b318c2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 820c9ff3f332145ca537364db46c2b33e017033e2fc8893ceba522983b6e757c
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -49,7 +49,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 9;
+const PLANT_BUILD = 10;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -281,7 +281,9 @@ async function plantSlugFor(P, kind, name) {
 // importing it, Unity gives it a harmless .meta, and no slug can start with "_"). plantSupport writes them when they
 // differ, removes ones it listed before and no longer makes, and plantDelete removes them all with the app's LAST
 // asset here. Nothing else in the folder is touched.
-const PLANT_SUPPORT_FILE = "_support" + PLANT_EXT, PLANT_SUPPORT_RESERVED = ["editor"];
+// Build 10: also "scripts", for an app's RUNTIME scripts (CrunchyTile's Rule Tile classes: a tile asset's script cannot
+// live under Editor/, which Unity leaves out of a build). No asset slug takes either name.
+const PLANT_SUPPORT_FILE = "_support" + PLANT_EXT, PLANT_SUPPORT_RESERVED = ["editor", "scripts"];
 function plantSupportOk(rel) {
   return plantSafeRel(rel) && rel.slice(-PLANT_EXT.length) !== PLANT_EXT && PLANT_SUPPORT_RESERVED.indexOf(rel.split("/")[0].toLowerCase()) >= 0 && rel.indexOf("/") > 0;
 }
