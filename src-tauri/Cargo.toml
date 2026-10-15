@@ -1,6 +1,6 @@
 [package]
 name = "crunchyfx"
-version = "1.2.0"
+version = "1.2.1"
 description = "CrunchySFX — a from-scratch sound effect generator"
 authors = ["superevil6"]
 edition = "2021"

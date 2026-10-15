@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "url": "https://sevi66.itch.io/crunchysfx",
   "notes": "Fixes: no more clicking noise or silent playback after a long stretch without sounds (e.g. saving a Sound Kit to the Library), and a clearer message when your audio output is off."
 }
