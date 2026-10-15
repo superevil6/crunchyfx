@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/desktop.js @ d82674f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 3a6705900a6465f31d15c818ca9749f7a312f0df97ae3f11d460238fbdbd284f
+// GENERATED from crunchyCore/desktop.js @ 78cff2e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 486a1148801cacc927754643173c16f283dd800974f2111b38837a72860608ff
 "use strict";
 // THE DESKTOP GATE AND THE WEB'S ONE INVITATION (CONSOLIDATION-PLAN.md §2–§3; crunchyTile TILE-DESIGN.md §11).
 //
@@ -39,10 +39,14 @@
 //     samples  asset names for the mock Library; the first is the one saved (default Hero, Coin, Door, Cave, Boss)
 //     exts     the files one save writes (default [".png"]); the .crunchy sidecar is added
 //     uses     the game file the removal guard names (default "level_1.tscn")
-//     thumb(name, i, canvas)   paints a sample's picture (default: a small drawn tile in one of five colourways)
+//     thumb(name, i, canvas)   paints a sample's picture (default: the app's `art`, below)
+//   Build 3: EACH APP HAS ITS OWN DEMO without PROJECT_APP.tour: DESKTOP_TOUR_APPS, keyed by the suite id, gives the
+//   noun, samples, files and an `art` (DESKTOP_TOUR_ART: tile terrain, a sound's waveform, an effect's burst, a track's
+//   piano roll, a UI panel, an item icon, a shader's CRT gradient, a pixel figure), each thumbnail seeded by its name.
+//   The pitch names the price when suite.js gives the tool a `price` (desktopTourPitch).
 // Entry points: the web's "Get the desktop app" (desktopMount) opens it; settings.js (build 3) adds a row for it.
 
-const DESKTOP_BUILD = 2;
+const DESKTOP_BUILD = 3;
 
 function desktopIs() { return typeof window !== "undefined" && !!window.__TAURI__; }
 
@@ -76,9 +80,34 @@ function desktopMount(self, opts) {
 }
 
 // ---- the tour: its words (no DOM) ---------------------------------------------------------------------------------
+// Unknown ids (an app not in the table below) take these.
 const DESKTOP_TOUR_DEFAULTS = { noun: "assets", where: "your scenes", samples: ["Hero", "Coin", "Door", "Cave", "Boss"],
-                                exts: [".png"], uses: "level_1.tscn" };
+                                exts: [".png"], uses: "level_1.tscn", art: "tile" };
 const DESKTOP_TOUR_CLOSING = "Everything you make on the web stays free and CC0. The desktop app adds workflow, never features.";
+
+// EACH APP'S OWN DEMO (build 3; from CrunchySFX's usability test, 2026-10-16: every app showed Tile's grass tileset).
+// Keyed by the suite id (CRUNCHY_SUITE). An `exts` entry starting with "." or "_" follows the asset's slug
+// (".wav" → jump.wav); any other entry is a file name as written ("paint.tscn"). `art` names a painter in
+// DESKTOP_TOUR_ART (the editor mock and the Library's thumbnails, drawn here, no images). The app's own
+// PROJECT_APP.tour still wins, field by field.
+const DESKTOP_TOUR_APPS = {
+  tile:      { noun: "tilesets", where: "your TileMap", samples: ["Meadow", "Castle", "Cave", "Swamp", "Desert"],
+               exts: [".png", ".tres", "paint.tscn"], uses: "level_1.tscn", art: "tile" },
+  sfx:       { noun: "sounds", where: "your AudioStreamPlayers", samples: ["Jump", "Coin", "Hurt", "Explosion", "Menu Click"],
+               exts: [".wav"], uses: "player.tscn", art: "wave" },
+  vfx:       { noun: "effects", where: "your AnimatedSprite2Ds", samples: ["Hit Spark", "Fireball", "Heal", "Smoke Puff", "Lightning"],
+               exts: [".png", ".tres"], uses: "level_1.tscn", art: "burst" },
+  bgm:       { noun: "tracks", where: "your music player", samples: ["Title Theme", "Dungeon", "Boss", "Overworld", "Victory"],
+               exts: [".wav"], uses: "main.tscn", art: "roll" },
+  ui:        { noun: "UI kits", where: "your menus", samples: ["Main Menu", "HUD", "Inventory", "Dialogue", "Pause"],
+               exts: [".tres", ".png"], uses: "main_menu.tscn", art: "panel" },
+  items:     { noun: "items", where: "your inventory", samples: ["Iron Sword", "Potion", "Oak Shield", "Ruby", "Gold Key"],
+               exts: [".png"], uses: "inventory.tscn", art: "item" },
+  shader:    { noun: "shaders", where: "your materials", samples: ["CRT", "Pixelate", "Dissolve", "Scanlines", "Hit Flash"],
+               exts: [".gdshader", ".tres"], uses: "level_1.tscn", art: "crt" },
+  character: { noun: "characters", where: "your scenes", samples: ["Hero", "Goblin", "Knight", "Mage", "Villager"],
+               exts: [".png", ".tres", ".tscn"], uses: "level_1.tscn", art: "figure" },
+};
 
 function desktopTourChild(self, engine) {
   return typeof plantChildRel === "function" && typeof PLANT_SUITE !== "undefined" && PLANT_SUITE[self]
@@ -87,23 +116,35 @@ function desktopTourChild(self, engine) {
 
 function desktopTourWords(self) {
   const own = typeof PROJECT_APP !== "undefined" && PROJECT_APP && PROJECT_APP.suite === self && PROJECT_APP.tour ? PROJECT_APP.tour : {};
+  const app = Object.prototype.hasOwnProperty.call(DESKTOP_TOUR_APPS, self) ? DESKTOP_TOUR_APPS[self] : {};
+  const base = {};
+  Object.keys(DESKTOP_TOUR_DEFAULTS).forEach(function (k) { base[k] = app[k] != null ? app[k] : DESKTOP_TOUR_DEFAULTS[k]; });
   const w = {};
-  Object.keys(DESKTOP_TOUR_DEFAULTS).forEach(function (k) { w[k] = own[k] != null ? own[k] : DESKTOP_TOUR_DEFAULTS[k]; });
-  w.samples = (Array.isArray(w.samples) && w.samples.length ? w.samples : DESKTOP_TOUR_DEFAULTS.samples).map(String);
-  w.exts = Array.isArray(w.exts) && w.exts.length ? w.exts.map(String) : DESKTOP_TOUR_DEFAULTS.exts;
+  Object.keys(base).forEach(function (k) { w[k] = own[k] != null ? own[k] : base[k]; });
+  w.samples = (Array.isArray(w.samples) && w.samples.length ? w.samples : base.samples).map(String);
+  w.exts = Array.isArray(w.exts) && w.exts.length ? w.exts.map(String) : base.exts;
+  w.art = Object.prototype.hasOwnProperty.call(DESKTOP_TOUR_ART, w.art) ? w.art : "tile";
   w.thumb = typeof own.thumb === "function" ? own.thumb : null;
   const tool = typeof CRUNCHY_SUITE !== "undefined" ? CRUNCHY_SUITE.find(function (x) { return x.id === self; }) : null;
   w.self = self;
   w.name = tool ? tool.name : (typeof PLANT_SUITE_NAMES !== "undefined" && PLANT_SUITE_NAMES[self]) || "The app";
+  w.accent = tool && tool.accent ? tool.accent : "#ff7a45";
+  w.price = tool && tool.price ? String(tool.price) : "";
   w.child = desktopTourChild(self, "godot");
   w.unity = desktopTourChild(self, "unity");
   w.sample = w.samples[0];
   w.slug = typeof plantSlug === "function" ? plantSlug(w.sample)
     : w.sample.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "untitled";
   w.dir = "res://" + w.child + "/" + w.slug + "/";
-  w.files = w.exts.map(function (e) { return w.slug + e; }).concat([w.slug + (typeof PLANT_EXT !== "undefined" ? PLANT_EXT : ".crunchy")]);
+  w.files = w.exts.map(function (e) { return /^[._]/.test(e) ? w.slug + e : e; })
+    .concat([w.slug + (typeof PLANT_EXT !== "undefined" ? PLANT_EXT : ".crunchy")]);
   w.store = desktopStoreUrl(self);
   return w;
+}
+
+// The pitch beside "Get it on itch.io": the price when suite.js gives one.
+function desktopTourPitch(w) {
+  return w && w.price ? "One-time purchase: " + w.price + ". No account, no subscription." : "One-time purchase. No account, no subscription.";
 }
 
 function desktopTourPanels(w) {
@@ -115,7 +156,7 @@ function desktopTourPanels(w) {
       line: "Every save lands in res://" + w.child + "/<asset>/, ready for " + w.where + ", beside a small .crunchy file " +
             "that reopens the design exactly." },
     { key: "update", title: "Change it, and it updates in place",
-      line: "Save again and it re-exports under the same paths, so " + w.where + " keeps working. The removal guard stops a " +
+      line: "Save again and it re-exports under the same paths, so it keeps working in " + w.where + ". The removal guard stops a " +
             "save that would delete a file your scenes use." },
     { key: "library", title: "The Library",
       line: "All your " + w.noun + " as pictures: search them, see which ones a newer " + w.name + " would draw " +
@@ -183,7 +224,7 @@ function desktopTourOpen(self, opts) {
     get.type = "button";
     get.addEventListener("click", function () { go(w.store); });
     getRow.appendChild(get);
-    getRow.appendChild(el("span", "dtour-soon", "One-time purchase. No account, no subscription."));
+    getRow.appendChild(el("span", "dtour-soon", desktopTourPitch(w)));
   } else getRow.appendChild(el("span", "dtour-soon dtour-coming", "Coming soon to itch.io"));
   end.appendChild(getRow);
   panel.appendChild(end);
@@ -261,28 +302,161 @@ function desktopTourOpen(self, opts) {
   return desktopTourCur;
 }
 
-// A sample's picture: the app's own painter, or a small drawn tile (ground, a lit top band, flecks), seeded by i.
+// A sample's picture: the app's own painter (PROJECT_APP.tour.thumb), else its `art` from DESKTOP_TOUR_ART, seeded by
+// the sample's name and place so the mock Library reads as several different assets. Plain canvas, whole pixels.
 function desktopTourThumb(w, name, i, canvas) {
-  if (w.thumb) { try { w.thumb(name, i, canvas); return; } catch (e) { /* fall back to the drawn tile */ } }
-  const sets = [["#3b7a3c", "#7bc950", "#5a3d2b", "#3d2a1e"], ["#4a4f6a", "#8f96b8", "#33364a", "#23253a"],
-                ["#7a4a2c", "#d8a35a", "#5a3420", "#3c2216"], ["#2d6a78", "#73d1d9", "#1f4954", "#163640"],
-                ["#6a3a6e", "#c47ad0", "#4a284e", "#331a36"]];
-  const c = sets[i % sets.length], n = 16;
+  if (w.thumb) { try { w.thumb(name, i, canvas); return; } catch (e) { /* fall back to the drawn picture */ } }
+  const art = DESKTOP_TOUR_ART[w.art] || DESKTOP_TOUR_ART.tile;
+  const n = art.size;
   canvas.width = n; canvas.height = n;
   const g = canvas.getContext("2d");
   if (!g) return;
-  let s = (0x9e3779b9 ^ Math.imul(i + 1, 2654435761)) | 0;
+  let s = 0x811c9dc5;
+  String(name).split("").forEach(function (ch) { s = Math.imul(s ^ ch.charCodeAt(0), 16777619); });
+  s = (s ^ Math.imul(i + 1, 2654435761)) | 0;
+  if (!s) s = 0x9e3779b9;
   const rnd = function () { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
+  const px = function (c, x, y, ww, hh) { g.fillStyle = c; g.fillRect(x, y, ww || 1, hh || 1); };
   g.fillStyle = "#1c1a24"; g.fillRect(0, 0, n, n);
-  for (let x = 0; x < n; x++) {
-    const top = 5 + Math.round(Math.sin((x + i * 3) / 2.6) * 1.5);
-    g.fillStyle = c[1]; g.fillRect(x, top, 1, 2);
-    g.fillStyle = c[0]; g.fillRect(x, top + 2, 1, 2);
-    g.fillStyle = c[2]; g.fillRect(x, top + 4, 1, n);
-  }
-  for (let k = 0; k < 9; k++) { g.fillStyle = c[3]; g.fillRect(Math.floor(rnd() * n), 11 + Math.floor(rnd() * 5), 1, 1); }
-  g.fillStyle = c[1]; g.fillRect(2 + Math.floor(rnd() * 10), 1 + Math.floor(rnd() * 2), 2, 1);
+  art.draw(px, n, rnd, String(name).toLowerCase(), i, w.accent);
 }
+
+// The painters, one per app's kind of asset (`art` in DESKTOP_TOUR_APPS). Each gets px(colour, x, y, w, h), the size,
+// a seeded rnd, the sample's name in lower case, its place and the app's accent.
+const DESKTOP_TOUR_ART = {
+  tile: { size: 16, draw: function (px, n, rnd, name, i) {             // terrain: a lit top band over ground, flecks
+    const sets = [["#3b7a3c", "#7bc950", "#5a3d2b", "#3d2a1e"], ["#4a4f6a", "#8f96b8", "#33364a", "#23253a"],
+                  ["#7a4a2c", "#d8a35a", "#5a3420", "#3c2216"], ["#2d6a78", "#73d1d9", "#1f4954", "#163640"],
+                  ["#6a3a6e", "#c47ad0", "#4a284e", "#331a36"]];
+    const c = sets[i % sets.length];
+    for (let x = 0; x < n; x++) {
+      const top = 5 + Math.round(Math.sin((x + i * 3) / 2.6) * 1.5);
+      px(c[1], x, top, 1, 2); px(c[0], x, top + 2, 1, 2); px(c[2], x, top + 4, 1, n);
+    }
+    for (let k = 0; k < 9; k++) px(c[3], Math.floor(rnd() * n), 11 + Math.floor(rnd() * 5));
+    px(c[1], 2 + Math.floor(rnd() * 10), 1 + Math.floor(rnd() * 2), 2, 1);
+  } },
+  wave: { size: 24, draw: function (px, n, rnd, name, i) {             // a sound: a chunky waveform on a scope
+    const mid = 12, shape = i % 4;
+    px("#2a2633", 0, mid, n, 1);
+    for (let x = 1; x < n - 1; x += 2) {                                 // one bar per two pixels, as an editor draws it
+      const t = (x - 1) / (n - 3);
+      const env = shape === 0 ? Math.exp(-t * 2.6) : shape === 1 ? Math.sin(t * Math.PI)
+        : shape === 2 ? (t < 0.1 ? 0.6 : Math.exp(-(t - 0.1) * 1.4)) : 0.45 + 0.4 * Math.abs(Math.sin(t * 6.3 + i));
+      const a = Math.max(1, Math.round(10 * env * (0.4 + rnd() * 0.6)));
+      px("#c25326", x, mid - a, 1, a * 2 + 1);
+      px("#ff7a45", x, mid - a + 1, 1, Math.max(1, a * 2 - 1));
+    }
+  } },
+  burst: { size: 24, draw: function (px, n, rnd, name, i) {             // an effect: a spark burst, a hot core
+    const sets = [["#c77dff", "#f3d9ff", "#7b3fb0"], ["#ff7a45", "#ffe08a", "#b3401c"], ["#3ddc97", "#d6ffe9", "#1f8a5c"],
+                  ["#9aa3b8", "#e6e9f2", "#5a6072"], ["#7ea6ff", "#ffffff", "#3a5bb0"]];
+    const c = sets[i % sets.length], cx = 11 + Math.floor(rnd() * 2), cy = 11 + Math.floor(rnd() * 2);
+    const rays = 5 + Math.floor(rnd() * 4), turn = rnd() * Math.PI;
+    for (let r = 0; r < rays; r++) {
+      const ang = turn + r * Math.PI * 2 / rays, len = 5 + Math.floor(rnd() * 6);
+      for (let k = 2; k <= len; k++) px(k > len - 2 ? c[2] : c[0], Math.round(cx + Math.cos(ang) * k), Math.round(cy + Math.sin(ang) * k));
+    }
+    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) {
+      const d = x * x + y * y;
+      if (d <= 9) px(d <= 2 ? c[1] : d <= 5 ? c[0] : c[2], cx + x, cy + y);
+    }
+    for (let k = 0; k < 4; k++) px(c[1], 1 + Math.floor(rnd() * 22), 1 + Math.floor(rnd() * 22));
+  } },
+  roll: { size: 24, draw: function (px, n, rnd, name, i, accent) {      // a track: notes on a piano-roll strip
+    for (let y = 0; y < n; y += 2) {                                     // the keyboard down the left, its rows across
+      const black = [1, 3, 6, 8, 10].indexOf((y / 2) % 12) >= 0;
+      px(black ? "#2a2633" : "#d8dde8", 0, y, 4, 2); px(black ? "#201d27" : "#25222d", 4, y, n - 4, 2);
+    }
+    for (let x = 4; x < n; x += 5) px("#33304a", x, 0, 1, n);
+    let x = 5, row = 3 + Math.floor(rnd() * 4);
+    while (x < n) {
+      const len = 2 + Math.floor(rnd() * 3);
+      row = Math.max(0, Math.min(10, row + Math.floor(rnd() * 5) - 2));
+      const y = row * 2;
+      px(accent, x, y, Math.min(len, n - x), 2); px("#a8f5d2", x, y, 1, 1);
+      if (rnd() < 0.4) px("#1f8a5c", x, Math.min(n - 2, y + 6 + Math.floor(rnd() * 3) * 2), Math.min(len, n - x), 2);
+      x += len + (rnd() < 0.3 ? 1 : 0);
+    }
+  } },
+  panel: { size: 24, draw: function (px, n, rnd, name, i, accent) {     // a UI kit: a framed panel with buttons
+    px(accent, 1, 2, 22, 20); px("#23253a", 2, 3, 20, 18); px("#3a5bb0", 2, 3, 20, 3);
+    px("#cfdcff", 3, 4, 4 + Math.floor(rnd() * 8), 1);
+    const kind = i % 3;
+    if (kind === 0) for (let k = 0; k < 3; k++) {                       // a menu: three buttons, one lit
+      const lit = k === Math.floor(rnd() * 3);
+      px(lit ? accent : "#4a4f6a", 5, 8 + k * 4, 14, 3); px(lit ? "#ffffff" : "#8f96b8", 8, 9 + k * 4, 4 + Math.floor(rnd() * 5), 1);
+    } else if (kind === 1) {                                             // a HUD: bars and a slot row
+      [["#ff5c8a", 0.4 + rnd() * 0.6], ["#7ea6ff", 0.3 + rnd() * 0.7]].forEach(function (b, k) {
+        px("#14131a", 4, 8 + k * 4, 16, 3); px(b[0], 4, 8 + k * 4, Math.round(16 * b[1]), 3);
+      });
+      for (let k = 0; k < 4; k++) px(k === Math.floor(rnd() * 4) ? accent : "#4a4f6a", 4 + k * 4, 16, 3, 3);
+    } else {                                                             // a grid of slots
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 4; x++) px(rnd() < 0.3 ? accent : "#33364a", 4 + x * 4, 8 + y * 4, 3, 3);
+    }
+  } },
+  item: { size: 24, draw: function (px, n, rnd, name, i) {             // an item icon: sword, potion, shield, gem, key
+    const kinds = ["sword", "potion", "shield", "gem", "key"];
+    let kind = kinds.find(function (k) { return name.indexOf(k) >= 0; }) ||
+      (/ruby|emerald|sapphire/.test(name) ? "gem" : kinds[(i + Math.floor(rnd() * 5)) % 5]);
+    const hue = [["#ff5c5c", "#ffb3b3", "#a32a2a"], ["#5ca8ff", "#c2dcff", "#2a5aa3"], ["#a6e22e", "#e1ffb0", "#5c8a12"]][Math.floor(rnd() * 3)];
+    if (kind === "sword") {
+      for (let k = 0; k < 13; k++) { px("#d8dde8", 6 + k, 16 - k, 2, 1); px("#8f96b8", 6 + k, 17 - k); }
+      px("#ffffff", 19, 3);
+      for (let k = -3; k <= 3; k++) px("#c9913e", 5 + k, 17 + k);
+      px("#6f3f01", 3, 19, 2, 2); px("#5a3420", 2, 20, 2, 2); px(hue[0], 1, 21, 2, 2);
+    } else if (kind === "potion") {
+      px("#c9913e", 10, 3, 4, 2); px("#8f96b8", 10, 5, 4, 3);
+      for (let y = 8; y < 21; y++) { const r = y < 11 ? y - 6 : y > 18 ? 22 - y : 6; px("#8f96b8", 12 - r, y, r * 2, 1); }
+      for (let y = 12; y < 20; y++) { const r = y > 18 ? 21 - y : 5; px(hue[0], 12 - r, y, r * 2, 1); }
+      px(hue[1], 8, 13, 2, 2); px(hue[2], 14, 17, 2, 2);
+    } else if (kind === "shield") {
+      for (let y = 3; y < 21; y++) { const r = y < 14 ? 8 : Math.max(1, 8 - (y - 13)); px("#6f3f01", 12 - r, y, r * 2, 1); px("#c9913e", 13 - r, y, r * 2 - 2, 1); }
+      px(hue[0], 11, 5, 2, 13); px(hue[0], 6, 9, 12, 2);
+    } else if (kind === "gem") {
+      for (let y = 0; y < 13; y++) { const r = y < 4 ? 4 + y : 13 - y; px(hue[2], 12 - r, 6 + y, r * 2, 1); px(hue[0], 13 - r, 6 + y, Math.max(1, r * 2 - 2), 1); }
+      px(hue[1], 8, 8, 3, 2); px("#ffffff", 9, 8);
+    } else {                                                             // a key
+      for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) { const d = x * x + y * y; if (d <= 10 && d >= 3) px("#ffd23f", 7 + x, 8 + y); }
+      px("#ffd23f", 9, 10, 2, 2);
+      for (let k = 0; k < 9; k++) px("#ffd23f", 10 + k, 11 + k, 2, 2);
+      px("#c9913e", 15, 18, 3, 2); px("#c9913e", 17, 14, 3, 2);
+    }
+  } },
+  crt: { size: 24, draw: function (px, n, rnd, name, i, accent) {        // a shader: a gradient under CRT scanlines
+    const pairs = [[[54, 214, 231], [199, 125, 255]], [[255, 122, 69], [255, 210, 63]], [[61, 220, 151], [126, 166, 255]],
+                   [[255, 92, 138], [54, 214, 231]], [[30, 30, 60], [54, 214, 231]]];
+    const p = pairs[i % pairs.length], tilt = rnd() * 0.8, block = name.indexOf("pixel") >= 0 ? 4 : 1;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const bx = Math.floor(x / block) * block, by = Math.floor(y / block) * block;
+      let t = Math.min(1, Math.max(0, (bx + by * tilt) / (n * (1 + tilt))));
+      t = Math.round(t * 5) / 5;
+      const dim = y % 2 ? 0.55 : 1;
+      const cx = Math.abs(x - 11.5) / 12, cy = Math.abs(y - 11.5) / 12, vig = 1 - Math.max(0, cx * cx + cy * cy - 0.45);
+      const ch = function (k) { return Math.round((p[0][k] + (p[1][k] - p[0][k]) * t) * dim * vig); };
+      px("rgb(" + ch(0) + "," + ch(1) + "," + ch(2) + ")", x, y);
+    }
+    [[0, 0], [n - 1, 0], [0, n - 1], [n - 1, n - 1]].forEach(function (c) { px("#1c1a24", c[0], c[1]); });
+  } },
+  figure: { size: 24, draw: function (px, n, rnd, name, i, accent) {    // a character: a little pixel figure
+    const goblin = /goblin|orc|slime/.test(name);
+    const skin = goblin ? "#7bc950" : ["#f2c9a0", "#c98e5e", "#8a5a3c"][Math.floor(rnd() * 3)];
+    const tunic = [accent, "#7ea6ff", "#c9913e", "#3ddc97", "#c77dff"][i % 5];
+    const hair = ["#5a3420", "#ffd23f", "#2a2633", "#c25326"][Math.floor(rnd() * 4)];
+    const ox = 7 + Math.floor(rnd() * 2);
+    px("#14131a", ox, 3, 10, 19);                                        // the outline
+    px(skin, ox + 1, 4, 8, 6);
+    if (/mage|wizard/.test(name)) { px("#4a284e", ox - 1, 1, 12, 4); px("#4a284e", ox + 3, -1, 4, 2); }
+    else if (/knight/.test(name)) { px("#8f96b8", ox + 1, 3, 8, 4); px("#d8dde8", ox + 2, 3, 6, 1); }
+    else px(goblin ? "#3b7a3c" : hair, ox + 1, 4, 8, 2);
+    px("#14131a", ox + 3, 7); px("#14131a", ox + 6, 7);
+    if (goblin) { px(skin, ox - 1, 6, 2, 2); px(skin, ox + 9, 6, 2, 2); }
+    px(tunic, ox + 1, 11, 8, 6); px(skin, ox - 1, 12, 2, 4); px(skin, ox + 9, 12, 2, 4);
+    px("#5a3420", ox + 1, 15, 8, 1);
+    px("#33364a", ox + 2, 17, 2, 4); px("#33364a", ox + 6, 17, 2, 4);
+    px("#2a2633", ox + 1, 21, 3, 1); px("#2a2633", ox + 6, 21, 3, 1);
+  } },
+};
 
 // The four mock-ups. `later(ms, fn)` runs one step of the little animation (all at once under reduced motion).
 function desktopTourStage(key, w, stage, later, el) {
@@ -366,7 +540,8 @@ function desktopTourStage(key, w, stage, later, el) {
   if (key === "update") {
     shown = items.slice(0, 3);
     const guard = mini("dtour-guard");
-    const used = [{ path: w.child + "/" + w.slug + "/" + w.slug + "-old" + w.exts[0], by: [w.uses] }];
+    const old = w.files[0].indexOf(".") > 0 ? w.files[0].replace(/(\.[^.]+)$/, "-old$1") : w.files[0] + "-old";
+    const used = [{ path: w.child + "/" + w.slug + "/" + old, by: [w.uses] }];
     guard.appendChild(el("b", "", "The removal guard"));
     guard.appendChild(el("span", "", typeof plantUsedMessage === "function" ? plantUsedMessage(used, "save")
       : "This save removes a file your game uses. Press again to save anyway."));
@@ -416,7 +591,8 @@ function desktopTourLibrary(w, dock, items, others) {
     emptyHint: "Nothing planted yet.",
     suite: others.length ? function () {
       return others.map(function (t, i) {
-        return { key: t.id, name: t.name, summary: (i ? 2 : 4) + " assets in " + desktopTourChild(t.id, "godot") + "/", open: function () {} };
+        const noun = (DESKTOP_TOUR_APPS[t.id] || DESKTOP_TOUR_DEFAULTS).noun;
+        return { key: t.id, name: t.name, summary: (i ? 2 : 4) + " " + noun + " in " + desktopTourChild(t.id, "godot") + "/", open: function () {} };
       });
     } : null,
   });

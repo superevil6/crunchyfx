@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ d82674f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 040d6f52fd77e9ebe99ee0ba826b27ba15b287a92d1b3e76a5fbadcc27d78d14
+// GENERATED from crunchyCore/suite.js @ 78cff2e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 dc85af11f2cdd3054fc7d6509e0840f20959c9b34602bc55a78ca47851004a9a
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -22,18 +22,20 @@
 // 2026-10-09; crunchyui.com since 2026-10-11). When a link changes, change it HERE, AND in
 // each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
 // the hosts listed there. A link outside that scope does nothing on desktop.
+// PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
+// desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 8;
+const SUITE_BUILD = 9;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
-    web: "https://crunchytile.com/", desktop: "https://sevi66.itch.io/crunchytile" },
+    web: "https://crunchytile.com/", desktop: "https://sevi66.itch.io/crunchytile", price: "$6" },
   { id: "ui", name: "CrunchyUI", icon: "▣", pxi: "window", accent: "#7ea6ff",
     what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
     web: "https://crunchyui.com/", desktop: "" },
   { id: "sfx", name: "CrunchySFX", icon: "♪", pxi: "speaker", accent: "#ffd23f",
     what: "Sound effects from scratch: coins, lasers, explosions, robot voices and more, as WAV.",
-    web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx" },
+    web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx", price: "$6" },
   { id: "vfx", name: "CrunchyVFX", icon: "✸", pxi: "sparkle", accent: "#c77dff",
     what: "Sprite effects: explosions, hit sparks, magic, smoke and weather, as sprite sheets.",
     web: "https://crunchyvfx.com/", desktop: "" },

@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/plant.js @ d82674f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/plant.js @ 78cff2e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 2322777838ef3c6a677edefcc85cdeee251638e767f134a3b22acb98cbb3c098
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
