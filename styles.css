@@ -232,6 +232,10 @@
   .preset-section > summary:hover { color: var(--accent); }
   .preset-section .sec-count { color: var(--muted); font-weight: 400; font-size: 11px; }
   .sec-buttons { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 12px; }
+  /* While searching: the best matches (the query or an alias names them), best first, above the sections. */
+  .best-matches { border: 1px solid var(--accent); background: var(--panel); }
+  .best-matches[hidden] { display: none; }
+  .best-head { padding: 9px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.4px; color: var(--accent); }
   /* --fam is set per-button from FAMILY_COLORS: a left edge showing the synthesis family. */
   .presetbar button { padding: 6px 10px; font-size: 12px; border-left: 3px solid var(--fam, var(--line)); }
   .presetbar button:hover { border-left-color: var(--fam, var(--accent)); }
@@ -706,3 +710,15 @@ body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 680px; }
   #libDock { right: 0; width: min(420px, 100%); z-index: 150; box-shadow: var(--lift, none); }
   body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 0; }
 }
+  /* Sound Kit (one sound per role, one era): a list of rows, role · waveform · length · Play · Reroll · Use */
+  .kit-box { width: min(680px, 100%); }
+  .kit-list { display: flex; flex-direction: column; gap: 4px; padding: 12px 18px; overflow-y: auto; }
+  .kit-row { display: grid; grid-template-columns: 96px 148px 44px max-content max-content max-content; justify-content: start; align-items: center; gap: 10px;
+    padding: 3px 8px; border: 2px solid var(--line); background: var(--panel2); }
+  .kit-row.heard { border-color: var(--info); }
+  .kit-role { font-weight: 600; font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kit-row canvas { width: 148px; height: 28px; cursor: pointer; }
+  .kit-len { font-size: 11px; text-align: right; white-space: nowrap; }
+  .kit-row button { padding: 3px 10px; font-size: 12px; }
+  .kit-box .var-ctl select { padding: 6px 24px 6px 8px; font-size: 13px; }
+  @media (max-width: 560px) { .kit-row { grid-template-columns: 80px 1fr auto auto; } .kit-row .kit-len, .kit-row .kit-use { display: none; } }

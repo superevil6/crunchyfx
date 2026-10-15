@@ -33,7 +33,7 @@
 <header>
   <h1>crunchy<b>SFX</b></h1>
   <span class="tag">a from-scratch sound effect generator</span>
-  <button id="browseToggle" class="viewtoggle" title="Show or hide the preset browser (focus mode)" aria-pressed="true" data-icon="folder">Presets</button>
+  <button id="browseToggle" class="viewtoggle" title="Hide the preset browser to give the editor the room (focus mode)" data-icon="folder">Hide presets</button>
   <button id="suiteBtn" class="viewtoggle" title="The other Crunchy tools: tiles, game UI, sprite effects and music" data-icon="star">Crunchy suite</button>
   <button id="feedbackBtn" class="viewtoggle" data-icon="mail" title="Tell the person who makes CrunchySFX what happened, or an idea: from your own mail app, and you see everything it includes">Feedback</button>
   <button id="settingsBtn" class="cog" title="Settings" aria-label="Settings" data-icon="cog"></button>
@@ -50,6 +50,7 @@
   <button id="breed" class="accent2 tool" data-icon="breed" title="Breed: nine offspring of this sound; keep the ones you like and breed again to evolve it somewhere new">Breed<small>mix &amp; evolve</small></button>
   <button id="foundry" class="accent2 tool" title="Foundry: build original sounds by kind (jump, coin, hit…) and console style, keep the ones you like" data-icon="hammer">Foundry<small>build by kind</small></button>
   <button id="variations" class="accent2 tool" title="Variations: the same sound, slightly different, as a pack (jump_01.wav …) so a repeated sound doesn't repeat exactly" data-icon="package">Variations<small>same sound, for repeats</small></button>
+  <button id="kitBtn" class="accent2 tool" title="Sound Kit: a whole set of sounds for your game in one era (jump, coin, confirm, cancel, hit, explosion …), to download or save together" data-icon="layers">Sound Kit<small>a set for your game</small></button>
   <span class="fmtgroup" title="Format for all WAV exports (Export, history, sequence, batch)">
     <select id="fmtRate" title="Sample rate">
       <option value="22050">22 kHz</option>
@@ -70,7 +71,7 @@
   </span>
   </div>
   <div class="controls-right">
-  <button id="export" class="export-btn" title="Export the current sound as a WAV" data-icon="download">Export WAV</button>
+  <button id="export" class="export-btn" title="Export the current sound as a WAV. A WAV drops straight into Godot, Unity or any engine: in Godot, put it in res:// and play it with an AudioStreamPlayer." data-icon="download">Export WAV</button>
   <button id="importwav" title="Import a WAV/audio file to mangle with the tools" data-icon="upload">Import WAV</button>
   <button id="save">Save preset</button>
   <button id="load">Load preset</button>
@@ -86,7 +87,9 @@
       <input type="text" id="soundName" placeholder="untitled" autocomplete="off" spellcheck="false" maxlength="60"></label>
     <canvas id="miniScope" width="360" height="40" title="The sound in the editor (the big waveform is below)"></canvas>
     <span class="now-file hint">Export WAV saves <b id="soundFile">sound.wav</b> · <span id="soundFmt">44.1 kHz 16-bit stereo</span>
-      <button type="button" id="soundFmtBtn" class="linkish" title="Sample rate, bit depth, mono/stereo and loop for every WAV export (Settings)">change format</button></span>
+      <button type="button" id="soundFmtBtn" class="linkish" title="Sample rate, bit depth, mono/stereo and loop for every WAV export (Settings)">change format</button>
+      <!-- WAVs ARE ENGINE-READY, SAID ON SCREEN (2026-10-15 usability round): nothing told a Godot dev the file just works -->
+      · <span class="now-engine" title="A WAV drops straight into Godot, Unity or any engine. Godot: put it in res:// and play it with an AudioStreamPlayer (or AudioStreamPlayer2D). Unity: drop it in Assets/ and play it with an AudioSource.">ready for Godot, Unity or any engine</span></span>
     <span id="nowStatus" class="now-status" role="status" aria-live="polite"></span>
   </div>
   <input type="file" id="loadfile" accept="application/json" hidden>
@@ -357,6 +360,162 @@ const PARAMS = [
   ["gain",       "Gain",       0, 1, 0.01, 0.7, "",     "Output"],
   ["duration",   "Duration",   0.05, 2, 0.01, 0.4, "s", "Output"],
 ];
+// ---------- Help for every control (2026-10-15 usability round, "Sam") ----------
+// One plain-English line per PARAMS key, for someone who has never touched a synth: shown as the row's tooltip (its
+// label and slider). Kept BESIDE PARAMS, not in it, so PARAMS' row shape (sliced by tools/export-synth.py and
+// tools/make-og.mjs) never changes. A new PARAMS row needs a line here: the web suite fails on a key without one.
+const PARAM_HELP = {
+  wave: "The engine that makes the raw sound: a simple tone, a plucked string, a bell, a voice, a whoosh…",
+  freq: "Pitch: how high or low the sound is. Low = big and heavy, high = small and bright.",
+  sweep: "Slides the pitch while the sound plays: up (jumps, power-ups) or down (falls, lasers, deaths).",
+  vibDepth: "Vibrato: a wobble in the pitch. More = a wider wobble.",
+  vibRate: "How fast the vibrato wobbles.",
+  vibOnset: "How long before the vibrato starts (0 = from the very start).",
+  unison: "Stacks copies of the sound, slightly out of tune with each other: thicker, wider, chorus-like.",
+  detune: "How far apart the stacked copies (Unison) are tuned. More = wider and more wobbly.",
+  pulseWidth: "The shape of the pulse wave: thin (nasal, reedy) to square (hollow, classic 8-bit).",
+  pwmDepth: "Makes the pulse width move by itself: the classic shimmering, phasing chiptune tone.",
+  pwmRate: "How fast the pulse width moves.",
+  pluckDamp: "How quickly the plucked string fades and how dark it is. More = shorter and duller.",
+  modalPartials: "How many ringing tones the struck object has. More = richer, more complex metal or wood.",
+  modalDecay: "How long the struck object rings after the hit.",
+  modalInharm: "0 = a musical tone (bar, chime); more = clangy and bell-like, less in tune.",
+  modalBright: "How much of the high ringing you hear: dull thunk to bright ping.",
+  grainSize: "Granular cuts the sound into tiny pieces (grains). This is how long each piece is.",
+  grainDensity: "How many grains play per second. Few = sputtery, many = a smooth cloud.",
+  grainSpray: "Picks each grain from a slightly random place: more = blurrier, more scattered.",
+  grainScan: "How fast the grains move through the source: 1 = normal speed, less = stretched, more = squashed.",
+  grainSpread: "Spreads the grains across left and right for a wider sound.",
+  morph: "Blends your drawn Wave A into Wave B (0 = all A, 1 = all B).",
+  morphSweep: "Moves the blend while the sound plays: towards B (+) or back towards A (−).",
+  formantVowel: "The vowel the voice makes: from 'ah' through 'eh' and 'ee' to 'oh' and 'oo'.",
+  formantSize: "Size of the throat: small = tiny creatures and children, big = giants and monsters.",
+  formantQ: "How sharp the vowel sounds: low = breathy and vague, high = clear and ringing.",
+  formantBreath: "Adds air and breath to the voice: whispery.",
+  formantTilt: "The tone of the voice itself: 0 = buzzy, more = soft and rounded (coos, oohs).",
+  formantRough: "Growl: adds creak, rasp and gravel to the voice.",
+  formantLfoRate: "How fast the vowel changes by itself, as if the voice is talking.",
+  formantLfoDepth: "How far the vowel moves by itself (0 = holds one vowel).",
+  bubbleRate: "How many bubbles pop per second: a drip to a boil.",
+  bubbleRise: "How much each bubble's pitch rises: the 'bloop' in a bubble.",
+  bubbleSpread: "How different the bubbles are in size and pitch.",
+  bubbleDecay: "How long each bubble rings.",
+  particleRate: "How many crackles per second: a few sparks to a roaring fire or heavy rain.",
+  particleTone: "Pitch of the crackles: low thuds to high fizz.",
+  particleDecay: "How long each crackle lasts: tiny clicks to longer pops.",
+  particleSpread: "How different the crackles are from each other.",
+  impactTone: "Pitch of the hit: low thump to high crack.",
+  impactDecay: "How long the hit rings out after the strike.",
+  impactPunch: "How hard and sudden the strike is.",
+  impactGrit: "Dirt and roughness in the hit: clean tap to crunchy smash.",
+  whooshTone: "Pitch of the rushing air: low swoosh to high swish.",
+  whooshSweep: "How much the whoosh rises and falls as it passes by.",
+  whooshBody: "How thick and heavy the whoosh is.",
+  whooshPeak: "Where the loudest moment falls: early (a quick slash) or late (a slow pass).",
+  addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
+  addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
+  addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
+  addDriftRate: "How fast the stacked tones swell and fade.",
+  addDetune: "Spreads the stacked tones slightly out of tune and across the stereo field: wider.",
+  speechRate: "How fast the robot voice speaks.",
+  speechSize: "Size of the speaking voice: small and squeaky to big and deep.",
+  fmAlgo: "How the four FM tones are wired together. Each gives a different family of sounds: try them.",
+  fmRatio2: "Pitch of FM tone 2 compared with the main tone: whole numbers sound musical, others metallic.",
+  fmRatio3: "Pitch of FM tone 3 compared with the main tone: whole numbers sound musical, others metallic.",
+  fmRatio4: "Pitch of FM tone 4 compared with the main tone: whole numbers sound musical, others metallic.",
+  fmIndex: "How strongly the FM tones bend each other: soft and pure to bright, harsh and clangy.",
+  fmFeedback: "Feeds the FM sound back into itself: adds grit and noise.",
+  noise: "Mixes in hiss (noise): for explosions, wind, static, hits.",
+  subOsc: "Adds a tone an octave lower underneath: more weight and bass.",
+  ringMod: "Ring mod: multiplies the sound by a second tone: metallic, bell-like, robotic.",
+  ringFreq: "Pitch of the ring mod's second tone: changes which metallic notes you hear.",
+  noiseColor: "Colour of the hiss: 0 = bright white noise, more = darker and rumblier.",
+  boom: "Adds a deep, falling bass thump underneath: weight for explosions and big hits.",
+  boomFreq: "Pitch of the boom: lower = deeper.",
+  boomDrop: "How far the boom's pitch falls as it plays (in octaves): the 'whump' of a kick drum.",
+  boomDecay: "How long the boom lasts.",
+  attack: "How long the sound takes to fade in: 0 = an instant hit, more = a soft swell.",
+  decay: "How long the sound takes to fall from its peak to the sustain level.",
+  sustain: "The level the sound holds at after the decay (0 = it fades out completely).",
+  release: "How long the sound takes to fade out at the end.",
+  hold: "How long the sound stays at full volume before it starts to fall.",
+  envCurve: "The shape of the fades: 0 = straight lines, more = snappier, more natural fades.",
+  filterMode: "What the filter keeps: lowpass = the lows (muffled), highpass = the highs (thin), bandpass = a narrow middle…",
+  cutoff: "Where the filter cuts: low = dark and muffled, high = bright and open.",
+  reso: "Resonance: a whistling peak at the filter's cutoff. High = squelchy, synthy, wah-like.",
+  filtEnv: "Sweeps the filter over the sound: + opens it up as the sound starts, − closes it.",
+  wahRate: "Wah: moves the filter up and down on its own. How fast it wobbles.",
+  wahDepth: "How far the wah moves the filter.",
+  drive: "Distortion: pushes the sound until it breaks up. A little = warm, a lot = crunchy and aggressive.",
+  driveOS: "Drive quality: higher = cleaner, smoother distortion (less fizzy harshness). Slower to render.",
+  bitcrush: "Bit depth: fewer bits = the grainy, crunchy sound of old consoles. 16 = clean.",
+  downsample: "Lowers the sample rate: more = lo-fi, aliased, old-console grit. 1 = clean.",
+  width: "Stereo width: 0 = centred (mono), more = spread wide across left and right.",
+  reverb: "Reverb: the echoey sound of a room or a hall. How much of it you hear.",
+  reverbSize: "How big the reverb's room is: a closet to a cathedral.",
+  reverbTone: "How bright the reverb is: dark and soft to bright and splashy.",
+  convMix: "A more realistic reverb, modelled on a real kind of space. How much of it you hear.",
+  convType: "Which kind of space the realistic reverb models: a room, a hall, a metal plate, a spring, or your own file.",
+  convSize: "How long the realistic reverb rings (seconds).",
+  convTone: "How bright the realistic reverb is.",
+  delay: "Echo: repeats of the sound. How loud the echoes are.",
+  delayTime: "Time between echoes.",
+  delayFb: "How many echoes: low = one or two, high = a long trail of repeats.",
+  pingpong: "Makes the echoes bounce between left and right.",
+  phaserMix: "Phaser: a sweeping, swirling, jet-like whoosh over the sound.",
+  phaserRate: "How fast the phaser sweeps.",
+  phaserDepth: "How strong the phaser's sweep is.",
+  chorusMix: "Chorus: thickens the sound with slightly wobbling copies, like several players at once.",
+  chorusRate: "How fast the chorus wobbles.",
+  chorusDepth: "How strong the chorus wobble is.",
+  repeat: "Plays the sound several times in a row: bursts, machine guns, rapid beeps.",
+  rate: "How fast the repeats come (per second).",
+  arpStep: "Changes the pitch of each repeat, in semitones: rising or falling runs of notes.",
+  transient: "Shapes the start of the sound: + makes the hit snappier, − softens it.",
+  limiter: "Keeps the loudest peaks under control so the sound can be louder without clipping.",
+  reverse: "Plays the whole sound backwards.",
+  gain: "Overall volume.",
+  duration: "How long the sound is, in seconds.",
+};
+// One line per engine (the Engine buttons), in the same plain words.
+const WAVE_HELP = {
+  sine: "The purest tone: soft, round, clean. Beeps, chimes, whistles.",
+  square: "Hollow and buzzy: the classic 8-bit video-game tone.",
+  saw: "Bright and buzzy: rich, brassy, aggressive. Lasers, synths.",
+  triangle: "Soft and flute-like, between a sine and a square. Gentle retro tones.",
+  pulse: "A square wave you can make thinner (Pulse width): nasal, reedy chiptune tones.",
+  FM: "Simple FM: one tone bending another. Bells, electric pianos, metallic zaps.",
+  organ: "A few stacked tones like an organ: warm, full.",
+  "half-sine": "A sine with half cut away: soft but with a little edge.",
+  pluck: "A plucked string, physically modelled: guitars, harps, plinks.",
+  sample: "Your own audio (Import WAV or Record), reshaped by every control here.",
+  modal: "A struck object that rings: bells, bars, metal, wood, mallets.",
+  granular: "Chops a sound into tiny grains and scatters them: textures, clouds, glitches.",
+  custom: "A waveform you draw yourself.",
+  formant: "A vocal model: vowels, voices, creatures, choirs.",
+  bubble: "Water: drips, bubbles, pours, boiling.",
+  particle: "Crackles: fire, rain, sparks, static, gravel.",
+  additive: "Many stacked tones that drift: pads, drones, swells.",
+  speech: "A retro robot voice that speaks the text you type.",
+  "FM 4op": "Four-tone FM like 90s consoles and keyboards: bells, basses, brass, metallic hits.",
+  impact: "Built for hits: punches, thuds, slams, gunshots.",
+  whoosh: "Air moving past: swings, swooshes, dashes, passes.",
+};
+// One line per Console: what that old machine sounded like.
+const CONSOLE_HELP = {
+  "8-Bit": "Like the NES / Famicom: clean square-wave beeps.",
+  "Pocket": "Like the original Game Boy: thin, gritty, lo-fi.",
+  "Super": "Like the SNES: warmer, softer, with a little echo.",
+  "Mega": "Like the Mega Drive / Genesis: twangy, metallic FM.",
+  "Turbo": "Like the PC Engine / TurboGrafx-16: bright little wavetable tones.",
+  "Woodgrain": "Like the Atari 2600 (the wood-panelled one): harsh, detuned, very crunchy.",
+  "SID": "Like the Commodore 64's SID chip: shimmering, squelchy filtered pulses.",
+  "1-Bit": "Like a ZX Spectrum or a PC speaker: a raw on-off beeper buzz.",
+  "Pokey": "Like the Atari 8-bit computers' POKEY chip: resonant, gritty buzz.",
+  "Arcade": "Like 90s arcade boards and the Neo Geo: rich four-tone FM.",
+  "AY": "Like the AY / YM chip in the Amstrad CPC, ZX Spectrum 128 and Atari ST: buzzy detuned squares.",
+};
+
 
 const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
@@ -600,9 +759,23 @@ function fileStem(name) {
 }
 // The sound's display name ("" when it has none). seqLabel's "Sound" is the old unnamed marker.
 function soundName() { return seqLabel && seqLabel !== "Sound" ? seqLabel : ""; }
+// A DIFFERENT SOUND NEVER REUSES A FILE NAME IN ONE SESSION (2026-10-15 usability round): on the web every export lands
+// in Downloads, so a second, different "coin.wav" became "coin(1).wav" or clashed. The first export of a name keeps it
+// plain; a different sound under the same name is coin-2.wav, coin-3.wav … (the same sound again keeps its own name).
+// The desktop asks where to save with a native dialog (the name is a suggestion there), so it keeps the plain name.
+const exportNamesUsed = new Map();   // file name → the sound it was (its state, as JSON)
+function exportFileName(name, snap) {
+  const stem = fileStem(name);
+  if (isDesktopShell()) return stem + ".wav";
+  const key = JSON.stringify(snap || snapshotState());
+  let file = stem + ".wav";
+  for (let n = 2; exportNamesUsed.has(file) && exportNamesUsed.get(file) !== key; n++) file = stem + "-" + n + ".wav";
+  exportNamesUsed.set(file, key);
+  return file;
+}
 function exportWav() {
   const { L, R } = render();
-  const name = soundName(), file = fileStem(name) + ".wav";
+  const name = soundName(), file = exportFileName(name);
   downloadWav(L, R, file, name || "sound").then((saved) => { if (saved) nowSay("Saved " + saved + (isDesktopShell() ? "" : " (downloads)")); });
 }
 // ---------- The now bar (the sound in the editor: name, file, mini waveform, status) ----------
@@ -660,6 +833,12 @@ function drawMiniScope(L) {
   box.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === "Escape") box.blur(); });
   box.addEventListener("blur", nowSync);
   document.getElementById("soundFmtBtn").addEventListener("click", () => { settingsDialog.open(); settingsExtras(); const r = document.getElementById("settingsFmtRow"); if (r) r.scrollIntoView({ block: "nearest" }); });
+}
+// Scroll the page so `el`'s top sits just below the sticky controls bar (which would otherwise cover it).
+function scrollToBelowControls(el) {
+  const bar = document.querySelector(".controls");
+  const under = bar && getComputedStyle(bar).position === "sticky" ? bar.getBoundingClientRect().height : 0;
+  window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - under - 12));
 }
 function isDesktopShell() { const T = window.__TAURI__; return !!(T && T.dialog && T.fs); }
 
@@ -803,7 +982,7 @@ function renderHistory() {
     el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state, hname));
     el.querySelector('[data-a="wav"]').addEventListener("click", () => withState(item.state, () => {
       const { L, R } = render();
-      const file = fileStem(hname) + ".wav";
+      const file = exportFileName(hname, item.state);
       downloadWav(L, R, file, hname || "sound").then((saved) => { if (saved) nowSay("Saved " + saved + (isDesktopShell() ? "" : " (downloads)")); });
     }));
     const histDrag = el.querySelector('[data-a="drag"]');
@@ -950,6 +1129,7 @@ for (const [group, ps] of Object.entries(groups)) {
       row.className = "waverow";
       const sel = `<select data-key="${key}">${list.map((w, i) => `<option value="${i}">${w}</option>`).join("")}</select>`;
       row.innerHTML = `<label>${label}</label>${sel}`;
+      if (PARAM_HELP[key]) row.title = label + ": " + PARAM_HELP[key];   // the plain-English line (PARAM_HELP)
       panel.appendChild(row);
       const el = row.querySelector("select");
       el.value = state[key];
@@ -960,6 +1140,7 @@ for (const [group, ps] of Object.entries(groups)) {
       row.innerHTML = `<label>${label}</label>
         <input type="range" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${state[key]}">
         <output></output>`;
+      if (PARAM_HELP[key]) row.title = label + ": " + PARAM_HELP[key];   // the plain-English line (PARAM_HELP)
       panel.appendChild(row);
       const input = row.querySelector("input");
       const out = row.querySelector("output");
@@ -1018,6 +1199,7 @@ function makeEngineBtn(i) {
   b.className = "engine-btn";
   b.dataset.wave = i;
   b.textContent = WAVES[i];
+  if (WAVE_HELP[WAVES[i]]) b.title = WAVES[i] + ": " + WAVE_HELP[WAVES[i]];
   b.addEventListener("click", () => { state.wave = i; updateWavePanels(); syncWaveButtons(); play(); });
   return b;
 }
@@ -1071,8 +1253,9 @@ const CONSOLES = [
 const consoleSection = document.createElement("div");
 consoleSection.className = "console";
 consoleSection.innerHTML =
-  '<div class="engine-title"><span>Console — re-voice the sound on a retro chip (keeps its pitch &amp; rhythm)</span>' +
-    '<button id="consoleClean" class="engine-btn">✕ clean</button></div>' +
+  '<div class="engine-title" title="Re-voices the sound on an old console\'s sound chip. Its pitch, length and rhythm stay; the tone becomes that machine\'s.">' +
+    '<span>Console — make it sound like an old game console (keeps its pitch &amp; rhythm)</span>' +
+    '<button id="consoleClean" class="engine-btn" title="Remove the console\'s voice: back to the plain sound">✕ clean</button></div>' +
   '<div class="console-grid" id="consoleGrid"></div>';
 document.querySelector(".ws-editor").insertBefore(consoleSection, panels);   // after Engine, before panels
 const consoleGrid = consoleSection.querySelector("#consoleGrid");
@@ -1092,6 +1275,7 @@ CONSOLES.forEach(([name, skin]) => {
   b.className = "engine-btn";
   b.dataset.console = name;
   b.textContent = name;
+  if (CONSOLE_HELP[name]) b.title = name + ": " + CONSOLE_HELP[name];
   b.addEventListener("click", () => applyConsole(name, skin));
   consoleGrid.appendChild(b);
 });
@@ -1626,16 +1810,33 @@ function applyPreset(obj, label, action) {
 const PRESET_CATEGORIES = window.PRESET_CATEGORIES;   // category layout lives in presets.js
 
 const presetBar = document.getElementById("presets");
-// A preset button — same behaviour as before: click = fresh variation of that character.
+// A preset button. THE FIRST CLICK IS THE PRESET (2026-10-15 usability round, "Sam"): it used to load a fresh random
+// variation every time, so the Coin you liked was gone on the next click. Now a click loads the preset EXACTLY; a
+// click on the same preset while the editor still holds what that button just gave (untouched) is a variation, named
+// apart ("Coin v2", "Coin v3" … — never "Coin 2", which is another preset) so History and the files tell them apart.
+let presetTake = null;            // { name, state }: what the last preset click put in the editor
+const presetTakeN = {};           // preset name → its highest variation number this session
+function presetClick(name) {
+  const again = presetTake && presetTake.name === name && sameState(presetTake.state, snapshotState());
+  if (again) {
+    const n = presetTakeN[name] = (presetTakeN[name] || 1) + 1;
+    applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name + " v" + n, "Variation");
+    nowSay(name + ", variation " + n + ": click it again for another, Undo for the one before");
+  } else {
+    applyPreset(PRESETS[name], name);
+    nowSay(name + " preset: click it again for a variation");
+  }
+  presetTake = { name: name, state: snapshotState() };
+}
 function makePresetButton(name) {
   const b = document.createElement("button");
   b.textContent = name;
   const fam = familyOf((PRESETS[name] || {}).wave);   // colour-code by synthesis family
   b.dataset.fam = fam;
   b.style.setProperty("--fam", FAMILY_COLORS[fam]);
-  b.title = "Click for a fresh " + name + "-like variation · " + fam;
+  b.title = "Click: load " + name + " · click again: a fresh variation of it · " + fam;
   b.dataset.pb = name;   // drag source id for custom categories (desktop)
-  b.addEventListener("click", () => applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name));
+  b.addEventListener("click", () => presetClick(name));
   return b;
 }
 // Safety net: surface any preset not placed in a category above.
@@ -1678,43 +1879,99 @@ const presetCount = document.getElementById("presetCount");
 // SEARCH BY WORD STARTS, WITH A GAME-DEV VOCABULARY (2026-10-14 usability round): "hit" finds 8-Bit Hit, not
 // cHITtering; "back" finds Cancel, "menu" the UI sounds. Every query word must start a word of the preset's name, of
 // its section's name, or be an alias of one (SEARCH_ALIASES: the words a game dev types → the words presets use).
+// SECOND ROUND (2026-10-15, "Sam"): spaces and hyphens don't matter ("power up" = "power-up" = "powerup": a query or an
+// alias may run across the name's words); an ALIAS matches preset NAMES only, never a section's name ("hurt" → hit
+// meant the whole Hits / Melee section, 59 swords and axes); and the best matches come first, in their own row
+// (the name itself, then an alias of it), above the sections. Keys are compact (no spaces): "levelup", "gameover".
 const SEARCH_ALIASES = {
   back: ["cancel", "close", "return"], menu: ["ui", "cursor", "select", "confirm", "cancel", "click", "blip"],
+  ui: ["click", "blip", "cursor", "menu", "select", "confirm", "cancel"], click: ["blip", "cursor", "tick", "select"],
   select: ["confirm", "cursor", "click"], ok: ["confirm", "accept"], accept: ["confirm"], deny: ["error", "cancel", "buzz"],
-  hurt: ["hit", "damage", "pain", "ouch"], damage: ["hit", "hurt"], pain: ["hurt", "ouch"],
-  pickup: ["coin", "collect", "item", "gem"], collect: ["coin", "pickup", "gem"], item: ["pickup", "coin"],
-  death: ["die", "dead", "game"], die: ["death", "dead"], shoot: ["laser", "gun", "shot", "blaster", "pistol"],
+  hurt: ["hit", "damage", "pain", "ouch", "oof", "impact", "punch"], damage: ["hit", "hurt", "impact", "punch"],
+  pain: ["hurt", "ouch", "hit"], ouch: ["hit", "hurt", "pain"], oof: ["hit", "hurt", "thud"],
+  pickup: ["coin", "collect", "item", "gem"], collect: ["coin", "pickup", "gem"], item: ["pickup", "coin"], gem: ["pickup", "coin", "sparkle"],
+  death: ["die", "dead", "game over"], die: ["death", "dead", "game over"], shoot: ["laser", "gun", "shot", "blaster", "pistol", "zap"],
   gun: ["shot", "pistol", "rifle", "blaster", "shotgun"], attack: ["hit", "slash", "swing", "sword", "punch"],
-  explode: ["explosion", "boom", "blast"], boom: ["explosion", "blast"], powerup: ["power", "upgrade", "level"],
-  win: ["victory", "fanfare", "success", "level"], lose: ["fail", "game", "death"], error: ["wrong", "buzz", "deny"],
-  walk: ["footstep", "step"], step: ["footstep"], land: ["thud", "impact", "landing"], bounce: ["spring", "boing"],
-  hover: ["cursor", "tick"], open: ["door", "chest"], swing: ["whoosh", "swoosh"], dash: ["whoosh", "swoosh"],
+  explode: ["explosion", "boom", "blast", "kaboom"], explosion: ["boom", "blast", "kaboom"], boom: ["explosion", "blast", "kaboom"],
+  powerup: ["power up", "upgrade", "level up", "extra life"], levelup: ["level up", "fanfare", "victory"],
+  oneup: ["extra life"], "1up": ["extra life"], extralife: ["extra life"], heal: ["healing", "restore", "regen", "extra life", "chime", "sparkle"],
+  win: ["victory", "fanfare", "success", "level up"], lose: ["fail", "game over", "death"], gameover: ["game over", "mission failed"],
+  error: ["wrong", "buzz", "deny"], walk: ["footstep", "step"], step: ["footstep"], land: ["thud", "impact", "landing"],
+  jump: ["hop", "boing"], bounce: ["spring", "boing"], hover: ["cursor", "tick"], open: ["door", "chest"],
+  swing: ["whoosh", "swoosh"], dash: ["whoosh", "swoosh"], laser: ["zap", "blaster"], zap: ["laser"], block: ["shield"],
 };
 const searchWords = (t) => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-function searchMatcher(q) {
-  const terms = searchWords(q).map((t) => [t].concat(SEARCH_ALIASES[t] || []));
-  if (!terms.length) return () => true;
-  return (text, extra) => {
-    const words = searchWords(text + " " + (extra || ""));
-    return terms.every((alts) => alts.some((a) => words.some((w) => w.startsWith(a))));
+const compactWord = (t) => searchWords(t).join("");
+// Does `alt` (any spacing) start a word of `words`, possibly running on across the next ones ("powerup" ↔ Power Up)?
+// `whole`: it must be whole words (or a plural): an ALIAS is a word, not a prefix ("pain" is not Paint Stroke).
+function wordsHave(words, alt, whole) {
+  if (!alt) return false;
+  const fits = (s) => whole ? s === alt || s === alt + "s" || s === alt + "es" : s.startsWith(alt);
+  for (let i = 0; i < words.length; i++) {
+    if (fits(words[i])) return true;
+    if (alt.startsWith(words[i])) { let s = words[i]; for (let j = i + 1; j < words.length && s.length < alt.length + 2; j++) { s += words[j]; if (fits(s)) return true; } }
+  }
+  return false;
+}
+// searchScore(q)(name, section) → 0 (no match) | 1 (via its section's name) | 2…2.9 (an alias names it; its first
+// aliases rank higher: "hurt" → Hit before Punch) | 3 (the query names it) | 4 (the query IS its name). A query of
+// several words also counts as one compact word ("power up").
+function searchScore(q) {
+  const ws = searchWords(q);
+  if (!ws.length) return () => 4;
+  const compact = ws.join("");
+  const aliasOf = (t) => (SEARCH_ALIASES[t] || []).map(compactWord);
+  const viaAlias = (nw, list) => { const i = list.findIndex((a) => wordsHave(nw, a, true)); return i < 0 ? 0 : 2 + 0.9 * (1 - i / list.length); };
+  return (name, section) => {
+    const nw = searchWords(name);
+    if (nw.join("") === compact) return 4;
+    if (ws.every((t) => wordsHave(nw, t)) || (ws.length > 1 && wordsHave(nw, compact))) return 3;
+    const whole = viaAlias(nw, aliasOf(compact));
+    if (whole) return whole;
+    if (ws.length > 1 && ws.every((t) => wordsHave(nw, t) || aliasOf(t).some((a) => wordsHave(nw, a, true)))) return 2;
+    const sw = searchWords(section || "");
+    if (sw.length && ws.every((t) => wordsHave(nw, t) || wordsHave(sw, t))) return 1;
+    return 0;
   };
 }
+function searchMatcher(q) { const score = searchScore(q); return (text, extra) => score(text, extra) > 0; }   // (kept: a yes/no form)
+// THE BEST MATCHES ROW: while searching, up to BEST_MAX presets the query (or an alias) names, best first, above the
+// sections (whose own filtered lists stay, A→Z). Buttons of its own, so the sections are left exactly as they were.
+const BEST_MAX = 12;
+const bestRow = document.createElement("div");
+bestRow.className = "best-matches";
+bestRow.hidden = true;
+presetBar.insertBefore(bestRow, presetBar.firstChild);
 function filterPresets() {
   const q = presetSearch.value.trim().toLowerCase();
-  const matches = searchMatcher(q);
+  const score = searchScore(q);
   let shown = 0;
+  const best = [];
   sections.forEach(({ details, buttons }, idx) => {
     let secShown = 0;
-    const secName = (details.querySelector("summary") || {}).textContent || "";
+    const secName = ((details.querySelector("summary") || {}).textContent || "").replace(/\(\d+\)/, "");
     for (const b of buttons) {
-      const match = !q || matches(b.textContent, secName.replace(/\(\d+\)/, ""));
-      b.style.display = match ? "" : "none";
-      if (match) secShown++;
+      const s = q ? score(b.textContent, secName) : 4;
+      b.style.display = s ? "" : "none";
+      if (s) secShown++;
+      if (q && s >= 2) best.push({ name: b.textContent, s: s });
     }
     details.style.display = secShown ? "" : "none";
     details.open = q ? secShown > 0 : idx === 0;     // reveal matches; else restore default
     shown += secShown;
   });
+  best.sort((a, b) => b.s - a.s || a.name.length - b.name.length || a.name.localeCompare(b.name, undefined, { numeric: true }));
+  bestRow.innerHTML = "";
+  bestRow.hidden = !best.length;
+  if (best.length) {
+    const h = document.createElement("div");
+    h.className = "best-head";
+    h.textContent = "Best matches";
+    const wrap = document.createElement("div");
+    wrap.className = "sec-buttons";
+    best.slice(0, BEST_MAX).forEach((m) => wrap.appendChild(makePresetButton(m.name)));
+    bestRow.appendChild(h); bestRow.appendChild(wrap);
+  }
   shown += filterMyPresets(q);                       // also filter the saved-preset library
   shown += filterUserCats(q);                        // …and any custom categories
   presetCount.textContent = q ? (shown + " match" + (shown === 1 ? "" : "es")) : "";
@@ -1776,14 +2033,20 @@ makeCollapsible(document.querySelector(".console"), document.querySelector(".con
 const workspaceEl = document.querySelector(".workspace");
 const browseToggle = document.getElementById("browseToggle");
 if (workspaceEl && browseToggle) {
+  // THE LABEL SAYS WHAT A CLICK DOES (2026-10-15 usability round, "Sam"): it read "Presets", lit, like a way TO the
+  // presets, and a click hid them. Now "Hide presets" / "Show presets"; showing them also brings them into view.
   const applyBrowse = () => {
     const hidden = !!prefs.hideBrowser;
     workspaceEl.classList.toggle("browser-hidden", hidden);
-    browseToggle.classList.toggle("active", !hidden);
-    browseToggle.setAttribute("aria-pressed", String(!hidden));
-    setIconLabel(browseToggle, "folder", hidden ? "Show presets" : "Presets");
+    browseToggle.classList.toggle("active", hidden);   // lit only as the way back to them
+    browseToggle.removeAttribute("aria-pressed");
+    browseToggle.title = hidden ? "Show the preset browser again" : "Hide the preset browser to give the editor the room (focus mode)";
+    setIconLabel(browseToggle, "folder", hidden ? "Show presets" : "Hide presets");
   };
-  browseToggle.addEventListener("click", () => { prefs.hideBrowser = !prefs.hideBrowser; savePrefs(); applyBrowse(); });
+  browseToggle.addEventListener("click", () => {
+    prefs.hideBrowser = !prefs.hideBrowser; savePrefs(); applyBrowse();
+    if (!prefs.hideBrowser) { const box = document.querySelector(".ws-browser .presetsearch"); if (box) scrollToBelowControls(box); }
+  });
   applyBrowse();
 }
 
@@ -2203,6 +2466,7 @@ updateMacros();
 
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT") {
+    if (!kitModal.hidden) return;   // the Sound Kit: Space presses the focused button (Play, Reroll), not the editor's Play
     e.preventDefault();
     play();
   }
@@ -2396,11 +2660,13 @@ riffPanel.querySelector("#riffLoopIn").addEventListener("change", (e) => { riffL
 riffPlayBtn.addEventListener("click", () => { if (riffPlaying) riffStop(); else riffPlay(); });
 riffPanel.querySelector("#riffExportBtn").addEventListener("click", riffExport);
 riffPanel.querySelector("#riffClearBtn").addEventListener("click", () => { riffPattern = new Array(riffN).fill(null); riffSel = 0; riffStop(); renderRiff(); });
-// Collapsible bordered section holding the keyboard + riff. Defaults EXPANDED (keyboard stays
-// available); folding hides both and stops playback. Step-entry is the separate ✎ Write toggle.
+// Collapsible bordered section holding the keyboard + riff; folding hides both and stops playback. Step-entry is the
+// separate ✎ Write toggle. FOLDED on a first visit (2026-10-15 usability round, "Sam"): open, the piano and the step
+// grid filled the first screen and pushed the presets below the fold. Anyone who opened it once keeps it open
+// (prefs.collapsed.instrument is remembered).
 riffPanel.querySelector("#riffWriteIn").addEventListener("change", (e) => { riffWrite = e.target.checked; });
 makeCollapsible(riffPanel, riffPanel.querySelector(".riff-head"), "instrument",
-  (open) => { if (open) renderRiff(); else riffStop(); });
+  (open) => { if (open) renderRiff(); else riffStop(); }, true);
 renderRiff();
 
 // Wire the persistence hooks (declared up near snapshotState) now that the riff state + UI exist,
@@ -2735,6 +3001,9 @@ function crc32(bytes) {
   let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
+// A VALID, FIXED DOS DATE (2026-10-15): the entries carried 0 (1980-00-00, which unzip shows as 2114). 1980-01-01 00:00
+// is the earliest valid date: deterministic (the same pack is the same bytes) and read correctly everywhere.
+const ZIP_DOS_DATE = (0 << 9) | (1 << 5) | 1;   // (year-1980)<<9 | month<<5 | day
 function makeZip(files) {   // files: [{name, data:Uint8Array}] → a STORE-only (uncompressed) .zip
   const enc = new TextEncoder(), parts = [], central = [];
   let offset = 0;
@@ -2743,10 +3012,12 @@ function makeZip(files) {   // files: [{name, data:Uint8Array}] → a STORE-only
     const name = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length, at = offset;
     const h = new DataView(new ArrayBuffer(30));
     h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(8, 0, true);   // sig, ver, STORE
+    h.setUint16(10, 0, true); h.setUint16(12, ZIP_DOS_DATE, true);                        // 00:00, 1980-01-01
     h.setUint32(14, crc, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true); h.setUint16(26, name.length, true);
     push(new Uint8Array(h.buffer)); push(name); push(f.data);
     const c = new DataView(new ArrayBuffer(46));
     c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true);
+    c.setUint16(12, 0, true); c.setUint16(14, ZIP_DOS_DATE, true);
     c.setUint32(16, crc, true); c.setUint32(20, sz, true); c.setUint32(24, sz, true);
     c.setUint16(28, name.length, true); c.setUint32(42, at, true);
     central.push(new Uint8Array(c.buffer), name);
@@ -2936,52 +3207,38 @@ function buildPackFiles() {
     return { name: varFileName(i), data: new Uint8Array(buf), title: base + " " + (i + 1), item: item, L: L };
   });
 }
-// THE WEB ZIP CARRIES SIDECARS (crunchyCore DESKTOP-ROADMAP.md §6.4): each variation of a single sound IS a sound with a
-// share form, so it goes in a folder of its own beside its <name>.crunchy, the shape a planted Library reads. Unzipped
-// into a game's crunchy/sfx/, the desktop Library finds every one and re-renders the same bytes (its exportName is the
-// WAV's title, its wav the file's name). The WAVs themselves are byte-for-byte what they were. A SEQUENCE variation has
-// no share form (a list of sounds), so a sequence pack stays WAVs only, at the root, as before.
-//
-// THE ZIP'S LAYOUT (2026-10-14 usability round): the WAVs FLAT at the top (hit_01.wav … hit_08.wav, ready to select
-// together and drop into Godot's AudioStreamRandomizer), a README.txt, and the Library form above (a folder per sound,
-// its WAV beside its .crunchy) under crunchy-library/, where it is out of the way. The WAVs are copies: the same bytes.
+// THE ZIP (2026-10-15 usability round, "Sam"): the WAVs flat at the top (hit_01.wav … hit_08.wav, ready to select
+// together and drop into Godot's AudioStreamRandomizer) and a README.txt — nothing else. Until then it also carried a
+// crunchy-library/ folder (crunchyCore DESKTOP-ROADMAP.md §6.4: each take as a planted-Library entry, its WAV beside its
+// .crunchy), but those were COPIES of every WAV: a game dev who dropped the unzipped folder into a Godot project got 16
+// imported sounds for 8. The README now carries each take's share link instead, so any take reopens in CrunchySFX
+// (in a browser) — "edit it later" with no second copy of the audio. A SEQUENCE variation has
+// no share form (a list of sounds): its README has no links.
+function packTakeLink(f) {
+  if (!f.item || Array.isArray(f.item) || (sampleBuf && usesSample(f.item.wave))) return "";   // imported audio is not in a link
+  const keepRiff = riffGetPatch;
+  riffGetPatch = () => null;                                     // a variation carries no riff
+  try { return WEB_BASE_URL + "?s=" + withState(f.item, () => encodePatch(f.title)); } finally { riffGetPatch = keepRiff; }
+}
 function packReadme(files, seq) {
   const first = files[0].name, last = files[files.length - 1].name;
+  const links = seq ? [] : files.map((f) => { const u = packTakeLink(f); return u ? "  " + f.name + "  " + u : ""; }).filter(Boolean);
   return [
     varBaseName() + ": a variation pack from CrunchySFX (" + files.length + " sounds" + (seq ? ", each the whole sequence" : "") + ")",
     "",
     first + " … " + last + "  (" + nowFmtText() + ")",
     "  The same sound, slightly different each time, matched in loudness (gated RMS), peaks at or below -3 dBFS.",
     "",
-    "Godot 4: put the WAVs in your project, make an AudioStreamRandomizer (on an AudioStreamPlayer's Stream),",
+    "Godot 4: put the WAVs in your project (res://), make an AudioStreamRandomizer (on an AudioStreamPlayer's Stream),",
     "  and add each WAV to its Streams list (drag them from the FileSystem dock). Its Random Pitch and",
     "  Random Volume Offset add more variety on top; leave them at 1 and 0 to play the takes as they are.",
     "Unity: drop the WAVs into an AudioClip[] and play a random one.",
-    seq ? "" : "",
-    seq ? "" : "crunchy-library/: the same sounds as CrunchySFX desktop Library entries (a folder each, with its .crunchy).\n" +
-               "  Copy those folders into your game's crunchy/sfx/ to keep them editable in the Library; otherwise delete it.",
-    "",
-  ].join("\n");
+  ].concat(links.length ? ["", "Edit a take again: open its link (it opens in CrunchySFX with that exact sound).", ""].concat(links) : [])
+   .concat([""]).join("\n");
 }
 function packZipFiles(files) {
-  const enc = new TextEncoder();
   const seq = files.some((f) => Array.isArray(f.item));
-  const flat = files.map((f) => ({ name: f.name, data: f.data })).concat([{ name: "README.txt", data: enc.encode(packReadme(files, seq)) }]);
-  if (seq) return flat;                                          // a sequence has no share form: WAVs + README only
-  const out = flat;
-  files.forEach(function (f) {
-    const stem = f.name.replace(/\.wav$/, "");
-    const keepRiff = riffGetPatch;
-    riffGetPatch = () => null;                                   // a variation carries no riff
-    let s;
-    try { s = withState(f.item, () => encodePatch(f.title)); } finally { riffGetPatch = keepRiff; }
-    const fields = { s: s, exportName: f.title, wav: f.name, fmt: fmtNow(), peaks: soundPeaks({ L: f.L }) };
-    if (sampleBuf && usesSample(f.item.wave)) fields.sampleF32 = f32ToB64(sampleBuf);
-    if (customIR && Math.round(f.item.convType) === 4 && f.item.convMix > 0) fields.customIR = customIR.name || "a loaded impulse response";
-    const side = plantSidecarFile(stem, plantSidecar("sound", f.title, fields, [{ path: f.name, data: f.data }], APP_VERSION));
-    out.push({ name: "crunchy-library/" + stem + "/" + f.name, data: f.data }, { name: "crunchy-library/" + stem + "/" + side.path, data: enc.encode(side.data) });
-  });
-  return out;
+  return files.map((f) => ({ name: f.name, data: f.data })).concat([{ name: "README.txt", data: new TextEncoder().encode(packReadme(files, seq)) }]);
 }
 async function exportPack() {
   const files = buildPackFiles();
@@ -2999,7 +3256,7 @@ async function exportPack() {
     a.download = base + "_pack.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    varMsg.textContent = "✓ Saved " + base + "_pack.zip to your downloads: " + files.length + " WAVs at its top (" + files[0].name + " …), a README, and crunchy-library/ for the desktop app";
+    varMsg.textContent = "✓ Saved " + base + "_pack.zip to your downloads: " + files.length + " WAVs (" + files[0].name + " …) and a README (how to use them in Godot or Unity)";
     nowSay("Saved " + base + "_pack.zip");
   }
 }
@@ -3228,7 +3485,7 @@ function ucResolve(it) {
   return null;
 }
 function ucApply(it) {   // click an item = load it into the editor (+ play)
-  if (it.t === "b") { if (PRESETS[it.n]) applyPreset(audiblePatch(() => varyPreset(PRESETS[it.n])), it.n); return; }
+  if (it.t === "b") { if (PRESETS[it.n]) presetClick(it.n); return; }   // a built-in: the same click rule as its button
   const p = userPresets.find((x) => x.id === it.id);
   if (p) { if (p.sample) { sampleBuf = b64ToSample(p.sample); sampleName = p.name; updateSampleUI(); } applyPreset(p.state, p.name); }
 }
@@ -3659,6 +3916,13 @@ const STYLES = [
   { name: "AY",      fn: (g) => { retro(g); if (tonal(g)) g.wave = 1; g.bitcrush = Math.min(g.bitcrush, 5); g.detune = Math.max(g.detune, 8); g.unison = Math.max(g.unison, 2); g.vibDepth = Math.max(g.vibDepth, 0.07); g.vibRate = 8; return g; } },
 ];
 const styleByName = (n) => STYLES.find((s) => s.name === n);
+// The help line for a style (CONSOLE_HELP's, the Consoles strip's), for the Foundry's style chips and the Kit's Era menu.
+const styleHelp = (n) => n === "Generic" ? "The full modern engine: no console character." : CONSOLE_HELP[n] || "";
+// The console character as a function over a (sparse) patch: on a full genome, or the identity for "Generic".
+function styleShaper(styleName) {
+  const style = styleByName(styleName) || STYLES[0];
+  return style.fn ? (g) => style.fn(fullGenome(g)) : (g) => g;
+}
 
 // Fresh batch. type: "mutate" = mutate the editor sound; "random" = full-range chaos (old
 // behaviour, mostly duds); "any" = a random archetype per tile; otherwise an archetype name.
@@ -3673,7 +3937,7 @@ function fullGenome(patch) {
 }
 function foundryGenerate(type, styleName) {
   const style = styleByName(styleName) || STYLES[0];
-  const shape = style.fn ? (g) => style.fn(fullGenome(g)) : (g) => g;   // console character (on a full genome), or identity
+  const shape = styleShaper(styleName);   // console character (on a full genome), or identity
   const out = [];
   if (type === "mutate") {
     const seed = genomeFromState();
@@ -3714,7 +3978,7 @@ foundryModal.innerHTML =
     '</div>' +
     '<div class="fnd-styles" id="fndStyles">' +
       '<span class="fnd-slabel">Console style</span>' +
-      STYLES.map((s, i) => '<label class="fnd-style"><input type="radio" name="fndstyle" value="' + s.name + '"' + (i === 0 ? ' checked' : '') + '><span>' + s.name + '</span></label>').join('') +
+      STYLES.map((s, i) => '<label class="fnd-style" title="' + styleHelp(s.name) + '"><input type="radio" name="fndstyle" value="' + s.name + '"' + (i === 0 ? ' checked' : '') + '><span>' + s.name + '</span></label>').join('') +
     '</div>' +
     '<div id="fndGrid" class="breed-grid"></div>' +
     (isDesktop ?
@@ -3820,6 +4084,247 @@ if (isDesktop) {
     fndMsg.textContent = "✓ Saved " + foundryKeep.length + " to My Presets.";
   });
 }
+
+// ---------- Sound Kit (2026-10-15, AJ: "a kit … UI sounds (confirm, cancel), basic actions (jump, swing, coin) … a modal,
+// an era dropdown, a list of the generated sounds that fill their roles and an export to library/save button") ----------
+// One sound per ROLE, all in ONE era (a Foundry console style). Each role is a Foundry archetype, or a preset as the seed;
+// both go through the Foundry's own path: varyPreset (the mild jitter a preset's second click gives) → the era's style →
+// audiblePatch. The web downloads one zip (<kit>/<role>.wav + README.txt); the desktop also plants each sound in the
+// Library as "<Kit> <Role>" through projPut (Save never overwrites: a taken name gets the next number).
+// KIT_ROLES is APPEND-ONLY (a kit's file names come from it). `kind` = an ARCHETYPES name; `preset` = a PRESETS name;
+// `over` = params laid over the source before the jitter; `what` = the README's line for it.
+const KIT_ROLES = [
+  { role: "Jump",      kind: "Jump / hop",        what: "the player jumps" },
+  { role: "Coin",      kind: "Coin / pickup",     what: "a coin or item is picked up" },
+  { role: "Confirm",   preset: "Confirm",         what: "a menu choice is accepted" },
+  { role: "Cancel",    preset: "Cancel",          what: "back, or a menu choice is refused" },
+  { role: "Menu Move", preset: "Cursor Move",     what: "the cursor moves between menu items" },
+  { role: "Swing",     kind: "Whoosh / swing",    what: "a sword, a punch, a dash" },
+  { role: "Hit",       kind: "Hit / impact",      what: "an attack lands" },
+  // Hurt: the Hit, lower, with a longer fall (sfxr's own "hit/hurt" is this sound) so the two read apart
+  { role: "Hurt",      kind: "Hit / impact",      over: { freq: 110, sweep: -0.55, noise: 0.35, decay: 0.16, release: 0.1, duration: 0.32 }, what: "the player takes damage" },
+  { role: "Explosion", kind: "Explosion / boom",  what: "something blows up" },
+  { role: "Power-up",  kind: "Powerup / fanfare", what: "an upgrade, a level up" },
+  { role: "Shoot",     kind: "Laser / zap",       what: "a shot is fired" },
+  { role: "Game Over", preset: "Game Over",       what: "the game is lost" },
+];
+function kitSource(r) {
+  const src = r.preset ? PRESETS[r.preset] : archByName(r.kind).patch;
+  return r.over ? Object.assign({}, src, r.over) : src;
+}
+// ONE sound for a role in an era: the Foundry's path (a jittered instance, the era's character, re-rolled until audible)
+function kitGenerate(r, era) {
+  const shape = styleShaper(era);
+  return fullGenome(audiblePatch(() => shape(varyPreset(kitSource(r)))));
+}
+let kitEra = "Generic";
+let kitRows = [];                 // [{ r, g, L, R, heard }] in KIT_ROLES order
+let kitPlayTimer = null;
+const kitModal = document.createElement("div");
+kitModal.className = "modal";
+kitModal.hidden = true;
+kitModal.setAttribute("role", "dialog");
+kitModal.setAttribute("aria-label", "Sound Kit");
+kitModal.innerHTML =
+  '<div class="modal-box kit-box">' +
+    '<div class="modal-head"><h2 data-icon="layers">Sound Kit</h2>' +
+      '<span class="hint">A set of sounds for your game, one per job, all in one era. Reroll any you don\'t like; changing the era makes a new kit. All procedural, no AI, and CC0.</span>' +
+      '<button id="kitClose" data-icon="close" title="Close (Esc). The kit\'s sounds stay in History">Close</button></div>' +
+    '<div class="var-ctl">' +
+      '<label title="The kit\'s files are named from this: my_kit/jump.wav …">Kit name <input id="kitName" type="text" class="var-name" value="My Kit" maxlength="40" autocomplete="off" spellcheck="false"></label>' +
+      '<label title="The console every sound in the kit is made for. Changing it makes a new kit">Era <select id="kitEra">' +
+        STYLES.map((s) => '<option value="' + s.name + '" title="' + styleHelp(s.name) + '">' + s.name + '</option>').join('') +
+      '</select></label>' +
+      '<span id="kitEraHelp" class="hint"></span>' +
+    '</div>' +
+    '<div id="kitList" class="kit-list"></div>' +
+    '<div class="modal-foot">' +
+      '<button id="kitRerollAll" data-icon="dice" title="A new sound for every role, in the same era">Reroll all</button>' +
+      '<button id="kitPlayAll" data-icon="play" title="Hear every sound in the kit, one after another">Play all</button>' +
+      '<span id="kitMsg" class="hint"></span>' +
+      '<span class="spacer"></span>' +
+      (isDesktop ? '<button id="kitLib" class="primary" data-icon="save" title="Plant every sound in the Library as its own sound, named “Kit name Role” (a taken name gets the next number)">Save kit to Library</button>' : '') +
+      '<button id="kitDl"' + (isDesktop ? '' : ' class="primary"') + ' data-icon="download" title="' + (isDesktop ? 'Write the kit\'s folder (a WAV per role and a README) into a folder you choose' : 'One zip: a folder with a WAV per role and a README (Godot steps, and a link that reopens each sound)') + '">' + (isDesktop ? 'Export kit to folder…' : 'Download kit') + '</button>' +
+    '</div>' +
+  '</div>';
+document.body.appendChild(kitModal);
+const kitList = kitModal.querySelector("#kitList");
+const kitNameEl = kitModal.querySelector("#kitName");
+const kitEraEl = kitModal.querySelector("#kitEra");
+const kitMsg = kitModal.querySelector("#kitMsg");
+function kitName() { return kitNameEl.value.trim().slice(0, 40) || "My Kit"; }
+function kitSoundName(row) { return kitName() + " " + row.r.role; }
+function kitFileName(row) { return fileStem(row.r.role) + ".wav"; }
+function kitMake(r) { const g = kitGenerate(r, kitEra), o = withState(g, () => render()); return { r: r, g: g, L: o.L, R: o.R, heard: false }; }
+function kitRowEl(i) {
+  const row = kitRows[i], el = document.createElement("div");
+  el.className = "kit-row";
+  el.innerHTML =
+    '<span class="kit-role"></span>' +
+    '<canvas class="hist-thumb" width="148" height="28"></canvas>' +
+    '<span class="kit-len hint"></span>' +
+    '<button class="kit-play" data-icon="play" title="Hear it">Play</button>' +
+    '<button class="kit-reroll" data-icon="dice" title="A new sound for this role only (same era)">Reroll</button>' +
+    '<button class="kit-use" title="Load it into the editor to tweak it">Use</button>';
+  el.querySelector(".kit-role").textContent = row.r.role;
+  el.querySelector(".kit-role").title = kitFileName(row) + ": " + row.r.what;
+  el.querySelector(".kit-len").textContent = (row.L.length / SR).toFixed(2) + " s";
+  drawThumb(el.querySelector("canvas"), thumbPeaks(row.L));
+  el.querySelector("canvas").title = "Hear it";
+  el.querySelector("canvas").addEventListener("click", () => kitPlay(i));
+  el.querySelector(".kit-play").addEventListener("click", () => kitPlay(i));
+  el.querySelector(".kit-reroll").addEventListener("click", () => kitReroll(i));
+  el.querySelector(".kit-use").addEventListener("click", () => { kitToHistory(); applyPreset(row.g, kitSoundName(row), "Kit"); kitClose(); });
+  iconsIn(el);
+  return el;
+}
+function kitRender() {
+  kitList.innerHTML = "";
+  kitRows.forEach((_, i) => kitList.appendChild(kitRowEl(i)));
+  kitModal.querySelector("#kitEraHelp").textContent = styleHelp(kitEra);
+}
+function kitStopAll() { if (kitPlayTimer) { clearTimeout(kitPlayTimer); kitPlayTimer = null; } }
+function kitPlay(i) { const row = kitRows[i]; row.heard = true; kitList.querySelectorAll(".kit-row").forEach((e, k) => e.classList.toggle("heard", k === i)); playBuffer(row.L, row.R); }
+// a sound heard and then rerolled away goes to History first (you may have liked it); one never heard is not kept
+function kitDrop(row) { if (row && row.heard && kitHistoryAdd(row)) { renderHistory(); saveHistory(); } }
+function kitReroll(i) {
+  kitDrop(kitRows[i]);
+  kitRows[i] = kitMake(kitRows[i].r);
+  kitList.replaceChild(kitRowEl(i), kitList.children[i]);
+  kitPlay(i);
+}
+function kitRerollAll() {
+  kitStopAll();
+  kitRows.forEach(kitDrop);
+  kitRows = KIT_ROLES.map(kitMake);
+  kitRender();
+  kitMsg.textContent = "";
+}
+function kitPlayAll() {
+  kitStopAll();
+  let i = 0;
+  const next = () => {
+    if (i >= kitRows.length || kitModal.hidden) { kitPlayTimer = null; kitList.querySelectorAll(".kit-row").forEach((e) => e.classList.remove("heard")); return; }
+    const row = kitRows[i];
+    kitPlay(i++);
+    kitPlayTimer = setTimeout(next, Math.round(row.L.length / SR * 1000) + 250);
+  };
+  next();
+}
+// ---- History: every kit sound lands there, named "<Kit> <Role>" (an exact repeat of an entry is not added twice) ----
+function kitHistoryAdd(row) {
+  const name = kitSoundName(row), snap = fullGenome(row.g);
+  if (histItems.some((h) => h.name === name && sameState(h.state, snap))) return false;
+  histItems.unshift({ id: ++histSeq, name: name, label: "Kit · " + kitEra, state: snap, peaks: thumbPeaks(row.L), silent: false,
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+  if (histItems.length > HIST_MAX) histItems.pop();
+  return true;
+}
+function kitToHistory() { kitRows.slice().reverse().forEach(kitHistoryAdd); renderHistory(); saveHistory(); }   // reversed: Jump ends on top
+// ---- the files ----
+function kitWav(row) {
+  return new Uint8Array(encodeWav(row.L, row.R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: kitSoundName(row) }));
+}
+function kitLink(row) {
+  const keepRiff = riffGetPatch;
+  riffGetPatch = () => null;                                       // a kit sound carries no riff
+  try { return WEB_BASE_URL + "?s=" + withState(row.g, () => encodePatch(kitSoundName(row))); } finally { riffGetPatch = keepRiff; }
+}
+function kitReadme() {
+  const dir = fileStem(kitName()), w = Math.max.apply(null, kitRows.map((r) => kitFileName(r).length));
+  const pad = (s) => s + " ".repeat(w - s.length);
+  return [
+    kitName() + ": a sound kit from CrunchySFX (" + kitRows.length + " sounds, era: " + kitEra + ")",
+    "",
+    dir + "/  (" + nowFmtText() + ")",
+  ].concat(kitRows.map((r) => "  " + pad(kitFileName(r)) + "  " + r.r.role + ": " + r.r.what))
+   .concat([
+    "",
+    "License: CC0 1.0 (public domain). Use these sounds in anything, commercial or not. No attribution required,",
+    "  and no credit owed to anyone.",
+    "",
+    "Godot 4: drop the " + dir + " folder into your project (res://). Add an AudioStreamPlayer, set its Stream to",
+    "  res://" + dir + "/" + kitFileName(kitRows[0]) + " (drag it from the FileSystem dock), and call play():",
+    "    $AudioStreamPlayer.play()",
+    "Unity: drop the folder into Assets/ and play a clip with an AudioSource (audioSource.PlayOneShot(clip)).",
+    "",
+    "Edit a sound again: open its link (it opens in CrunchySFX with that exact sound).",
+    "",
+  ]).concat(kitRows.map((r) => "  " + pad(kitFileName(r)) + "  " + kitLink(r))).concat([""]).join("\n");
+}
+// [{ name: "<kit>/<role>.wav", data }] + "<kit>/README.txt"
+function kitZipFiles() {
+  const dir = fileStem(kitName());
+  return kitRows.map((r) => ({ name: dir + "/" + kitFileName(r), data: kitWav(r) }))
+    .concat([{ name: dir + "/README.txt", data: new TextEncoder().encode(kitReadme()) }]);
+}
+async function kitDownload() {
+  const files = kitZipFiles(), dir = fileStem(kitName());
+  kitToHistory();
+  const T = window.__TAURI__;
+  if (T && T.dialog && T.fs) {                              // desktop: the kit's folder, inside a folder you choose
+    let at; try { at = await T.dialog.open({ directory: true, title: "Choose a folder for the sound kit" }); } catch (e) { return; }
+    at = Array.isArray(at) ? at[0] : at;
+    if (!at) return;
+    const base = String(at).replace(/[\/\\]+$/, "");
+    await T.fs.mkdir(base + "/" + dir, { recursive: true });
+    for (const f of files) await T.fs.writeFile(base + "/" + f.name, f.data);
+    kitMsg.textContent = "✓ Exported " + dir + "/ (" + kitRows.length + " WAVs and a README) to " + plantBase(base);
+    nowSay("Exported the " + kitName() + " kit");
+    return;
+  }
+  const a = document.createElement("a");                    // web: one .zip
+  a.href = URL.createObjectURL(new Blob([makeZip(files)], { type: "application/zip" }));
+  a.download = dir + ".zip";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  kitMsg.textContent = "✓ Saved " + dir + ".zip to your downloads: " + kitRows.length + " WAVs in " + dir + "/ and a README";
+  nowSay("Saved " + dir + ".zip");
+}
+// DESKTOP: each sound planted as its own Library sound, "<Kit> <Role>", through projPut (the single save's path: its WAV
+// is Export WAV's bytes, its sidecar its share string). Names settled now, free of the planted ones and of each other.
+function kitSaveToLibrary() {
+  kitToHistory();
+  if (!project) { libraryShow(); projStatus("Plant CrunchySFX in a folder first: your game's, or any. Then Save kit to Library plants each sound."); kitMsg.textContent = "Plant in a folder first (the Library, on the right)."; return false; }
+  const items = kitRows.map((row) => {
+    const typed = kitSoundName(row).slice(0, 60), name = projFreeName("sound", typed);
+    projPending.push(name);
+    const keepRiff = riffGetPatch;
+    riffGetPatch = () => null;
+    let s; try { s = withState(row.g, () => encodePatch(name)); } finally { riffGetPatch = keepRiff; }
+    return { typed: typed, name: name, fields: { s: s, fmt: fmtNow() } };
+  });
+  kitMsg.textContent = "Saving " + items.length + " sounds to the Library…";
+  return projDo(async function () {
+    let n = 0;
+    try {
+      for (const it of items) { projStatus("Saving " + (n + 1) + " of " + items.length + ": " + it.name + "…"); await projPut(it.name, it.fields); n++; }
+    } finally { items.forEach((it) => { const k = projPending.indexOf(it.name); if (k >= 0) projPending.splice(k, 1); }); projAfter(); }
+    const renamed = items.filter((it) => it.name !== it.typed).length;
+    const msg = "Saved " + n + " sounds of " + kitName() + " in " + project.rel + (renamed ? " (" + (renamed === 1 ? "1 name was taken: it got" : renamed + " names were taken: they got") + " the next number)" : "") + ".";
+    projStatus(msg);
+    kitMsg.textContent = "✓ " + msg;
+  });
+}
+function kitOpen() {
+  kitEraEl.value = kitEra;
+  if (!kitRows.length) kitRows = KIT_ROLES.map(kitMake);
+  kitRender();
+  kitMsg.textContent = "";
+  kitModal.hidden = false;
+  kitNameEl.focus();
+}
+function kitClose() { kitStopAll(); if (!kitModal.hidden) { kitModal.hidden = true; kitToHistory(); const b = document.getElementById("kitBtn"); if (b) b.focus(); } }
+document.getElementById("kitBtn").addEventListener("click", kitOpen);
+kitEraEl.addEventListener("change", () => { kitEra = kitEraEl.value; kitRerollAll(); });   // a new era = a new kit
+kitModal.querySelector("#kitRerollAll").addEventListener("click", kitRerollAll);
+kitModal.querySelector("#kitPlayAll").addEventListener("click", kitPlayAll);
+kitModal.querySelector("#kitDl").addEventListener("click", kitDownload);
+if (isDesktop) kitModal.querySelector("#kitLib").addEventListener("click", kitSaveToLibrary);
+kitModal.querySelector("#kitClose").addEventListener("click", kitClose);
+kitModal.addEventListener("click", (e) => { if (e.target === kitModal) kitClose(); });
+kitNameEl.addEventListener("keydown", (e) => { if (e.key === "Enter") kitNameEl.blur(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !kitModal.hidden) kitClose(); });
 
 // ============================================================================================
 // THE PLANTED LIBRARY (crunchyCore plant.js + DESKTOP-ROADMAP.md step 3; the worked examples are crunchyTile
@@ -4438,10 +4943,10 @@ desktopMount("sfx", {
 // Shows once on a fresh visit (prefs.tourSeen); replayable from Settings. Skips on shared-link visits.
 const TOUR = [
   { target: null, title: "Welcome to CrunchySFX", body: "Make game & UI sound effects from scratch — coins, lasers, explosions, robot voices and more. Here's the 30-second workflow." },
-  { target: ".ws-browser", title: "1 · Start from a preset", body: "900+ ready-made sounds, game sounds first (Retro / Arcade, UI, Impacts…). Click any to hear it, or search: \"jump\", \"hit\", \"menu\"." },
+  { target: ".ws-browser .presetsearch, .ws-browser .fam-legend, #presets > .preset-section:first-of-type", top: true, title: "1 · Start from a preset", body: "900+ ready-made sounds, game sounds first (Retro / Arcade, UI, Hits…). Click one to load it; click it again for a variation. Or search: \"jump\", \"hurt\", \"menu\"." },
   { target: ".nowbar", title: "2 · Name it", body: "The sound in the editor, by name. Every file is named from it: Jump exports jump.wav, a pack jump_01.wav … Type to rename it." },
-  { target: "#rand,#breed,#foundry,#variations", title: "3 · Make more sounds", body: "Randomize: a new sound. Breed: mix and evolve this one somewhere new. Foundry: build sounds by kind (jump, coin, hit). Variations: the same sound, slightly different, for a sound your game repeats. In each: click a sound to hear it, double-click (or Use) to load it." },
-  { target: "#export", title: "4 · Export a WAV", body: "Happy with it? Export WAV saves it, named after the sound, ready for your game. Sample rate, mono or stereo: ⚙ Settings (or \"change format\" beside the name)." },
+  { target: "#rand,#breed,#foundry,#variations,#kitBtn", title: "3 · Make more sounds", body: "Randomize: a new sound. Breed: mix and evolve this one somewhere new. Foundry: build sounds by kind (jump, coin, hit). Variations: the same sound, slightly different, for a sound your game repeats. Sound Kit: a whole set for your game (jump, coin, confirm, cancel, hit…) in one era, saved together. In each: click a sound to hear it, double-click (or Use) to load it." },
+  { target: "#export", title: "4 · Export a WAV", body: "Happy with it? Export WAV saves it, named after the sound. A WAV drops straight into Godot, Unity or any engine (Godot: put it in res:// and play it with an AudioStreamPlayer). Sample rate, mono or stereo: ⚙ Settings (or \"change format\" beside the name)." },
   { target: "#share", title: "Bonus · share a link", body: "Every sound is a URL — share it and the other person hears your exact sound, no file needed." },
   { target: null, title: "You're all set!", body: "Explore the panels to shape any sound in detail. Replay this tour anytime from ⚙ Settings. Now go make some noise." },
 ];
@@ -4484,7 +4989,9 @@ function showTourStep(i) {
   tourEl.querySelector(".tour-prev").style.visibility = tourIdx === 0 ? "hidden" : "visible";
   tourEl.querySelector(".tour-skip").style.visibility = last ? "hidden" : "visible";
   const els = step.target ? Array.from(document.querySelectorAll(step.target)).filter((e) => e.getClientRects().length) : [];
-  if (els.length) els[0].scrollIntoView({ block: "center", inline: "nearest" });
+  // a `top` step lands on its TOP (just under the sticky controls): the preset list is taller than the screen, and
+  // centring it showed the middle of the list (2026-10-15 usability round)
+  if (els.length) { if (step.top) scrollToBelowControls(els[0]); else els[0].scrollIntoView({ block: "center", inline: "nearest" }); }
   const r = els.length ? tourUnionRect(els) : null;
   if (r) {
     const pad = 6;

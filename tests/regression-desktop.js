@@ -448,19 +448,25 @@
     return ok(row && /CrunchyTile/.test(row.textContent) && /2 designs/.test(row.textContent) && /crunchy\/tile/.test(row.textContent) &&
               /^open https:\/\/crunchytile\.com\//.test(M.log[M.log.length - 1]), row ? row.textContent : "no row");
   });
-  await t("web-zip/an-unzipped-variation-pack-appears-current", async function () {
+  // THE WEB ZIP (2026-10-15 usability round): WAVs + a README only. Its crunchy-library/ copies (a planted-Library entry
+  // per take, crunchyCore DESKTOP-ROADMAP.md §6.4) made Godot import every take twice; a take now comes back through the
+  // share link the README gives it, and the desktop's Save plants it like any other sound.
+  await t("web-zip/a-take-from-a-pack-s-readme-plants-from-its-link", async function () {
     applyPreset(PRESETS["Coin"], "Coin");
     document.getElementById("varName").value = "step";
     seedVariations();
-    const zipped = packZipFiles(buildPackFiles());
-    // the zip's crunchy-library/ folders, copied into crunchy/sfx/ as its README says (the flat WAVs + README stay out)
-    zipped.forEach(function (f) { if (/^crunchy-library\//.test(f.name)) M.put(ROOT + "/" + f.name.replace(/^crunchy-library\//, ""), f.data); });
+    const files = buildPackFiles(), zipped = packZipFiles(files);
+    const rt = new TextDecoder().decode(zipped.find(function (z) { return z.name === "README.txt"; }).data);
+    const links = rt.match(/https:\/\/crunchysfx\.com\/\?s=\S+/g) || [];
+    document.getElementById("varClose").click();
+    loadSharedSound("?" + links[3].split("?")[1]);
+    normalizeOut = true; updateNormBtn();
     await projDo(function () { return projOpen(GODOT); });
     await settle();
-    projCheckUpdatesNow();
-    const steps = project.assets.filter(function (a) { return /^step \d+$/.test(a.name); });
-    document.getElementById("varClose").click();
-    return ok(steps.length === 8 && steps.every(function (a) { return !projUpdates[a.slug]; }) && card("step 1") && !project.skipped.length, steps.length + " " + project.skipped.join(","));
+    const same3 = audio(render()) === audio(withState(files[3].item, function () { return render(); }));
+    document.getElementById("plantSave").click();
+    await settle();
+    return ok(zipped.length === 9 && zipped.every(function (z) { return z.name.indexOf("/") < 0; }) && links.length === 8 && same3 && card("step 4"), status());
   });
   await t("unity/plants-into-assets-crunchy-sfx", async function () {
     libButton("Close").click();
@@ -591,6 +597,61 @@
     M.files.delete(V + "/sparkle.crunchy"); M.files.delete(V + "/sparkle.tscn"); projUsedArmed = "";
     await projLinkersRefresh();
     return ok(badge && /Sparkle/.test(badge.title) && held && !card(nm).querySelector(".lib-badge[title*='Sparkle']"), status());
+  });
+  // ---- THE SOUND KIT (2026-10-15, AJ): Save kit to Library plants each role as its own sound, "<Kit> <Role>", through the
+  // single save's path (projPut): never over a planted sound (a taken name gets the next number) ----
+  await t("kit/save-kit-to-library-plants-one-sound-per-role", async function () {
+    if (!project || project.dir !== GODOT) await projDo(function () { return projOpen(GODOT); });
+    applyPreset(PRESETS["Coin"], "Cave Kit Jump");                // the name the kit's Jump would take, planted already
+    document.getElementById("plantName").value = "Cave Kit Jump";
+    document.getElementById("plantSave").click();
+    await settle();
+    const was = M.text(ROOT + "/cave-kit-jump/cave-kit-jump.crunchy"), n0 = project.assets.length;
+    document.getElementById("kitBtn").click();
+    kitNameEl.value = "Cave Kit";
+    const sel = document.getElementById("kitEra");
+    sel.value = "Pocket"; sel.dispatchEvent(new Event("change"));
+    const shown = !!document.getElementById("kitLib") && /Export kit to folder/.test(document.getElementById("kitDl").textContent);
+    document.getElementById("kitLib").click();
+    await settle();
+    const bad = [];
+    kitRows.forEach(function (row) {
+      const name = "Cave Kit " + row.r.role + (row.r.role === "Jump" ? " 2" : "");
+      const a = plantFind(project, "sound", name);
+      if (!a) { bad.push("no " + name); return; }
+      const wav = M.bytes(ROOT + "/" + a.slug + "/" + a.data.wav);
+      if (!wav || !same(wav, soundWav(soundRender(a.data), a.data.fmt, a.data.exportName))) bad.push(name + ": the WAV is not its sidecar's sound");
+      if (audio(soundRender(a.data)) !== audio(row)) bad.push(name + ": not the kit's sound");
+      if (row.r.role !== "Jump" && !same(wav, kitWav(row))) bad.push(name + ": not the kit's WAV");
+    });
+    const hist = kitRows.every(function (row) { return histItems.some(function (h) { return h.name === "Cave Kit " + row.r.role; }); });
+    const n = project.assets.length - n0;
+    kitClose();
+    return ok(shown && !bad.length && n === KIT_ROLES.length && M.text(ROOT + "/cave-kit-jump/cave-kit-jump.crunchy") === was && hist &&
+              /Saved 12 sounds of Cave Kit/.test(status()) && /1 names? (was|were) taken/.test(status()) && card("Cave Kit Game Over") && !projPending.length,
+              bad.slice(0, 3).join(" · ") + " · " + n + " planted · " + status());
+  });
+  await t("kit/export-kit-to-folder-writes-the-kit-folder-on-desktop", async function () {
+    M.answer("/home/aj/Downloads");
+    await kitDownload();
+    const base = "/home/aj/Downloads/cave_kit/";
+    const files = M.list(base);
+    const rt = M.text(base + "README.txt") || "";
+    return ok(files.length === KIT_ROLES.length + 1 && same(M.bytes(base + "jump.wav"), kitWav(kitRows[0])) && /era: Pocket/.test(rt) && /res:\/\/cave_kit\//.test(rt),
+              files.join(","));
+  });
+  await t("kit/without-a-planted-folder-save-kit-says-plant-first", async function () {
+    await projDo(projClose);
+    await settle();
+    const before = M.list("/home/aj").length;
+    document.getElementById("kitBtn").click();
+    document.getElementById("kitLib").click();
+    await settle();
+    const said = /Plant CrunchySFX in a folder first/.test(status()) && library.isOpen() && /Plant in a folder first/.test(kitMsg.textContent);
+    kitClose();
+    await projDo(function () { return projOpen(GODOT); });
+    await settle();
+    return ok(said && M.list("/home/aj").length === before && !!project, status());
   });
   await t("safety/nothing-written-outside-crunchy-sfx", function () {
     const allowed = [ROOT + "/", UNITY + "/Assets/Crunchy/SFX/", PLAIN + "/crunchy/sfx/",

@@ -94,31 +94,33 @@
     normalizeOut = true; updateNormBtn();
     return ok(JSON.stringify(got) === JSON.stringify(V.links.map(function (l) { return l.audio; })), got.join(","));
   });
-  // THE PACK (2026-10-14 usability round): the WAVs flat at the top (for Godot's AudioStreamRandomizer), a README, and the
-  // Library form (a folder per sound: its WAV beside its .crunchy) under crunchy-library/. The WAVs are the same bytes.
-  t("zip/a-variation-pack-is-flat-wavs-a-readme-and-the-library-form-in-a-subfolder", function () {
+  // THE PACK (2026-10-15 usability round, "Sam"): the WAVs flat at the top (for Godot's AudioStreamRandomizer) and a
+  // README with each take's share link — NO crunchy-library/ copies (Godot imported 16 WAVs for 8), and a valid DOS date
+  // (1980-01-01 00:00; it was 1980-00-00, which unzip shows as 2114).
+  t("zip/a-variation-pack-is-flat-wavs-and-a-readme-with-valid-dates", function () {
     applyPreset(PRESETS["Coin"], "Coin");
     document.getElementById("varName").value = "footstep";
     seedVariations();
     const files = buildPackFiles(), zipped = packZipFiles(files);
-    const top = zipped.filter(function (f) { return f.name.indexOf("/") < 0; });
-    const good = files.every(function (f, i) {
-      const stem = f.name.replace(/\.wav$/, ""), w = zipped.find(function (z) { return z.name === f.name; });
-      const lw = zipped.find(function (z) { return z.name === "crunchy-library/" + stem + "/" + f.name; });
-      const sc = zipped.find(function (z) { return z.name === "crunchy-library/" + stem + "/" + stem + ".crunchy"; });
-      const d = sc && JSON.parse(new TextDecoder().decode(sc.data));
-      return w && same(w.data, f.data) && lw && same(lw.data, f.data) && d && plantSidecarValid(d) && d.kind === "sound" && d.name === "footstep " + (i + 1) &&
-             d.wav === f.name && d.exportName === "footstep " + (i + 1) && JSON.stringify(d.files) === JSON.stringify([f.name]) &&
-             d.hash === plantHash([{ path: f.name, data: f.data }]) && same(soundFiles(d)[0].data, f.data);   // the desktop re-renders the very same bytes
-    });
+    const good = files.every(function (f) { const w = zipped.find(function (z) { return z.name === f.name; }); return w && same(w.data, f.data); });
     const readme = zipped.find(function (z) { return z.name === "README.txt"; });
     const rt = readme ? new TextDecoder().decode(readme.data) : "";
-    const zip = makeZip(zipped), names = [];
+    const links = rt.match(/https:\/\/crunchysfx\.com\/\?s=\S+/g) || [];
+    const zip = makeZip(zipped), names = [], dates = [];
     const dv = new DataView(zip.buffer);
-    for (let o = 0; dv.getUint32(o, true) === 0x04034b50;) { const n = dv.getUint16(o + 26, true), sz = dv.getUint32(o + 18, true); names.push(new TextDecoder().decode(zip.subarray(o + 30, o + 30 + n))); o += 30 + n + sz; }
+    let o = 0;
+    for (; dv.getUint32(o, true) === 0x04034b50;) { const n = dv.getUint16(o + 26, true), sz = dv.getUint32(o + 18, true); dates.push(dv.getUint16(o + 12, true), dv.getUint16(o + 10, true)); names.push(new TextDecoder().decode(zip.subarray(o + 30, o + 30 + n))); o += 30 + n + sz; }
+    for (; dv.getUint32(o, true) === 0x02014b50;) { dates.push(dv.getUint16(o + 14, true), dv.getUint16(o + 12, true)); o += 46 + dv.getUint16(o + 28, true); }
+    const validDates = dates.every(function (d, i) { return i % 2 ? d === 0 : (d >> 5 & 15) >= 1 && (d & 31) >= 1 && (d >> 9) === 0; });
+    // a take's link opens that take (the same state as its variation genome)
+    loadSharedSound("?" + links[2].split("?")[1]);
+    const opened = files[2].item && Object.keys(files[2].item).every(function (k) { return k[0] === "_" || !(k in state) || state[k] === files[2].item[k]; });
+    normalizeOut = true; updateNormBtn();
     document.getElementById("varClose").click();
-    return ok(files.length === 8 && top.length === 9 && top.filter(function (f) { return /^footstep_0[1-8]\.wav$/.test(f.name); }).length === 8 && good &&
-              /AudioStreamRandomizer/.test(rt) && /crunchy-library/.test(rt) && names.length === 25 && names[0] === "footstep_01.wav", names.slice(0, 3).join(",") + " " + top.length);
+    return ok(files.length === 8 && zipped.length === 9 && names.length === 9 && names.every(function (n) { return n.indexOf("/") < 0; }) && good &&
+              names.filter(function (n) { return /^footstep_0[1-8]\.wav$/.test(n); }).length === 8 && names[0] === "footstep_01.wav" &&
+              /AudioStreamRandomizer/.test(rt) && !/crunchy-library/.test(rt) && links.length === 8 && validDates && opened,
+              names.length + " names, " + links.length + " links, dates " + dates.slice(0, 2).join("/") + (opened ? "" : ", the link opened another sound"));
   });
   t("zip/a-sequence-pack-stays-wavs-and-a-readme", function () {
     sequence = [{ genome: genomeFromState(), label: "a" }, { genome: genomeFromState(), label: "b" }];
@@ -244,11 +246,105 @@
     return ok(!bad.length, bad.join(", "));
   });
   t("search/word-starts-and-a-game-dev-vocabulary", function () {
-    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
     const back = find("back"), menu = find("menu"), hit = find("hit"), coin = find("coin");
     presetSearch.value = ""; filterPresets();
     return ok(back.indexOf("Cancel") >= 0 && menu.indexOf("Cursor Move") >= 0 && hit.indexOf("Chittering Chirp") < 0 && hit.indexOf("8-Bit Hit") >= 0 && coin.indexOf("Coin") >= 0,
               [back.length, menu.length, hit.length, hit.indexOf("Chittering Chirp")].join(","));
+  });
+  // ---- the second usability round (2026-10-15, "Sam": a Godot platformer dev, no synth knowledge) ----
+  // 3: presets on the first screen; the header button says what a click does; the tour lands on the top of the presets
+  t("sam/presets-on-the-first-screen-the-riff-folded-on-a-first-visit", function () {
+    // as a FIRST visit lays out: the v1.1 fixture's store has the XY scope (a tall square), a fresh visit the thin wave
+    // strip — set the strip without saving a pref (the store must stay as v1.1 left it), then put the square back
+    scrollTo(0, 0);
+    const row = document.querySelector(".scoperow"), cv = document.getElementById("scope"), keep = [row.className, cv.width, cv.height];
+    row.classList.remove("xy"); cv.width = 2320; cv.height = 90;
+    const first = document.querySelector("#presets > .preset-section"), btn = first.querySelector(".sec-buttons button");
+    const r = btn.getBoundingClientRect();
+    row.className = keep[0]; cv.width = keep[1]; cv.height = keep[2];
+    return ok(riffPanel.classList.contains("collapsed") && !(prefs.collapsed || {}).instrument && first.open && r.top > 0 && r.bottom < innerHeight,
+              "first preset button at " + Math.round(r.top) + " of " + innerHeight + (riffPanel.classList.contains("collapsed") ? "" : ", riff open"));
+  });
+  t("sam/the-presets-button-says-hide-or-show", function () {
+    const b = document.getElementById("browseToggle"), bad = [];
+    if (b.textContent.trim() !== "Hide presets" || b.classList.contains("active")) bad.push("start: " + b.textContent);
+    b.click();
+    if (b.textContent.trim() !== "Show presets" || shown(document.querySelector(".ws-browser"))) bad.push("hidden: " + b.textContent);
+    b.click();
+    if (b.textContent.trim() !== "Hide presets" || !shown(document.querySelector(".ws-browser")) || prefs.hideBrowser) bad.push("again: " + b.textContent);
+    localStorage.setItem("crunchyfx.prefs.v1", atBoot[3]); delete prefs.hideBrowser; scrollTo(0, 0);   // the store as v1.1 left it
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("sam/the-tour-s-preset-step-lands-on-the-top-of-the-presets", function () {
+    startTour(); showTourStep(TOUR.findIndex(function (st) { return /preset/i.test(st.title); }));
+    const box = document.querySelector(".ws-browser .presetsearch").getBoundingClientRect();
+    const sec = document.querySelector("#presets > .preset-section").getBoundingClientRect();
+    const bar = document.querySelector(".controls").getBoundingClientRect();
+    endTour(false); scrollTo(0, 0);
+    return ok(box.top >= bar.bottom && box.top < bar.bottom + 60 && sec.top < innerHeight, "search box at " + Math.round(box.top) + ", controls end " + Math.round(bar.bottom));
+  });
+  // 4: spaces/hyphens don't matter; aliases name presets, never a whole section; the best matches first
+  t("sam/search-hurt-and-power-up", function () {
+    const run = function (q) {
+      presetSearch.value = q; filterPresets();
+      const all = Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; });
+      return { all: all, best: Array.from(document.querySelectorAll("#presets .best-matches button")).map(function (b) { return b.textContent; }) };
+    };
+    const hurt = run("hurt"), pu = run("power up"), pu2 = run("power-up"), pu3 = run("powerup"), boom = run("explode"), heal = run("heal");
+    presetSearch.value = ""; filterPresets();
+    const bad = [];
+    if (hurt.all.length > 30 || hurt.all.indexOf("Hit") < 0 || hurt.best[0] !== "Hit" || hurt.all.indexOf("Sword Swing") >= 0) bad.push("hurt: " + hurt.all.length + " " + hurt.best.slice(0, 3));
+    [pu, pu2, pu3].forEach(function (r, i) { if (r.all.indexOf("Powerup") < 0 || r.all.indexOf("Robot Power Up") < 0 || r.all.indexOf("Power Down") >= 0) bad.push("power up #" + i + ": " + r.all.length); });
+    if (JSON.stringify(pu.all) !== JSON.stringify(pu2.all) || pu.all.length < 10) bad.push("power up " + pu.all.length + " vs power-up " + pu2.all.length + " vs powerup " + pu3.all.length);
+    if (boom.best.indexOf("Explosion") < 0) bad.push("explode: " + boom.best.slice(0, 3));
+    if (heal.all.indexOf("Healing Aura") < 0) bad.push("heal");
+    if (!document.querySelector("#presets .best-matches").hidden) bad.push("best row left after clearing");
+    return ok(!bad.length, bad.join(" · ") || hurt.all.length + " hurt, " + pu.all.length + " power up");
+  });
+  // 5 + 9: the first click is the preset; again = a variation, named apart; files never reuse a name for another sound
+  t("sam/first-click-is-the-preset-again-is-a-named-variation", function () {
+    const bad = [], btn = function (n) { return Array.from(document.querySelectorAll("#presets details button")).find(function (b) { return b.textContent === n; }); };
+    let files = [];
+    files = capture(function () {
+      btn("Jump").click();
+      btn("Coin").click();
+      const exact = snapshotState(); applyPreset(PRESETS["Coin"], "Coin");
+      if (!sameState(exact, snapshotState()) || soundName() !== "Coin") bad.push("first click was not the preset: " + soundName());
+      presetTake = { name: "Coin", state: snapshotState() };
+      exportWav();                                             // coin.wav
+      btn("Coin").click();
+      if (soundName() !== "Coin v2" || histItems[0].name !== "Coin v2" || histItems[0].label !== "Variation") bad.push("second: " + soundName() + "/" + histItems[0].name);
+      if (!/variation 2/.test(document.getElementById("nowStatus").textContent)) bad.push("status: " + document.getElementById("nowStatus").textContent);
+      exportWav();                                             // coin_v2.wav
+      btn("Coin").click();
+      if (soundName() !== "Coin v3") bad.push("third: " + soundName());
+      btn("Jump").click(); btn("Coin").click();
+      if (soundName() !== "Coin") bad.push("back to the preset: " + soundName());
+      exportWav();                                             // the same Coin: coin.wav again
+      state.freq = state.freq * 2; play("Edit");
+      exportWav();                                             // a different sound still called Coin: coin-2.wav
+    });
+    if (JSON.stringify(files) !== JSON.stringify(["coin.wav", "coin_v2.wav", "coin.wav", "coin-2.wav"])) bad.push("files: " + files.join(","));
+    if (!/click again/i.test(btn("Coin").title)) bad.push("tooltip: " + btn("Coin").title);
+    return ok(!bad.length, bad.join(" · "));
+  });
+  // 6: a plain-English line on every control and console
+  t("sam/every-params-key-and-console-has-help", function () {
+    const noHelp = PARAMS.filter(function (p) { return !PARAM_HELP[p[0]] || PARAM_HELP[p[0]].length < 12; }).map(function (p) { return p[0]; });
+    const rows = Array.from(document.querySelectorAll("#panels input[data-key], #panels select[data-key]")).filter(function (el) { return PARAM_BY_KEY[el.dataset.key] && !el.closest(".row, .waverow") || !el.closest(".row, .waverow").title; }).map(function (el) { return el.dataset.key; });
+    const consoles = Array.from(document.querySelectorAll("#consoleGrid .engine-btn")).filter(function (b) { return !b.title; }).map(function (b) { return b.textContent; });
+    const engines = Array.from(document.querySelectorAll("#engineGrid .engine-btn")).filter(function (b) { return !b.title; }).map(function (b) { return b.textContent; });
+    const head = document.querySelector(".console .engine-title").textContent;
+    const ring = document.querySelector('#panels [data-key="ringMod"]').closest(".row").title;
+    return ok(!noHelp.length && !rows.length && !consoles.length && !engines.length && /old game console/.test(head) && /metallic/.test(ring),
+              [noHelp.join(","), rows.join(","), consoles.join(","), engines.join(","), head].join(" | "));
+  });
+  // 7: the page says a WAV is Godot-ready
+  t("sam/export-says-godot-ready", function () {
+    const nf = document.querySelector(".nowbar .now-file"), ex = document.getElementById("export");
+    const step = TOUR.find(function (st) { return st.target === "#export"; });
+    return ok(shown(nf) && /Godot/.test(nf.textContent) && /AudioStreamPlayer/.test(nf.querySelector(".now-engine").title) && /res:\/\//.test(ex.title) && /Godot/.test(step.body), nf.textContent);
   });
   t("presets/game-dev-sections-first", function () {
     const heads = Array.from(document.querySelectorAll("#presets details > summary")).map(function (s) { return s.textContent; });
@@ -286,6 +382,103 @@
     if (feedback.isOpen()) bad.push("close left it open");
     return bad.length ? bad.join(" · ") + " (" + dets.map(label).join("|") + ")" : { pass: true, detail: dets.map(label).join("|") };
   });
+
+  // ---- THE SOUND KIT (2026-10-15, AJ): a modal, an era menu, one sound per role, a zip of them; every sound in History ----
+  const unzip = function (zip) {                       // a STORE zip's entries, by its local headers
+    const dv = new DataView(zip.buffer, zip.byteOffset, zip.byteLength), out = [];
+    for (let o = 0; dv.getUint32(o, true) === 0x04034b50;) {
+      const n = dv.getUint16(o + 26, true), sz = dv.getUint32(o + 18, true);
+      out.push({ name: new TextDecoder().decode(zip.subarray(o + 30, o + 30 + n)), data: zip.subarray(o + 30 + n, o + 30 + n + sz), date: dv.getUint16(o + 12, true) });
+      o += 30 + n + sz;
+    }
+    return out;
+  };
+  const kitG = function () { return kitRows.map(function (r) { return JSON.stringify(r.g); }); };
+  t("kit/the-modal-opens-with-a-row-per-role-and-every-era", function () {
+    let open = false, rows = 0, roles = "", focus = false, eras = [];
+    capture(function () {
+      document.getElementById("kitBtn").click();
+      open = !kitModal.hidden;
+      rows = kitModal.querySelectorAll(".kit-row").length;
+      roles = Array.from(kitModal.querySelectorAll(".kit-role")).map(function (e) { return e.textContent; }).join("|");
+      focus = kitModal.contains(document.activeElement) && document.activeElement !== document.body;
+      eras = Array.from(document.getElementById("kitEra").options).map(function (o) { return o.value; });
+    });
+    const btn = document.getElementById("kitBtn");
+    const each = kitModal.querySelectorAll(".kit-row canvas").length === KIT_ROLES.length && kitModal.querySelectorAll(".kit-play").length === KIT_ROLES.length &&
+                 kitModal.querySelectorAll(".kit-reroll").length === KIT_ROLES.length;
+    const titled = Array.from(kitModal.querySelectorAll("button")).every(function (b) { return !!b.title; });
+    const want = ["Jump", "Coin", "Confirm", "Cancel", "Menu Move", "Swing", "Hit", "Hurt", "Explosion", "Power-up", "Shoot", "Game Over"];
+    return ok(open && rows === KIT_ROLES.length && roles === want.join("|") && focus && each && titled &&
+              JSON.stringify(eras) === JSON.stringify(STYLES.map(function (s) { return s.name; })) && eras[0] === "Generic" && eras.indexOf("8-Bit") > 0 &&
+              Array.from(document.getElementById("kitEra").options).slice(1).every(function (o) { return o.title === CONSOLE_HELP[o.value]; }) &&
+              btn.parentElement.classList.contains("controls-left") && /Sound Kit/.test(btn.textContent) && /a set for your game/.test(btn.querySelector("small").textContent) &&
+              document.getElementById("kitDl").textContent === "Download kit" && !document.getElementById("kitLib"),
+              rows + " rows · " + roles + " · eras " + eras.join(","));
+  });
+  t("kit/sounds-are-audible-and-ui-sounds-are-short", function () {
+    const len = function (role) { const r = kitRows.find(function (x) { return x.r.role === role; }); return r.L.length / SR; };
+    const loud = kitRows.every(function (r) { return withState(r.g, function () { return render(); }).rawPeak > AUDIBLE_FLOOR; });
+    return ok(loud && len("Menu Move") <= 0.2 && len("Confirm") <= 0.4 && len("Cancel") <= 0.4 && len("Coin") <= 0.6 && len("Game Over") <= 2.5,
+              kitRows.map(function (r) { return r.r.role + " " + (r.L.length / SR).toFixed(2); }).join(", "));
+  });
+  t("kit/reroll-changes-only-that-row", function () {
+    const before = kitG();
+    capture(function () { kitModal.querySelectorAll(".kit-reroll")[0].click(); });
+    const after = kitG();
+    const changed = after.map(function (g, i) { return g !== before[i]; });
+    return ok(changed[0] && changed.slice(1).every(function (c) { return !c; }) && kitModal.querySelectorAll(".kit-row").length === KIT_ROLES.length,
+              changed.join(","));
+  });
+  t("kit/changing-the-era-rerolls-all-in-that-era", function () {
+    const before = kitG(), sel = document.getElementById("kitEra");
+    capture(function () { sel.value = "8-Bit"; sel.dispatchEvent(new Event("change")); });
+    const after = kitG();
+    // 8-Bit: no reverb, no unison anywhere; every basic tone is a pulse wave in one of the four widths
+    const styled = kitRows.every(function (r) { return r.g.reverb === 0 && r.g.delay === 0 && r.g.unison === 1 && (r.g.wave > 7 || r.g.noise >= 0.6 || (r.g.wave === 4 && NES_PW.indexOf(r.g.pulseWidth) >= 0)); });
+    return ok(kitEra === "8-Bit" && after.every(function (g, i) { return g !== before[i]; }) && styled && /NES/.test(document.getElementById("kitEraHelp").textContent),
+              kitRows.map(function (r) { return r.r.role + ":" + r.g.wave + "/" + r.g.reverb; }).join(" "));
+  });
+  t("kit/download-kit-is-one-zip-a-wav-per-role-and-a-readme-and-history-has-them", function () {
+    kitNameEl.value = "Forest Kit";
+    const keepZip = window.makeZip;
+    let zip = null;
+    window.makeZip = function (files) { zip = keepZip(files); return zip; };
+    let got;
+    try { got = capture(function () { document.getElementById("kitDl").click(); }); } finally { window.makeZip = keepZip; }
+    const ents = zip ? unzip(zip) : [];
+    const names = ents.map(function (e) { return e.name; });
+    const want = KIT_ROLES.map(function (r) { return "forest_kit/" + fileStem(r.role) + ".wav"; }).concat(["forest_kit/README.txt"]);
+    const rt = ents.length ? new TextDecoder().decode(ents[ents.length - 1].data) : "";
+    const links = rt.match(/https:\/\/crunchysfx\.com\/\?s=\S+/g) || [];
+    // every WAV is the row's own sound in the export format, titled "<Kit> <Role>"
+    const wavs = kitRows.every(function (r, i) {
+      const d = ents[i] && ents[i].data, dv = d && new DataView(d.buffer, d.byteOffset, d.byteLength);
+      return d && String.fromCharCode(d[0], d[1], d[2], d[3], d[8], d[9], d[10], d[11]) === "RIFFWAVE" && dv.getUint32(24, true) === exportFmt.rate &&
+             dv.getUint16(22, true) === exportFmt.channels && dv.getUint16(34, true) === exportFmt.depth && same(d, kitWav(r));
+    });
+    // a link reopens that exact sound
+    loadSharedSound("?" + links[1].split("?")[1]);
+    const reopened = audio(render()) === audio(kitRows[1]) && soundName() === "Forest Kit Coin";
+    normalizeOut = true; updateNormBtn();
+    const hist = KIT_ROLES.every(function (r) { return histItems.some(function (h) { return h.name === "Forest Kit " + r.role; }); });
+    const shownHist = Array.from(document.querySelectorAll("#histlist .hist-label")).some(function (e) { return /^Forest Kit Jump/.test(e.textContent); });
+    return ok(JSON.stringify(got) === '["forest_kit.zip"]' && JSON.stringify(names) === JSON.stringify(want) && wavs &&
+              ents.every(function (e) { return e.date === ZIP_DOS_DATE; }) && links.length === KIT_ROLES.length && reopened &&
+              /era: 8-Bit/.test(rt) && /CC0/.test(rt) && /No attribution required/.test(rt) && /res:\/\/forest_kit\/jump\.wav/.test(rt) && /AudioStreamPlayer/.test(rt) &&
+              /menu_move\.wav +Menu Move: /.test(rt) && hist && shownHist,
+              got.join(",") + " · " + names.length + " entries · " + links.length + " links · reopened " + reopened + " · history " + hist);
+  });
+  t("kit/escape-closes-and-the-kit-is-kept-for-next-time", function () {
+    const before = kitG();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    const closed = kitModal.hidden && document.activeElement === document.getElementById("kitBtn");
+    capture(function () { document.getElementById("kitBtn").click(); });
+    const kept = JSON.stringify(kitG()) === JSON.stringify(before) && document.getElementById("kitEra").value === "8-Bit";
+    kitClose();
+    return ok(closed && kept && kitModal.hidden);
+  });
+
 
   scrollTo(0, 0);
   const failed = rows.filter(function (r) { return !r.pass; });

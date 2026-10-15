@@ -1,4 +1,4 @@
-# The audio of CrunchySFX v1.1 (HEAD 5e457cc, 2026-10-11), as tests/audio-hash.js prints it. A run must match EXACTLY.
+# The audio of CrunchySFX 1.2 (2026-10-16): Cow Moo, Dog Bark, Dog Bark 2 removed; the fire look-alikes Dragon Fire Breath 2, Fireball Cast 2, Fire Whoosh 2, Flamethrower 2 and Kindled Torch removed; Torch Ignite, Molten Flame and Kindled Flame reworked to stand apart. Every other sound's samples proved unchanged (932 of 932). The WAV format follows each preset's index, so later presets' lines moved. As tests/audio-hash.js prints it; a run must match EXACTLY.
 AUDIO Coin 47f12edd7c9e75e4
 AUDIO Laser f6c22d2b195a2a1a
 AUDIO Jump b3f0d9e61a01ac31
@@ -66,146 +66,143 @@ AUDIO Mana Charge 580de8f345f25d46
 AUDIO Magic Missile 5ecc7733e89ef89c
 AUDIO Crossbow Bolt 9cc8ff436587917c
 AUDIO Wind Slash acb81f6188a424e4
-AUDIO Dog Bark ea3c7aa73433b868
-AUDIO Cat Meow b342216b83897f44
-AUDIO Bird Chirp 282fd9b113761cdc
-AUDIO Frog Croak f7958275e748d522
-AUDIO Cricket Chirp f5c69a9e2a4c65e7
-AUDIO Owl Hoot 4205d4b004ab4187
-AUDIO Snake Hiss 59c21dc978ee1586
-AUDIO Bee Buzz 604ecb5bcbf938d4
-AUDIO Wolf Howl 8b611c89274cfea2
-AUDIO Horse Neigh 2bb1f3ffb592a004
-AUDIO Cow Moo 81f44bb4ea50a057
-AUDIO Rooster Crow 86d3f9cb7db3f008
-AUDIO Duck Quack f4b42dd72c89cb74
-AUDIO Elephant Trumpet 515c21f336a87ddc
-AUDIO Rain f6bdc9896aef99ba
-AUDIO Rustling Leaves 5fcfb48f96e624fc
-AUDIO Waterfall ad46dce64d6c51a5
-AUDIO Ocean Surf 3b28f53c157b7a97
-AUDIO Earthquake Rumble cf6481be0854c6c1
-AUDIO Dripping Cave a2a591662bb17bc7
-AUDIO Jump Scare Stinger ad30bb9bbcef9b8c
-AUDIO Horror Drone 3c67bdc3b5665c0a
-AUDIO Ghostly Wail d30b2ba1a487af3e
-AUDIO Demonic Roar 47974ef534570528
-AUDIO Creepy Whisper f7fca14a5105fdc9
-AUDIO Heartbeat 5b7bec379d38bc44
-AUDIO Creaking Door 291ae6a3246119b8
-AUDIO Distant Scream 8576510a14ec17f3
-AUDIO Sinister Laugh 60bde24bf48e3fae
-AUDIO Music Box b666128e458d2c75
-AUDIO Tension Riser 326c631bdaf12030
-AUDIO Sub Drop Hit 4f39f607b12bdb12
-AUDIO Ghost Breath 33be73a7c176a4f8
-AUDIO Nails on Chalkboard 368b8473c1f19954
-AUDIO Ominous Bell 834d3eccd2ce7397
-AUDIO Rattling Chains cddf6b62eee6c1eb
-AUDIO Radio Static 54812be2049296cb
-AUDIO Possessed Screech 069339e28fb292bb
-AUDIO Dread Pulse be9bf871e8c1b26a
-AUDIO Skittering Swarm f43fefb1e5165806
-AUDIO Meteor Descent 7b4f543cb12f0b09
-AUDIO Meteor Impact db7cc4cb395cf0b6
-AUDIO Comet Whoosh 003b36eb967dc820
-AUDIO Acid Sizzle 9a7a24f3fcf28f00
-AUDIO Acid Splash 1dad5b2f318c914c
-AUDIO Toxic Bubble f9021db1244eb262
-AUDIO Gas Leak 8fbdc41b321dcec0
-AUDIO Gas Puff 22376daa1a3362f7
-AUDIO Steam Vent e37dd5d601d7342d
-AUDIO Cartoon Boing 73f9d9f9dbb3b44a
-AUDIO Slide Whistle Up 33d824028522b85d
-AUDIO Slide Whistle Down 3117675ca0e706e3
-AUDIO Fart ef654a4cbf23dd2d
-AUDIO Burp 7f68069bcd4f6f4a
-AUDIO Slime Splat 91b1be6e3f7896bb
-AUDIO Squeaky Toy d33d3fbbf615e940
-AUDIO Bubble Blorp 0d1099154db087e2
-AUDIO Lava Bubble ca762e42fcbdf347
-AUDIO Mud Squelch 21112e0553dd4a48
-AUDIO Magic Fizzle 5f0a0cb9ba082d9e
-AUDIO Flamethrower 4afed38d07e009e2
-AUDIO Fire Whoosh 649d0848d59fd221
-AUDIO Torch Ignite 491e828fceb8d220
-AUDIO Ember Crackle 99542afd868ade88
-AUDIO Dragon Fire Breath d30f7a7bdd6fa4b2
-AUDIO Match Strike 8b975edbcea6b46a
-AUDIO Inferno Roar cee33922e687b8f3
-AUDIO Fire Sparks 05188812f7117a65
-AUDIO Robot Servo 451014a68c8da7a7
-AUDIO Robot Power Up 2b75ad64f3afa7b7
-AUDIO Robot Power Down 80db04c758231af2
-AUDIO Robot Talk 8e28ae187ff0c27b
-AUDIO Robot Stomp 8ffff224b7e03023
-AUDIO Mechanical Whir a29bf3778f243478
-AUDIO Hydraulic Hiss 1ad66f29b1f42406
-AUDIO Robot Alarm 010b33dd65233b80
-AUDIO Scanner Ping 30f6b831381ff1e8
-AUDIO Data Glitch 56beffca0f72f4d3
-AUDIO Gear Grind 271652b09db20b39
-AUDIO Servo Twitch 6280d3a937daad3c
-AUDIO Healing Aura c52e0505f50711cc
-AUDIO Curse Whoosh a2ad6945cf6ed21e
-AUDIO Shield Cast 1236ef149a92eb07
-AUDIO Notification a18bf938fab11541
-AUDIO Menu Open 5c60da73e34131e0
-AUDIO Grenade Blast 4717cda7a03ab6c8
-AUDIO Distant Boom cce5b961b5f8b1cc
-AUDIO Servo Motor cd46d6fa2e85b745
-AUDIO Power Down 2b92a135e327f54c
-AUDIO Campfire Crackle a4c39cf6b4ccd299
-AUDIO Bird Trill 7ddf15b497dc25c1
-AUDIO Goblin Chatter 83491c277ff973f4
-AUDIO Beast Roar 5421522b9792006e
-AUDIO Insect Buzz 40c393ce4d41d131
-AUDIO Ghost Moan c7fe99c7f6a9a6ea
-AUDIO Jumpscare Hit 15090b07fd8d5746
-AUDIO Whispering Void f4d80c6d359c5040
-AUDIO Pistol Shot 50fe0a2190931f60
-AUDIO Sniper Rifle a15f450ce264cf91
-AUDIO Spear Thrust 3d7c7d869901c35d
-AUDIO Axe Chop f500b99b0372614a
-AUDIO Whip Crack aa77ca1b5278b0a8
-AUDIO Fireball Whoosh 4dc456fa38d3e057
-AUDIO Pickup Item 74d701b32c0f797e
-AUDIO Extra Life ac2f0dcacf74faa9
-AUDIO Force Field 714d0f9c9a04d865
-AUDIO Warp Drive 4f4f716e5b8d4285
-AUDIO Laser Charge 39ffeac35c2bce76
-AUDIO Boing Spring 23d222617002abb8
-AUDIO Squish Pop 837e19e053e59977
-AUDIO Enchant 8d2c39e96156a1b4
-AUDIO Summon Portal fc9263490f4a6e36
-AUDIO Hex Bolt 74026fe1ca2a7418
-AUDIO Tab Switch 34dd8dffdc054578
-AUDIO Unlock b5a73d75dd2d95e2
-AUDIO Barrel Burst 1b80af5d4b5f3730
-AUDIO Nuke Rumble 0b8a403ef9b78b83
-AUDIO Drone Hover 5ae7169c3e1ffed7
-AUDIO Conveyor Belt 4771712eae9d95e7
-AUDIO Thunderclap fc27c5dc238827fd
-AUDIO Stream Babble defd1520156998ad
-AUDIO Slime Gurgle 37f7adbfdec23258
-AUDIO Bat Screech 9f9304b731fe924c
-AUDIO Troll Grunt f5cba3c949c668bc
-AUDIO Demon Whisper 88de0b3be8c753ae
-AUDIO Bone Crack ca0e53db6a0c1030
-AUDIO Cursed Chime c1d81d71abb9e11e
-AUDIO Machine Gun b43779f4d73f0733
-AUDIO Plasma Rifle baa5770673861ec9
-AUDIO Rapier Lunge 5dfcba2ba3c23212
-AUDIO Flail Swing 78ed2bdcbc71b9d3
-AUDIO Fire Burst 93e896382d8f3fbf
-AUDIO Retro Jump 7d5f66c418511485
-AUDIO Game Start f3fe790ad7771795
-AUDIO Teleporter Hum 559fb2eecfafc465
-AUDIO Energy Drain 11a0e8a6334249d9
-AUDIO Scan Complete f31d53b4b642d095
-AUDIO Rubber Stretch 052055c18c2f711e
-AUDIO Pop Cork 89063a81543e4b9e
-AUDIO Fireball Cast 2 8cfbcf35bbcec300
+AUDIO Cat Meow a414ff56e149d371
+AUDIO Bird Chirp c8be8ffc2eda6423
+AUDIO Frog Croak 95d185e634724e25
+AUDIO Cricket Chirp 492f8f3431aad767
+AUDIO Owl Hoot 4e7a585ed1877915
+AUDIO Snake Hiss 152290a5b831bffc
+AUDIO Bee Buzz a528f1f37f28f9f2
+AUDIO Wolf Howl 178235189a8a64c3
+AUDIO Horse Neigh fce0a443451fa334
+AUDIO Rooster Crow 0e7d13e62a74abc5
+AUDIO Duck Quack ce49d42a30f588df
+AUDIO Elephant Trumpet f0d025e6f7f5014b
+AUDIO Rain b67ede91220c09e4
+AUDIO Rustling Leaves 010f3344a0f87dff
+AUDIO Waterfall 453ebf23d6a3f4fa
+AUDIO Ocean Surf 1907192caeb7e835
+AUDIO Earthquake Rumble 4e62dceb2791f748
+AUDIO Dripping Cave 112edbd878130eb1
+AUDIO Jump Scare Stinger 850e228199f3cdb0
+AUDIO Horror Drone cd5b40f14ce1c1b0
+AUDIO Ghostly Wail 0f3bd5c753f4af66
+AUDIO Demonic Roar cde05319f00107e4
+AUDIO Creepy Whisper fb7c25cd7830ba3c
+AUDIO Heartbeat eedcc54f5f1975d4
+AUDIO Creaking Door 6fe1d6551ce839b0
+AUDIO Distant Scream 6b33e0b95196fe8e
+AUDIO Sinister Laugh f83e0b3f44f2a4dc
+AUDIO Music Box 7e0d8d9ddd2b4e1e
+AUDIO Tension Riser 691d992790647f98
+AUDIO Sub Drop Hit f44f92542f3f6bd3
+AUDIO Ghost Breath baa22d6d522f1e1a
+AUDIO Nails on Chalkboard f1cc4d1ec55b4715
+AUDIO Ominous Bell 78b32c5c643d41ed
+AUDIO Rattling Chains 51eba0fac1e940a7
+AUDIO Radio Static d566cfbe9c66c9c1
+AUDIO Possessed Screech cfb52e2f44f64262
+AUDIO Dread Pulse cbb7451d53fc2c98
+AUDIO Skittering Swarm 3d3a3cc8f81bdb5d
+AUDIO Meteor Descent 3a3ae84fd2715bca
+AUDIO Meteor Impact a98b39d5b6ae6a1c
+AUDIO Comet Whoosh b491c7e92afc3482
+AUDIO Acid Sizzle 34d407e778f04cd4
+AUDIO Acid Splash 7acf28a711a572c8
+AUDIO Toxic Bubble 419d5f7f93cb97a8
+AUDIO Gas Leak 26c4e908521cf605
+AUDIO Gas Puff 8ae99f71decaa06a
+AUDIO Steam Vent d772e0af811d0a92
+AUDIO Cartoon Boing e4a75fdfad604886
+AUDIO Slide Whistle Up cb0b7e70fb62873b
+AUDIO Slide Whistle Down e7d33f881f7e0fa9
+AUDIO Fart 757e7bdfd5b8f01e
+AUDIO Burp d73e8141eed18c98
+AUDIO Slime Splat fc473951169a0f88
+AUDIO Squeaky Toy bbe84d7ecfe2ff19
+AUDIO Bubble Blorp f68e08e4f02350c1
+AUDIO Lava Bubble c7cb8f1f899e319c
+AUDIO Mud Squelch 4739a824a046963b
+AUDIO Magic Fizzle f2aa8ea46be89b51
+AUDIO Flamethrower 3c1c2c15aabfa698
+AUDIO Fire Whoosh a93dac5638a329d5
+AUDIO Torch Ignite 9c603bbb93db2298
+AUDIO Ember Crackle ec9aaef24afd6ead
+AUDIO Dragon Fire Breath caf00724a726ccc1
+AUDIO Match Strike 4c8729c095a200cf
+AUDIO Inferno Roar 06946cc5a0d0987c
+AUDIO Fire Sparks 20ff80a7893ec3be
+AUDIO Robot Servo 17d09cbac793ed65
+AUDIO Robot Power Up 9591bb6d5eda5a24
+AUDIO Robot Power Down a1dfc798ad541617
+AUDIO Robot Talk 4456af8cc82d104b
+AUDIO Robot Stomp 7d45b7e805b23d41
+AUDIO Mechanical Whir e526fdcf8de36b6a
+AUDIO Hydraulic Hiss 5294a6f426b0d6a5
+AUDIO Robot Alarm 09f46b7049cb05d9
+AUDIO Scanner Ping f97be27f79fb004c
+AUDIO Data Glitch 1fd341fb28ba71c6
+AUDIO Gear Grind a8d8fbc20b6fa307
+AUDIO Servo Twitch 792a93e8d2c6d51b
+AUDIO Healing Aura 6edc4bb63f1e71bd
+AUDIO Curse Whoosh 3d4aa3f3fca4b5ea
+AUDIO Shield Cast 8d02f4e56e4fb228
+AUDIO Notification d8a1ab260133a4fd
+AUDIO Menu Open 2d9cdeec1814de69
+AUDIO Grenade Blast 570e445875b310b7
+AUDIO Distant Boom 63876926e27f8a0b
+AUDIO Servo Motor 82a5cba5617b56d6
+AUDIO Power Down fdcb7ccd0fc72374
+AUDIO Campfire Crackle eec1d7218d0aa0b2
+AUDIO Bird Trill df1b8d1562b94fa6
+AUDIO Goblin Chatter 206b306441f24ae9
+AUDIO Beast Roar 91b0f771fe9bd694
+AUDIO Insect Buzz 4564d30a43ca1245
+AUDIO Ghost Moan 69efc3376986c434
+AUDIO Jumpscare Hit 855316eb668846c0
+AUDIO Whispering Void 15185b0f1b2c743c
+AUDIO Pistol Shot 33a8a78a6bc1ef83
+AUDIO Sniper Rifle 0f5e7f7fb65f2148
+AUDIO Spear Thrust 45ae24afc042052e
+AUDIO Axe Chop 9962ae908a15dcef
+AUDIO Whip Crack 1f3192c66ac41feb
+AUDIO Fireball Whoosh fc85a2d4a66433a7
+AUDIO Pickup Item eeb331f45c66d083
+AUDIO Extra Life 931909518e1dd25e
+AUDIO Force Field 4134464d02c0d92a
+AUDIO Warp Drive 49b51522de901ff7
+AUDIO Laser Charge 12d7a55a4f9052cd
+AUDIO Boing Spring 8d7a7221cfced2c8
+AUDIO Squish Pop 529cf900f2270675
+AUDIO Enchant d02299a3d0c83088
+AUDIO Summon Portal 009ec1b38aeeea2a
+AUDIO Hex Bolt ab4c9ba7c3d867d8
+AUDIO Tab Switch 09709108a9137021
+AUDIO Unlock 6ed2a814a57c7ba5
+AUDIO Barrel Burst daf714b0444b236b
+AUDIO Nuke Rumble 621c4ee0ed0ff053
+AUDIO Drone Hover 1dfccf0d808a8220
+AUDIO Conveyor Belt 2c89c9c46e0b9ff9
+AUDIO Thunderclap 92a33bbba9982840
+AUDIO Stream Babble 87ef1cdc41e3dc93
+AUDIO Slime Gurgle 80a555b13ca4670a
+AUDIO Bat Screech 2f23685e4815fa2b
+AUDIO Troll Grunt 7b6a0d26d3e8ba49
+AUDIO Demon Whisper 0c180e5ec5563d03
+AUDIO Bone Crack a5fd9e3437dc8fdb
+AUDIO Cursed Chime 4a2cb320c8885a0f
+AUDIO Machine Gun 2b8ef00c4ad8e48f
+AUDIO Plasma Rifle 10307ad83b75f623
+AUDIO Rapier Lunge 482d9a80b69c5055
+AUDIO Flail Swing 49bd62304286b945
+AUDIO Fire Burst 7ad4c1fb1bf8ba86
+AUDIO Retro Jump 701626d48e99e2cd
+AUDIO Game Start d2b91f5c695a15bb
+AUDIO Teleporter Hum b180483a771e2daf
+AUDIO Energy Drain ef9d3d1115af8a6a
+AUDIO Scan Complete 7f09be54a72eaa8d
+AUDIO Rubber Stretch d4570d555009213a
+AUDIO Pop Cork 0379e922c198a94d
 AUDIO Teleport 2 8debef2c77b24125
 AUDIO Magic Sparkle 2 734b70394f81883c
 AUDIO UI Click 2 327266fa828c0b8f
@@ -217,729 +214,724 @@ AUDIO Robot Talk 2 1f8a34e3185546e4
 AUDIO Thunder 2 b9bb260b9e27bd80
 AUDIO Wind Gust 2 16a5a2105e412643
 AUDIO Monster Growl 2 ba0a0d761177c209
-AUDIO Dog Bark 2 2511ca723d7b7901
-AUDIO Dragon Fire Breath 2 ba12e9a4eb85112d
-AUDIO Jump Scare Stinger 2 90dcc9dbe7d80556
-AUDIO Ghostly Wail 2 e3fb412adcf24b4b
-AUDIO Heartbeat 2 51de437eb099641b
-AUDIO Gunshot 2 c9a086e80e1204e7
-AUDIO Shotgun 2 c443559fd8c90de6
-AUDIO Rifle Crack 2 2badc9047d1602c1
-AUDIO Sword Clash 2 d3574e7816702bcf
-AUDIO Hammer Smash 2 c3877878c99dff23
-AUDIO Katana Slice 2 e3d48306ed963c3f
-AUDIO Flamethrower 2 3e217a6cbb9bd689
-AUDIO Fire Whoosh 2 cdf82546e18c9111
-AUDIO Coin 2 a3e2d3c610952c49
-AUDIO Powerup 2 1ffed6460176d03d
-AUDIO Laser 2 55538f49ef6a230e
-AUDIO Warp Drive 2 0b98ecc368b10604
-AUDIO Fart 2 80aa38e5fc1942d6
-AUDIO Arcane Sigil 61b5323c493ff90d
-AUDIO Arcane Shimmer 0ea359a09751a025
-AUDIO Fae Glyph 5b0b5c5308da6ab6
-AUDIO Wyrd Bloom e03b4f021b7d3289
-AUDIO Arcane Weave fa634faca539b2ab
-AUDIO Arcane Rune 7cc1ebbab61fada7
-AUDIO Mystic Whorl 5c75ef4afa2ff1bf
-AUDIO Ethereal Aura 34209e1db3d2a8e6
-AUDIO Radiant Aura b28e40eb2ea586d8
-AUDIO Astral Aura 9517b45f2bc9a6ac
-AUDIO Wyrd Spark c173d4ec3e30123d
-AUDIO Ethereal Rune ee6a86cdd82c63fa
-AUDIO Celestial Bloom 6911ab6daaa282c8
-AUDIO Runic Chime 3417f4336c9ab306
-AUDIO Glimmer Whorl 5b85a98ebcdeb8d9
-AUDIO Arcane Chime db5ea095c4686a70
-AUDIO Glimmer Aura bfec0a8a711fcbdf
-AUDIO Prism Surge f9020df27e554729
-AUDIO Enchanted Bloom f7b009ce7f5ee421
-AUDIO Shadow Hymn 13417954ae1ba029
-AUDIO Ethereal Spark 37a3ae5348f724f6
-AUDIO Shadow Shimmer cbbe315268256797
-AUDIO Astral Hymn 1b2773a749d88cf4
-AUDIO Glimmer Weave ef5e4846c8ea7955
-AUDIO Fae Bloom de8815a512d0289a
-AUDIO Astral Chime d3c52351f7e2a1fa
-AUDIO Quick Tone 0ee04d1aaf4ec1ff
-AUDIO Silky Chirp 882c1ffb02d11502
-AUDIO Quick Chirp 6899eef528ab3760
-AUDIO Muted Tap bfd41764a1cb4fc9
-AUDIO Soft Tick a3f82a2bbb032258
-AUDIO Silky Cue 2fa50d79d8350ecc
-AUDIO Sharp Beep ec2b12c217debfe5
-AUDIO Bright Nudge d7f0532cdfc99967
-AUDIO Soft Pop b334b7778a1074c2
-AUDIO Sharp Tone 2d2478fa3050ee43
-AUDIO Crisp Chirp f79a7de97eeb6cb0
-AUDIO Quick Beep a9ace5af0664fe46
-AUDIO Crisp Blip c287a5644361a191
-AUDIO Distant Wallop 35b8ed7cbccad3b5
-AUDIO Seismic Detonation 4bf94a6ad7a3df59
-AUDIO Massive Blast 44426ab2078a6173
-AUDIO Concussive Wallop 6e5144204bc45abd
-AUDIO Cavern Shockwave a5e679969002dfe1
-AUDIO Seismic Shockwave 8e83651c9d1487f3
-AUDIO Rolling Shockwave ee13121023af7b79
-AUDIO Deep Boom ece998fa27bf75c3
-AUDIO Cavern Wallop eef5465aaf6b9875
-AUDIO Concussive Kaboom 15e9c258b2d7cfcf
-AUDIO Muffled Wallop 7f98c6890945586a
-AUDIO Thunderous Boom 92ace06312c74570
-AUDIO Thunderous Wallop 9bb7d545f0735fe0
-AUDIO Overclocked Gear bffe3c98a0cfee5d
-AUDIO Electric Whir b87c23885c8c81bb
-AUDIO Hydraulic Hum 6352150b01083c56
-AUDIO Rusty Buzz 6ca19bf85d3b43ab
-AUDIO Servo Drone 85bd21d4b9620983
-AUDIO Pneumatic Relay 50cef46bad231e34
-AUDIO Pneumatic Hum 9a88546804cf7e91
-AUDIO Clockwork Whir 77f41ed40b20d4a1
-AUDIO Grinding Motor cfc602379d94b18a
-AUDIO Pneumatic Buzz 129785a126aba7b2
-AUDIO Hydraulic Piston 4f19207b547ff764
-AUDIO Digital Gear e1e4c9e5826de5da
-AUDIO Overclocked Ratchet 6cde26d978fb65a2
-AUDIO Broken Drone 833bf94266a4f6a9
-AUDIO Grinding Buzz 7f9f0ab4ad8c81bb
-AUDIO Broken Buzz 50c494b7a582ffec
-AUDIO Overclocked Relay 3dc975adab9a3c72
-AUDIO Overclocked Drone cea66841c41332c4
-AUDIO Grinding Whir 51e110a5f545a046
-AUDIO Digital Piston 36e29c0c9db1af6d
-AUDIO Hydraulic Drone d579269801173315
-AUDIO Hydraulic Motor 7955e679fd916204
-AUDIO Broken Piston 0ee085b49a19496f
-AUDIO Hydraulic Glitch 740afe089e5f447d
-AUDIO Restless Hollow 0e893280fa5a9427
-AUDIO Rushing Drizzle 94a2799a820fe3a1
-AUDIO Rushing Breeze d14977a7db8ba88e
-AUDIO Misty Rumble e77b1f6ad80039f5
-AUDIO Frozen Stream 91ddeafbe666b616
-AUDIO Restless Cascade 8d7fa29ad31e70f9
-AUDIO Misty Drizzle df3ad886b5096c41
-AUDIO Restless Drizzle 132c2f331ae73200
-AUDIO Windswept Gust ec4afa0511a56fe4
-AUDIO Quiet Cascade 69b3a5111afa2af2
-AUDIO Frozen Drizzle 7772f83cabdcd8a7
-AUDIO Howling Squall 54303716e6802dd9
-AUDIO Rushing Tide 74ac11bf92dce184
-AUDIO Windswept Cascade 5228f07d52c21730
-AUDIO Rushing Rumble e8bfdca5d379db66
-AUDIO Rolling Rustle 2e1191c44f8315b3
-AUDIO Rolling Rumble 972b2cba308ba853
-AUDIO Restless Tide e93cc0ef22acf108
-AUDIO Gentle Drizzle f41a85b7740c22e8
-AUDIO Howling Hollow 65ba3f05d54e0fe0
-AUDIO Frozen Squall 3531da4274794449
-AUDIO Giant Growl 540826f5621dc156
-AUDIO Angry Wail 4098f8ed372c620e
-AUDIO Feral Gnash 8bc825b7cb157986
-AUDIO Tiny Roar af5692614939776c
-AUDIO Slithering Growl b86184b04a9fd455
-AUDIO Guttural Hiss 938f0a76ee2a1a85
-AUDIO Ancient Squeal d0a9984d24a80518
-AUDIO Feral Croak 111f8da0adc410df
-AUDIO Wailing Gnash 321c6be7f9fba85a
-AUDIO Angry Growl 3021c23dc9c025dc
-AUDIO Rabid Snarl 77d02a493558ea38
-AUDIO Ancient Growl 93fcd1e5d79fac8a
-AUDIO Chittering Chirp 3b15088253d6b515
-AUDIO Rabid Bellow f8304014931fbfcd
-AUDIO Tiny Snarl 354ac14d04b77f82
-AUDIO Feral Howl 7b1b2ac4e7682ce9
-AUDIO Giant Howl 67680eacfb204377
-AUDIO Guttural Bellow 32744ee48fbb7829
-AUDIO Tiny Hiss bb63bfde68916347
-AUDIO Ancient Croak 33a6cfd5e0badaa0
-AUDIO Tiny Bellow 142a1748672fd11b
-AUDIO Feral Roar a8665e9d9ebb16c6
-AUDIO Wailing Hiss dcec9b662689d2f1
-AUDIO Tiny Gnash 86fc9c5f7547e950
-AUDIO Wailing Screech 49eda01f2cc85d6c
-AUDIO Slithering Wail 107075d3293b4ff6
-AUDIO Guttural Growl 84de1d4902dded16
-AUDIO Ghastly Murmur 78318b750dd2b5e0
-AUDIO Creeping Toll 54a19fd1d0f3defa
-AUDIO Creeping Murmur c9ea907f68777fae
-AUDIO Hollow Wail a18939a329979e5a
-AUDIO Rotting Knell b466e8c7c5ddc032
-AUDIO Dreadful Knell a6859444b6c9dbe7
-AUDIO Forsaken Moan 88d29bf89f78f171
-AUDIO Hollow Shriek 49bc5e209e7dfaa7
-AUDIO Cursed Stinger 6e94948f77370446
-AUDIO Forsaken Groan 9b50ec43064493a4
-AUDIO Forsaken Pulse 3aece57ead7dc395
-AUDIO Rotting Pulse edef1cd52c6e9834
-AUDIO Rotting Shriek 79d5735928d3e01e
-AUDIO Whispering Shriek 9e34810b80aec8d2
-AUDIO Forsaken Murmur 2d41a95b65e1c2ca
-AUDIO Dreadful Wail 4d0e1dd6a8b5e6a7
-AUDIO Ghastly Moan 84f9a7d9f3bedfba
-AUDIO Cursed Groan 8aa3ab99d1bdd1c6
-AUDIO Dreadful Moan 054ec2b28b333459
-AUDIO Cursed Wail c2a1c33887cc5701
-AUDIO Dreadful Toll 6f88247009457e5d
-AUDIO Hollow Groan be4af14936b1cd64
-AUDIO Whispering Pulse 0c38d8f275b21ea5
-AUDIO Forsaken Wail 2c59b23649b118f7
-AUDIO Whispering Groan 8ad9f2737ed0d620
-AUDIO Wretched Wail 5694adf6742ede15
-AUDIO Ghastly Groan ff5996817940f496
-AUDIO Whispering Murmur 2842649c4c76b109
-AUDIO Hollow Rattle 538b87dd6e360a28
-AUDIO Rotting Toll 68d21bf090ac4a09
-AUDIO Wretched Murmur 814c2ef5557b5c52
-AUDIO Rail Fire b15a8016d44531e7
-AUDIO Plasma Shot 004a2c0795ecb7b2
-AUDIO Compact Fire fd76ba97ccda783a
-AUDIO Plasma Discharge 5d169bb0603dd5a5
-AUDIO Suppressed Crack afcd301f6204d45a
-AUDIO Suppressed Fire 3555d59b071bee46
-AUDIO Burst Round f1b15d35de881f64
-AUDIO Magnum Fire ecf1a4e5e6b9d3a2
-AUDIO Magnum Shot 5ac4d73e25e6d645
-AUDIO Heavy Discharge a0a2d5b59c1eb3c4
-AUDIO Rail Round f6b16e5044f7f0b3
-AUDIO Heavy Round 17fb4bcac0418707
-AUDIO Snub Report b4199a0a303b02c3
-AUDIO Snub Discharge 5ce8652f865dcd0e
-AUDIO Reckless Chop d69bdc191254b7c2
-AUDIO Heavy Thrust 179a9252fe568141
-AUDIO Whirling Riposte 6ddb154b502d2d70
-AUDIO Iron Slice be024695807e3606
-AUDIO Heavy Chop bbeb899b29ad4520
-AUDIO Reckless Slice e30518e4056f99cd
-AUDIO Grim Cleave acae7fd2a5507127
-AUDIO Swift Cleave 788cbc6773499280
-AUDIO Keen Cleave 9a11ddeab68d4b4f
-AUDIO Swift Thrust 23411cc7413dd810
-AUDIO Reckless Thrust 0fec1b8b39cbf00e
-AUDIO Brutal Bash d56a9d9ef26cbd1d
-AUDIO Grim Chop 8738007c9079674d
-AUDIO Reckless Clash 236dc0fd04806f50
-AUDIO Keen Swing 0edcff5387b3b83c
-AUDIO Whirling Swing f1c3792ba30f95bc
-AUDIO Swift Riposte ddbfc22b7d9c9bea
-AUDIO Iron Clash 23c262eaf00a7199
-AUDIO Razor Cleave 1e32c36868d23f0f
-AUDIO Iron Cleave 50c2a79ab1a3022d
-AUDIO Heavy Slice ac5e38f18a458624
-AUDIO Swift Chop d8b223d73909ebba
-AUDIO Whirling Chop a2e92d57533ffcf8
-AUDIO Searing Blaze e116cdbb5af7d50a
-AUDIO Searing Torch 6e4ca35ef7bd1fb3
-AUDIO Kindled Ignite 62aa8dde7d52146f
-AUDIO Kindled Flare ddef95fc0f684483
-AUDIO Smoldering Ignite b918b43716ca2944
-AUDIO Searing Flare fcdd4085c00e99aa
-AUDIO Blazing Torch d5e2e1b4aee73019
-AUDIO Searing Ignite 3fc257dff1dfbf92
-AUDIO Kindled Flame ee53e307259d8fcc
-AUDIO Molten Scorch dcf8e90987d7bc62
-AUDIO Infernal Flare 8e25d6762239af6d
-AUDIO Kindled Torch e42fa951f9df810e
-AUDIO Molten Flame 3823bc541ceb510b
-AUDIO Ashen Whoosh d964288e41574c37
-AUDIO 8-Bit Ding 54512cbdf38f1910
-AUDIO Pixel Fanfare 5f06fe24cca16781
-AUDIO Retro Ding 15a4d0905ec064d9
-AUDIO Retro Pickup 9d45618e243daa6b
-AUDIO Retro Jingle 7cf5344c35d1a9fb
-AUDIO Turbo Bounce 6d7f396769848de8
-AUDIO Pixel Pickup 41a3796567c77b36
-AUDIO Pixel Score f082b580a01cb1a5
-AUDIO Arcade Jump ff8a9ac2139a2797
-AUDIO High Jingle ab639cd3a985bb28
-AUDIO 8-Bit Fanfare 0ee19ed747500630
-AUDIO Chiptune Bounce 74b92214db50782b
-AUDIO Arcade Jingle ba6034bc843091f5
-AUDIO Chiptune Ding 5c6380202175b12d
-AUDIO Bonus Bounce 22f267d9a5cf9de6
-AUDIO Ionized Leak 867cd0e311f1e3e4
-AUDIO Alien Surge 77e85fad7b102d26
-AUDIO Warp Field c6f35f94c80bbfe5
-AUDIO Radioactive Scan 7c7903af16bde3c4
-AUDIO Reactor Surge 6f9062aa95392f5b
-AUDIO Toxic Surge bc06b7d0fcf37501
-AUDIO Warp Scan 30925e228487d195
-AUDIO Toxic Hum 3183679facc8272a
-AUDIO Ionized Charge 1a1bcba34aa33c1c
-AUDIO Quantum Pulse 4fe975ddb8a46c62
-AUDIO Alien Field 2fd8b94f388dedb6
-AUDIO Ionized Alarm 1f36e985a5a0ae96
-AUDIO Photon Whoosh 42ba10dbb467deee
-AUDIO Photon Charge 24387921dbad165c
-AUDIO Photon Drip 6154d1ed7acc9376
-AUDIO Ionized Beam d0abe26baaa5dab4
-AUDIO Photon Surge 90ebdde22ab75acb
-AUDIO Reactor Beam f982d54977b18fe6
-AUDIO Reactor Charge 42e2420756b1bbd6
-AUDIO Squishy Plop c4e57b1c1bbeeae9
-AUDIO Goofy Plop af61040f64c82c06
-AUDIO Silly Blorp 5e698a6dc690aa02
-AUDIO Goofy Splat 9dfc414f77d5f8d4
-AUDIO Zany Squish 422be083d5cf2000
-AUDIO Silly Wobble 37c747bd8df05a08
-AUDIO Zany Wobble fbecf01ed61336c5
-AUDIO Bouncy Pop e22969418c16c5aa
-AUDIO Squishy Boing 71f4218407d582a5
-AUDIO Zany Splat b446a4779f1a65e0
-AUDIO Loony Wobble 2ca38b73e1196c76
-AUDIO Slippery Sproing 140e637acd3c1e49
-AUDIO Wobbly Plop 95e76c60f602b441
-AUDIO Bouncy Sproing 11e8b25b22dbb568
-AUDIO Silly Boing c3875b0f11722016
-AUDIO Loony Squeak 6b33db2083aa6e47
-AUDIO 8-Bit Coin d0c56eb2f76ed2f5
-AUDIO 8-Bit Jump 05151e1b1fe7c7f6
-AUDIO 8-Bit Blip 106fedabdaa28460
-AUDIO Pocket Zap fccb0470888cccfd
-AUDIO Pocket Coin e2835199ce17bddc
-AUDIO Pocket Powerup 5ba1a1ddffdb65b6
-AUDIO Super Chime 63f04b7da28f0a48
-AUDIO Super Coin 11def13b3c42de92
-AUDIO Super Hit 781a11807ebd4fef
-AUDIO Mega Shot 09cb9f65b28a7840
-AUDIO Mega Bass 906841fc2aa4a3f1
-AUDIO Mega Zap 0d1d951f9908b4d4
-AUDIO Turbo Laser c1af7934ff2827e9
-AUDIO Turbo Powerup b914c1756d3d1c88
-AUDIO Turbo Blip 5e7f1444ce190e7d
-AUDIO Woodgrain Buzz a045fe8fadba0712
-AUDIO Woodgrain Zap 09553d717220ddae
-AUDIO Woodgrain Boom 571b26c38c5459f0
-AUDIO SID Bass 6d66d74ba79f35e6
-AUDIO SID Zap 6775c02e4adeeaa9
-AUDIO SID Lead c6358fc68966963f
-AUDIO 8-Bit Laser 11067f59e1cbd5c4
-AUDIO 8-Bit Powerup f1311b8dd9cca718
-AUDIO 8-Bit Hit cd69f926ff499d0d
-AUDIO 8-Bit 1UP 1cf964ef950e6136
-AUDIO Pocket Jump 4d5896c3c900ed12
-AUDIO Pocket Blip 018f6a2ea89a990f
-AUDIO Pocket Hit 7a45cb946e2ef1e9
-AUDIO Pocket Select aed9efc57971c804
-AUDIO Super Powerup 22e475115f337570
-AUDIO Super Zap 383bca4bee022c48
-AUDIO Super Sparkle ed99e68615003991
-AUDIO Super Fanfare d2a89100ab29a2b1
-AUDIO Mega Punch bf0b45c8c589aa9b
-AUDIO Mega Explosion 9dddbbb1b92b72a4
-AUDIO Mega Lead 3d6be233d3171d32
-AUDIO Mega Hit 9de0e0a026b6d099
-AUDIO Turbo Coin ef6f3a357d7bf41c
-AUDIO Turbo Zap a0393d779d6d857a
-AUDIO Turbo Hit e8d86b8c516a9a6f
-AUDIO Turbo Chime 284b3625731c8582
-AUDIO Woodgrain Blip e6d0359acb2993ff
-AUDIO Woodgrain Hit 2889d8d13bf74a96
-AUDIO Woodgrain Jump ac3110731b0c31c6
-AUDIO Woodgrain Shot 63bf30c176307a30
-AUDIO SID Coin 7dd9261e54a62eff
-AUDIO SID Blip 9e21f522c08cd27f
-AUDIO SID Pluck cb5f011d82de7208
-AUDIO SID Sweep 647959ef355ad43a
-AUDIO Bell 75873c718bc18f32
-AUDIO Church Bell 48d931830035db6a
-AUDIO Hand Bell 832f93ca45da8df1
-AUDIO Wind Chime 61d821ea2a0756c7
-AUDIO Kalimba 0c7217866e710879
-AUDIO Music Box Note 4e2f2bb98d9acb5e
-AUDIO Glass Ping 8f862548473b3bcf
-AUDIO Marimba 5289e261c6b9d6e8
-AUDIO Vibraphone aaba28ee25ae4e4b
-AUDIO Metal Clang 1a8fb016b9a14313
-AUDIO Gong 73b34dc169050f56
-AUDIO Triangle Ting d4997f3b6361d4fe
-AUDIO Cathedral Bell 1d555f014f12f324
-AUDIO Spring Chime d9de8b74f58c6953
-AUDIO Grain Cloud f825c5c2d9134603
-AUDIO Shimmer Wash 0a4fa788030d2673
-AUDIO Time Freeze 76d8c86a8c91c009
-AUDIO Stutter Glitch 01e6148fa55bcfc4
-AUDIO Granular Drone acf13dad485b9fe6
-AUDIO Pixie Dust 23490485c6871b9a
-AUDIO Aah Choir d33dfe5bc4692776
-AUDIO Robot Voice 1303be9334eae28c
-AUDIO Monster Vowel 5a3431c8b8cbcaef
-AUDIO Alien Chatter 96387ee5eb0920a2
-AUDIO Pixie Voice 9ef0ad403c591a45
-AUDIO Ghost Wail 098e9e9f70fbf6a2
-AUDIO Ooo Drone 874657e0cf6dfa13
-AUDIO Vowel Talk 918c4d9b59a5d1aa
-AUDIO Wah Voice 3a0e31a2d5ecd56f
-AUDIO FM Piano 0daee45d843a72be
-AUDIO FM Bell a39a4d836c1500c0
-AUDIO FM Bass 8b6308dafbc5d1d5
-AUDIO Metallic Clang 95b65b82dd659201
-AUDIO Glassy Keys 8f2be147c0dbb8aa
-AUDIO Digital Brass 8b5d5c1c8a66a51b
-AUDIO FM Growl 029fe1283e81b2e1
-AUDIO Additive Organ 3872ba3a52ee307d
-AUDIO Bubble Drop eafe0cdac19887a1
-AUDIO Droplet Plink 71c3bb5a12229ef7
-AUDIO Bubbling Stream dba177d65043dc81
-AUDIO Boiling Pot 4fe73d25ae8d1c10
-AUDIO Underwater ca0b810e3bf07519
-AUDIO Pouring Water 23eb9ec122cd40ac
-AUDIO Lava Bloop d0b582ee1fc06353
-AUDIO Sci-Fi Bloop 4483e9e5ca2ef2a4
-AUDIO Crackling Fire af74c1f921d937a8
-AUDIO Heavy Rain c2a72bf543e823de
-AUDIO Frying Sizzle b880d7b6e22623a7
-AUDIO Geiger Counter aa00119ab3eeecc7
-AUDIO Electric Sparks f0922777242f1d88
-AUDIO Gravel Steps c3e0a6980c24ff01
-AUDIO Crowd Applause dc4ae7cde4bb344e
-AUDIO Static Hiss 29b518a9f220193c
-AUDIO Analog Kick 45fa2aeffd877b4e
-AUDIO Classic Kick d68ca5b5461f7340
-AUDIO Punch Kick e4ddb496b4207e9b
-AUDIO Snare 73d4d60fd9ac0ce6
-AUDIO Tight Snare b138158a3b5705b5
-AUDIO Rimshot df6f024b854cbcf8
-AUDIO Clap 1cc6d7260ed29da5
-AUDIO Closed Hat 4cf5f6051da8e878
-AUDIO Open Hat 9df1a2f2a57eade1
-AUDIO Low Tom f2ce5253bc906e24
-AUDIO High Tom f1e2d876b35edab5
-AUDIO Crash Cymbal afa554ff7b114154
-AUDIO Ride Cymbal 6d59d0e2df0a85d9
-AUDIO Cowbell 99ca130efb2252fd
-AUDIO Woodblock f0460cfb677de5c8
-AUDIO Shaker 26bc45be41c28aa1
-AUDIO Warm Pad 971d7d1679b3267f
-AUDIO Choir Aah 87c1460206967d5f
-AUDIO Sci-Fi Drone 5997a4cd5a53339e
-AUDIO Glass Pad 0920b03485fda4cf
-AUDIO Deep Drone b2edac8206c3a643
-AUDIO Shimmer Pad 5d920335e804c9f0
-AUDIO Power Hum bb0d9cadbadf75bc
-AUDIO Angelic Wash 4833dcffdcc14a9e
-AUDIO Say Hello f590424a30ef6465
-AUDIO Game Over Voice 0c3edf0dc450370a
-AUDIO Warning 8edb7bcd0a8b62f6
-AUDIO Robot Yes 67bc7ac2ec4af54b
-AUDIO Robot No 737b450f5872a022
-AUDIO Level Up Vox 1f742f792d30c13a
-AUDIO System Ready e67bbdfb8656df3e
-AUDIO Monster Speak 2d3642a99db05ff4
-AUDIO Phaser Pad e2ddaa302d758667
-AUDIO Chorus Keys 066f0fba172e03fd
-AUDIO Ping-Pong Pluck 86c47f7ed26e1b6f
-AUDIO Brown Noise Wind cd4345d61d94b863
-AUDIO Fireworks 0e23bb6654fe457f
-AUDIO Car Engine 9b432775bbba00f0
-AUDIO Helicopter 34cb603ce5fc308f
-AUDIO Plane Flyby 8f4abff14b12d8a6
-AUDIO Train 72a2d3529ada14c1
-AUDIO Chainsaw 219762ff86df1002
-AUDIO Tubular Bell 94c145d635336ddb
-AUDIO Grain Storm c918e09a2c24b03f
-AUDIO Frozen Choir 4e400762dab44cf5
-AUDIO Glitch Rain 79634e09e8c89344
-AUDIO Warped Tape b699e67b08a2eca0
-AUDIO Cloud Bloom eefdefe3b4e364b6
-AUDIO Micro Stutter 6485ec747c6e8319
-AUDIO Whispering Grains 8605fdb4f6c21779
-AUDIO Dust Devil f6ef96e395ff3894
-AUDIO Grain Riser 0795067d4e1f9360
-AUDIO Nasal Ee cc05deec841ab5b1
-AUDIO Throat Sing 1322d18a2c90c813
-AUDIO Whisper Breath 74a4d40693a25a11
-AUDIO Chant Loop 3ea320499f100512
-AUDIO Yawn Stretch 7dc91f02056ef1e1
-AUDIO Baby Coo 77cb764fbd8fcf84
-AUDIO Cave Drip 498064be57c5fc9f
-AUDIO Big Splash fcd7472607dbd95d
-AUDIO Fizzy Soda dcfa0be7bede33fa
-AUDIO Gulp Swallow c353884f40f2ea18
-AUDIO Water Swirl a29a9b9117a2294e
-AUDIO Sewer Drip cb40dcff6e1a2c04
-AUDIO Geyser Burst a3c038ca23bb3047
-AUDIO Popcorn 320c8e700d7edf07
-AUDIO Bubble Wrap 00aa16171ef7a9ea
-AUDIO Radio Interference 996fd733d985f398
-AUDIO Distant Fireworks 787e00d25be2aa5f
-AUDIO Leaf Litter 93a1db0e2ad001a3
-AUDIO Sparkler bc39f9b3bc446efe
-AUDIO Hail on Metal 7372d251f68637ba
-AUDIO Dark Ambient Bed 88a00f29c667aa8c
-AUDIO Cold Vacuum 0b16eac08946f28f
-AUDIO Solar Wind e3e480f1b5e3df5c
-AUDIO Monastery Drone f90f00da01a58c49
-AUDIO Neon Hum 2297deda80ec8df5
-AUDIO Dream Bell Pad 18b192d5fd3c2db4
-AUDIO Player One f3425135be78f226
-AUDIO Insert Coin 5d7cc3234230b5b8
-AUDIO Mission Failed 8f30023aedd73dcb
-AUDIO Access Denied fc0ae1e8b21d63ab
-AUDIO Ready Set Go f91363a967412152
-AUDIO Nice Work 726b49f604756235
-AUDIO Self Destruct f3fa1840cb2acaa1
-AUDIO Ice Skid 366b2c9d6b1efc24
-AUDIO Water Wade 45426c46927b8793
-AUDIO Cabinet Close 4cc8777b2fbaf1a4
-AUDIO Metal Locker d670436e4ddeb3ff
-AUDIO Key Jingle de2be55289321acd
-AUDIO Vault Door a634b84e97075fe5
-AUDIO Trapdoor Creak 58dfd489ae964892
-AUDIO Reverse Piano a7ec80d666916ced
-AUDIO Reverse Snare c022310dd29587e4
-AUDIO Reverse Laser 42151b36c6bb7dc3
-AUDIO Reverse Gong bbc9dd3691cd154f
-AUDIO Downlifter 3cff70f5a5adabd4
-AUDIO Braam Riser 0b89741718e7447c
-AUDIO Portal Inhale 3d39c9dacad33c59
-AUDIO Tine Keys a8ca973e9c01aceb
-AUDIO FM Marimba ae97c80b31218c20
-AUDIO FM Xylophone 750b8c1203cacc23
-AUDIO Crystal Mallet 8463538e1a6752ed
-AUDIO FM Clav afa06e43f0411116
-AUDIO Steel Drum cddf556a7b2aa761
-AUDIO FM Harp 6db1feefb9c0b066
-AUDIO Bell Lead 330c526c3b0ace89
-AUDIO Digital Flute 88288ba0c2699e27
-AUDIO Rubber Bass d38df84aa9b80089
-AUDIO Digital Choir 223f438bd1e72e4c
-AUDIO Chip Arp 5d41cf375b36b644
-AUDIO Wood Step c7c16dfe7cbe63b1
-AUDIO Stone Step f725cef0e8c5c969
-AUDIO Grass Step 20b22c211a32f0f0
-AUDIO Snow Step f02fcaaaca793d0b
-AUDIO Sand Step 2f2294278ad5a356
-AUDIO Mud Step 894aa0c4f6003bf9
-AUDIO Puddle Step 21098fb5e1a9057c
-AUDIO Metal Grate Step 2eb2892b46273e2c
-AUDIO Ladder Rung 50f26fc50961ee3c
-AUDIO Heavy Landing 0d36ff4b596c0446
-AUDIO Armor Step 91bb20815705c3a8
-AUDIO Sprint Cadence 2415dff86974cc31
-AUDIO Cloth Rustle 67d2118eaa69688f
-AUDIO Wooden Door Open 7e13a29535b02682
-AUDIO Door Slam d58cdf278db147de
-AUDIO Latch Click 015d20f85fb410a3
-AUDIO Chest Open 156636fbcbf5e912
-AUDIO Drawer Slide c62dabffeccf9b3a
-AUDIO Heavy Gate 41dc76c89f8e8c01
-AUDIO Sliding Door 1df98904d5eebaf1
-AUDIO Elevator Ding 199329093f2ca850
-AUDIO Safe Tumbler 06371b00cb029b55
-AUDIO Lock Bolt 9a7be8b5932cb702
-AUDIO Reverse Cymbal 778a100ab0c7b537
-AUDIO Reverse Bell c3b838a654cbc9bd
-AUDIO Suction Whoosh 2ffd5e67ccf8b15a
-AUDIO Riser Swell d7cb884db0c5c7fc
-AUDIO Reverse Vocal 0e6144aff7031702
-AUDIO Backwards Splash 50d15da854b74171
-AUDIO Rewind Tape 80df9c4b575acabe
-AUDIO Reverse Impact 504cf42b015cbbe2
-AUDIO Springy Boing 82155220620fbad1
-AUDIO Flying Saucer d95c054b63119d5c
-AUDIO Ascend Chime 0bac3d20299fe43f
-AUDIO Robot Chuckle bff19be8dac40fd5
-AUDIO Ominous Heartbeat 10894c769c3b10cd
-AUDIO Camera Shutter 1991df48431cbbcd
-AUDIO Goopy Slurp 7a259ffaa2b03073
-AUDIO Ricochet Zing 49300d4142a818c0
-AUDIO Stardust Chime 730b3c527c650d23
-AUDIO Bouncy Blip 8df79b4147a4236e
-AUDIO Trumpet be6b7b4095125b8f
-AUDIO Trombone 394469e31aca8bb2
-AUDIO French Horn 87d1c9333eb110e8
-AUDIO Tuba 1ac6176401074639
-AUDIO Brass Section ad7bfbe9699ce314
-AUDIO Brass Stab e1a4fa4cb318c271
-AUDIO Muted Trumpet a0ecdbcd3bd06004
-AUDIO Sci-Fi Brass c6f75f644d68d5e7
-AUDIO Square Lead 3da2741a4bcd6047
-AUDIO Pulse Lead 7edad5a90dbe9208
-AUDIO Triangle Lead f64a339da37c1a12
-AUDIO Pluck ddd87330ca14fec5
-AUDIO Modal Bell f93819ee88c01867
-AUDIO Sub Bass 19bb06650b99bfdc
-AUDIO Saw Bass 33687c7befbe27e0
-AUDIO Square Bass 209a39b8abfa6a99
-AUDIO Saw Pad bad2f427b4642184
-AUDIO Additive Pad e3db749eaa94e537
-AUDIO Organ d05c63ac9495d0eb
-AUDIO Stab a5953bb95be47e62
-AUDIO Dist Guitar 6e8aec781638e389
-AUDIO Clean Guitar e284959b7ab8b8a0
-AUDIO E-Piano 17964014d5538fef
-AUDIO Brass 83858493859ae578
-AUDIO Choir 84176aa8a25696b9
-AUDIO 808 Bass 6b99fef05cc6c209
-AUDIO Pick Bass b9c4442828030c55
-AUDIO Growl Bass 07b40816f77e4957
-AUDIO Power Chords 99b4cca8cf2bb5db
-AUDIO Strings 3a2472c5ee7440ca
-AUDIO Palm Mute 06ac4b56f4851071
-AUDIO Screamer Lead 3d6a757f27ef6ea0
-AUDIO Pinch Harmonic 6d9a2286debafc3b
-AUDIO Anvil c06699b08c532fe5
-AUDIO Bass Chug 436a8bb18a74f396
-AUDIO Dist Bass 893ce4819404e5ba
-AUDIO Chug Guitar 0cf6452059fdd663
-AUDIO Detuned Wall a3550a9f83ae8f50
-AUDIO Doom Chord 2df863a30ca74c10
-AUDIO Industrial Stab 191634e0d0260767
-AUDIO FM Shred 42bf410a7f043c23
-AUDIO FM Chug c9b8c041c5f749dc
-AUDIO Clang Lead 1bf94d812b080fea
-AUDIO FM Power 8a5f8a14804cf02b
-AUDIO FM Growl Bass 4301f9a908663476
-AUDIO Sitar fd0913942c744235
-AUDIO Flute edf04a2150b76fae
-AUDIO Ice Bells d7e1d9eff86cd75c
-AUDIO Drone Bass 7c29fe453f965646
-AUDIO Pizz Strings 96c0fdecc0e3d68f
-AUDIO Harpsichord 3b548b4f629c5018
-AUDIO Theremin 7332e90003849425
-AUDIO Pipe Organ 9ec33386c76c7b9f
-AUDIO Comp Guitar 904a22998e38fd5e
-AUDIO Upright Bass 53b19f03d89d6a5e
-AUDIO Bowed Bass 103245facf978d07
-AUDIO Low Reed 8da1008ab95b158d
-AUDIO Glockenspiel 165c683a32727dd7
-AUDIO Horn Section eab49a5a62c15451
-AUDIO Wind Pad 69f879abeb7651e6
-AUDIO Piano 186a1b244c751779
-AUDIO Harp edae76092765fc3c
-AUDIO Accordion 54d04ccd4192682e
-AUDIO Solo Violin 6e797abb7f8c72f8
-AUDIO Shakuhachi 4649c3db41319bb6
-AUDIO Temple Bell 74d8804dac1ac71e
-AUDIO Tremolo Strings 6e3e0a5682a23d69
-AUDIO Slide Guitar 44777834d295db8f
-AUDIO Surf Guitar 42b82c42a3b74eeb
-AUDIO Vocal Pad 5f6d27982c2df381
-AUDIO Low Chant a018c05fadd39436
-AUDIO Toy Piano 97e76d33cccb2d82
-AUDIO Harmonica a103d45c4f0c07c7
-AUDIO Tine Comp 7302bb882e58a4cb
-AUDIO Slap Bass 3294078d450e1168
-AUDIO Koto c8f49f654d938fbe
-AUDIO Shamisen 9071374fb7eb530e
-AUDIO Erhu 51df078b97b0eb4c
-AUDIO Dizi 5e30f519b3b27930
-AUDIO Nylon Guitar 38da7c206aaa8ad9
-AUDIO Rasgueado 100a02d455918683
-AUDIO Banjo 6f521b3248fa9b71
-AUDIO Pedal Steel 3849a4ecd2fdec79
-AUDIO Whistle d16c9daacf2a1927
-AUDIO Soprano 7af3b524255b06e9
-AUDIO Celesta 2d4f9a9476c18d9f
-AUDIO Fiddle 0c4f50ac487e8e99
-AUDIO Lead Vocal 13775144f9117cd7
-AUDIO Female Vocal afe29af16264ee3a
-AUDIO Child Voice 90529a8d4ec7bbf8
-AUDIO Whisper f9d14b08163150e9
-AUDIO Vocal Ahh d4c3773a8daad7df
-AUDIO Bass Voice 8d9269bbfad29f42
-AUDIO Finger Bass 60b8a7ee4e2e15a1
-AUDIO Fretless Bass d69d01be07bc1f93
-AUDIO Acid Bass d600de288d8968d9
-AUDIO Dub Bass 9e9df65b9236ec18
-AUDIO Pedal Bass 5f410b59bbae4e72
-AUDIO Saxophone 8edce2449b9bde4d
-AUDIO Ocarina 66c5861ebe532083
-AUDIO Cello 0e3f91ff7d50a038
-AUDIO Mandolin f81234dda0ee1a5e
-AUDIO Ukulele c5f33009016e3dce
-AUDIO Honky-tonk 2286e373f1ab5f1c
-AUDIO Funk Keys a7c8627d78dfc96a
-AUDIO Tape Strings 2e248d8a12ddcb5b
-AUDIO Guitarron 888d097cc1f3a63b
-AUDIO Dulcimer 0befb4acecb8795b
-AUDIO Funk Guitar bf5d139e668c577b
-AUDIO Clarinet 79917581165dcb28
-AUDIO Bandoneon 4b362b0143d105a8
-AUDIO Xylophone 69e0cf86ce801aa5
-AUDIO Super Saw d7163dca85f992db
-AUDIO Jazz Piano 7194ea2507b46fb4
-AUDIO Calliope c311871cace6702b
-AUDIO Sho 77e62b0988025e94
-AUDIO Deep Pad 747d22151a41826c
-AUDIO Bowed Metal 24b7391d107cd780
-AUDIO Bass Reed b83c37e07f731d1d
-AUDIO Koto Bass 73ba721d80cf241c
-AUDIO Harp Comp 41a049a3df391dc6
-AUDIO Reed Section c026f2c8385835db
-AUDIO Didgeridoo 92c2dc60f75f58f1
-AUDIO Grand Piano ae37e8f08b80a927
-AUDIO Acoustic Guitar b17fd8509c4815ef
-AUDIO Mandolin Chop a649fd80c57158a7
-AUDIO Nylon Comp b256d128ef30faa9
-AUDIO Ukulele Comp f44dd88bfa9fd90e
-AUDIO FM Lead 30d366a83fe28327
-AUDIO FM Stab 74e16e83d40e5d2a
-AUDIO Cursor Move acfc8e68ab0c209d
-AUDIO Cursor Tick a1a1d6f34b4516de
-AUDIO Cursor Blip 82049284aabc0277
-AUDIO Error fbee9db9dd92029c
-AUDIO Denied 31079ab413aa4e53
-AUDIO Paint Stroke c7ec1c776847c126
-AUDIO Boot-Up Chime e4e8314a259a34df
-AUDIO Processing Beeps 22149cefe23a1a8c
-AUDIO Sax Riff ded8cbd48faf2827
-AUDIO Trumpet Fanfare 3e5f8d1e88d7c803
-AUDIO Door Knock 529d1a989a6409ab
-AUDIO Crowd Cheer 7ff745ba265c3f3b
-AUDIO Shop Bell fd978ff239b8b25b
-AUDIO Vortex Whoosh 76d3ef6858025f29
-AUDIO Heavenly Chime 9898914eec5e2e2f
-AUDIO Heavenly Fizzle 8dadc2488db0a6ef
-AUDIO Glass Clink fbe20adf25f9f9e6
-AUDIO TV Power Off 70426b0f135d76b8
-AUDIO Thud a28cfd89fa316e96
-AUDIO Airplane Takeoff c08715560ffb66dd
-AUDIO Airplane Landing 7931ca734d36a364
-AUDIO Cash Register facb2d6e9357679d
-AUDIO Harp Glissando 745303c2a24f1721
-AUDIO Tambourine 5942f007d5de3830
-AUDIO Typewriter Clack cab9f0a4553bd667
-AUDIO Cello Pluck a602140ef9970c27
-AUDIO Kazoo 976e40f8cf28d011
-AUDIO Cluck c68bb9f7f0a768d6
-AUDIO Chain Clink 30ff3ca6f6705d7d
-AUDIO Sword Ting 2eecce03638cf236
-AUDIO Countdown Beep 3e4f0dbd8720d83c
-AUDIO Countdown Go d14d69fdd7933a16
-AUDIO Modem Chirp ca43dcbb4e5ba19e
-AUDIO Servo Chime 5831f3ec18aee4a7
-AUDIO Tesla Coil 337873e92e06e25a
-AUDIO Bubbling Flask 51687ca7b546d0c8
-AUDIO Knife Switch a4b520f1d89c71f2
-AUDIO Shears Snip a8c4490782914d6c
-AUDIO Petal Scatter 87559422c3bd7d43
-AUDIO Cape Whoosh e124a0637e6c32d6
-AUDIO Finger Snap 4d584325c4b09420
-AUDIO Sax Sigh 1c74223d140888ee
-AUDIO Harmonica Bend d148c22a9c88c13f
-AUDIO Cymbal Swell 591e228def6f6546
-AUDIO Van Horn 8ae0fb3ac9aa7853
-AUDIO Watering Can 50ce5db658b12491
-AUDIO Spade Dig 658fc8bb87340376
-AUDIO Teacup Ting f8182e94369abd8f
-AUDIO Wax Seal f09cb2273fd03df0
-AUDIO Cell Door Clang c52288718323ef68
-AUDIO Knuckle Crack 5ce291883bad1c8b
-AUDIO Brush Clatter ae3350311eec2bd2
-AUDIO Dead Tone 7c7ba900dda22573
-AUDIO Void Thump 005a2b4c1e0ef2f7
-AUDIO Brush Tap 11cdc57a85164f5d
-AUDIO Contented Hum 4f42a3436d3fb8ce
-AUDIO Palette Scrape a94362b67148d437
-AUDIO Visor Clank fa46a5b76cea257e
-AUDIO Gauntlet Creak 693892f5af60f87c
-AUDIO Triumphant Clank d063d894be421b47
-AUDIO Coin Tumble 177f26ea366ec0c9
-AUDIO Gold Bar Clunk fdd580d6f513ab93
-AUDIO Distant Cluck bdbb8d3c5e914165
-AUDIO Feather Rustle 190e57448ecc3cf3
-AUDIO Chord Swell 22063051209cac32
+AUDIO Jump Scare Stinger 2 567500278a08594a
+AUDIO Ghostly Wail 2 27c66cca0c75f689
+AUDIO Heartbeat 2 fb410f892339c5ca
+AUDIO Gunshot 2 ace36cdd17809160
+AUDIO Shotgun 2 4b2a2be2ab8f4d81
+AUDIO Rifle Crack 2 88745d41133409c6
+AUDIO Sword Clash 2 952ff1d9c773aac8
+AUDIO Hammer Smash 2 98acbd079bdc1cd4
+AUDIO Katana Slice 2 58f665cb04169c6e
+AUDIO Coin 2 39489db9d644ffd4
+AUDIO Powerup 2 c2ac8e65a55d7cc8
+AUDIO Laser 2 573b5295b816a5ae
+AUDIO Warp Drive 2 8a673a0e698ed88f
+AUDIO Fart 2 1926e2ff4eff750e
+AUDIO Arcane Sigil 8d09c330fb382d6f
+AUDIO Arcane Shimmer 9d158357216626da
+AUDIO Fae Glyph 0abe325577ab9a74
+AUDIO Wyrd Bloom 3c9004476b4b947e
+AUDIO Arcane Weave 2a35c276893adba1
+AUDIO Arcane Rune c32cb8670c90488a
+AUDIO Mystic Whorl 3ab3f2e25a22d37b
+AUDIO Ethereal Aura b22df06aa3446299
+AUDIO Radiant Aura 70426d87f09b7bd2
+AUDIO Astral Aura 35bf53c9d7fa129e
+AUDIO Wyrd Spark 2e36e8f330f51dba
+AUDIO Ethereal Rune 0e20c69fdf2dfebc
+AUDIO Celestial Bloom 5fc9c24f49a50fb8
+AUDIO Runic Chime 8373ffd068037dc5
+AUDIO Glimmer Whorl 252ee3c77ad48d86
+AUDIO Arcane Chime 727b57aa86f55ec3
+AUDIO Glimmer Aura de49c8aec1fc5239
+AUDIO Prism Surge 18c987a7052e6e92
+AUDIO Enchanted Bloom 0bad77307a71a953
+AUDIO Shadow Hymn 55dfbec3398854c6
+AUDIO Ethereal Spark e80c1a8e8cf2fdeb
+AUDIO Shadow Shimmer 97c53851df69e140
+AUDIO Astral Hymn ca62576c5c60ab41
+AUDIO Glimmer Weave 48e2439662e132b5
+AUDIO Fae Bloom bc1279b0b5282917
+AUDIO Astral Chime fbf67af584e530a8
+AUDIO Quick Tone 7394abf68f82841b
+AUDIO Silky Chirp fec8a5b14e8563aa
+AUDIO Quick Chirp 15522e02fff97efd
+AUDIO Muted Tap b2f07cea053757c3
+AUDIO Soft Tick f69ccf8f5e59aece
+AUDIO Silky Cue eb5c2ebe9ca80e45
+AUDIO Sharp Beep 09b2a0c33002e218
+AUDIO Bright Nudge ba3cf0544dfc96e7
+AUDIO Soft Pop 9bec6a8d8d2f81dc
+AUDIO Sharp Tone 37be44ad02126656
+AUDIO Crisp Chirp a6289868cd109dab
+AUDIO Quick Beep 7d528369e9abfe42
+AUDIO Crisp Blip 2b9ba578334d9735
+AUDIO Distant Wallop 22adf2f74cee75d4
+AUDIO Seismic Detonation 468d220153ba59ae
+AUDIO Massive Blast dc27aadf15635054
+AUDIO Concussive Wallop fc93f49bdf1506ba
+AUDIO Cavern Shockwave 1b790164d2f6636d
+AUDIO Seismic Shockwave cd48f60607fd72f7
+AUDIO Rolling Shockwave f4efbb5fc130da6c
+AUDIO Deep Boom ddb562f528060dce
+AUDIO Cavern Wallop cb7d468314ff5e76
+AUDIO Concussive Kaboom 94f8590e56fc9af9
+AUDIO Muffled Wallop 139c1effa9c01252
+AUDIO Thunderous Boom 6b547f9676c5facd
+AUDIO Thunderous Wallop 868f220a0a66f9a5
+AUDIO Overclocked Gear 1b6a6139b8234e28
+AUDIO Electric Whir 9caa350ccb6949c9
+AUDIO Hydraulic Hum b653c2a2092dd369
+AUDIO Rusty Buzz 9fbb5cdc963624fb
+AUDIO Servo Drone d5f751549f7cc913
+AUDIO Pneumatic Relay 13b705551ecab7fe
+AUDIO Pneumatic Hum 6a79112ddeb7e9e2
+AUDIO Clockwork Whir e521f3b3218f0094
+AUDIO Grinding Motor 3cefc7b19026fa64
+AUDIO Pneumatic Buzz 5eb2995b4f596294
+AUDIO Hydraulic Piston d0fb66b2a163cb0d
+AUDIO Digital Gear 6f45cfc458928105
+AUDIO Overclocked Ratchet 6b8fa56540ae0840
+AUDIO Broken Drone c10cc54a106184e7
+AUDIO Grinding Buzz ddc1b1d8289e298f
+AUDIO Broken Buzz ac9761bbebf37f80
+AUDIO Overclocked Relay 0a2673b355aeee70
+AUDIO Overclocked Drone e152af400bd559d9
+AUDIO Grinding Whir dbb74c7001b25a35
+AUDIO Digital Piston f472feabc759839c
+AUDIO Hydraulic Drone fcd2d0ee765782d3
+AUDIO Hydraulic Motor 59aa4d57a392b426
+AUDIO Broken Piston 9d7f43ef43b11f66
+AUDIO Hydraulic Glitch 534fd89a8b1a1f6b
+AUDIO Restless Hollow 41277cdbe8079246
+AUDIO Rushing Drizzle 71d5a1753215e160
+AUDIO Rushing Breeze 69c48c914c3910f0
+AUDIO Misty Rumble a82a7705811a1a4e
+AUDIO Frozen Stream 93a9cffdb327150c
+AUDIO Restless Cascade 1de5072132db3858
+AUDIO Misty Drizzle 5b4eeda3307942c6
+AUDIO Restless Drizzle e7d13e5dd95d1914
+AUDIO Windswept Gust c3cfacb98f0e420a
+AUDIO Quiet Cascade 6dc94b3c92de5307
+AUDIO Frozen Drizzle bacd937360e5c034
+AUDIO Howling Squall 13bb590fc60a782c
+AUDIO Rushing Tide bba7d3ff976dc9dc
+AUDIO Windswept Cascade 69a98258812422bd
+AUDIO Rushing Rumble 2f153e35a61c4926
+AUDIO Rolling Rustle 36bc4b263d0c2d27
+AUDIO Rolling Rumble 205f62299ba0e91a
+AUDIO Restless Tide ae059d926618f91f
+AUDIO Gentle Drizzle c12f8db528b1f842
+AUDIO Howling Hollow b65ad8886c7bc4fb
+AUDIO Frozen Squall 19a07437cf2eb1d4
+AUDIO Giant Growl a7f3a870e264ff23
+AUDIO Angry Wail d661f99463d57619
+AUDIO Feral Gnash 7a8e187da33b5714
+AUDIO Tiny Roar 08f9f4b2ee193f4b
+AUDIO Slithering Growl fa4058fe277ff57f
+AUDIO Guttural Hiss 12aa76c6d39dc827
+AUDIO Ancient Squeal 1dd80455d1131e04
+AUDIO Feral Croak a26123efb098d07e
+AUDIO Wailing Gnash d3da7982ccc78bd7
+AUDIO Angry Growl 3b3b3cb8bd894337
+AUDIO Rabid Snarl 31f5aa2a948437ab
+AUDIO Ancient Growl 1370bc362765d1a5
+AUDIO Chittering Chirp 7229635745914074
+AUDIO Rabid Bellow d05f1070af89dbad
+AUDIO Tiny Snarl 54f845635356233c
+AUDIO Feral Howl 5e330633b500d40a
+AUDIO Giant Howl c66c4f5bb2e326d4
+AUDIO Guttural Bellow eb4e50188cd0c203
+AUDIO Tiny Hiss 6b01b5e72df594d6
+AUDIO Ancient Croak ef9974c290e90f6b
+AUDIO Tiny Bellow e31d6d0518bf6106
+AUDIO Feral Roar b80023e734036566
+AUDIO Wailing Hiss 8b7cb408a405a1e5
+AUDIO Tiny Gnash 0b4357077697730e
+AUDIO Wailing Screech 209885f0bef3beb3
+AUDIO Slithering Wail e6b0ac2ddbe0de5c
+AUDIO Guttural Growl 9a718d4cd4cd9ee5
+AUDIO Ghastly Murmur 52f5cb473152dd3e
+AUDIO Creeping Toll 8b86a054b1c4d673
+AUDIO Creeping Murmur 7adfcc2423c46fd5
+AUDIO Hollow Wail 2bbbc854833c04df
+AUDIO Rotting Knell 0df96d767917ff07
+AUDIO Dreadful Knell dd9011b3c2cc93ce
+AUDIO Forsaken Moan 0b879e1214d57dcd
+AUDIO Hollow Shriek affeb95b67e183b2
+AUDIO Cursed Stinger 6dc6581e49c20969
+AUDIO Forsaken Groan 597600b279b113fb
+AUDIO Forsaken Pulse 6c8aa2cdcc5c3b98
+AUDIO Rotting Pulse d7453d2d5bd7fcd0
+AUDIO Rotting Shriek 2c6f1ea14be36aba
+AUDIO Whispering Shriek a7a63a87e3052438
+AUDIO Forsaken Murmur bf6e41e9e0556688
+AUDIO Dreadful Wail 05bd6880e53bc495
+AUDIO Ghastly Moan 798d7a7fec770a64
+AUDIO Cursed Groan c7b9aab912a8ab04
+AUDIO Dreadful Moan 5f83015fe94fec64
+AUDIO Cursed Wail 81558e1934163c30
+AUDIO Dreadful Toll abefe0944b1564d1
+AUDIO Hollow Groan ebfa556454feb461
+AUDIO Whispering Pulse 2752cf74d944162b
+AUDIO Forsaken Wail 510bae4c9b72921f
+AUDIO Whispering Groan 763c69225279a635
+AUDIO Wretched Wail 26c2cb011b75e6f0
+AUDIO Ghastly Groan ac3ff173d8caec0a
+AUDIO Whispering Murmur 13697ef910f3f29c
+AUDIO Hollow Rattle cabbc382bc89a177
+AUDIO Rotting Toll 354554c9d0a6fc30
+AUDIO Wretched Murmur 38c3cd374713c090
+AUDIO Rail Fire fa168a1786b24e58
+AUDIO Plasma Shot cd0ef9aadbad5963
+AUDIO Compact Fire ea1b804cb42525f9
+AUDIO Plasma Discharge 38cdd96563d327d0
+AUDIO Suppressed Crack b95fabece275fee3
+AUDIO Suppressed Fire 9a0a019b87313a56
+AUDIO Burst Round 712f15de949dee3f
+AUDIO Magnum Fire 1331c52637cb2f6d
+AUDIO Magnum Shot 876c0a1189830b16
+AUDIO Heavy Discharge a07cdef91e83d9f6
+AUDIO Rail Round 7fa6a00f61a516e6
+AUDIO Heavy Round c627634b1b2223ec
+AUDIO Snub Report 7d9a99f242b96933
+AUDIO Snub Discharge 96bb5e850b35535e
+AUDIO Reckless Chop 28d834d4f73815f9
+AUDIO Heavy Thrust 7a89ffa747dddb4c
+AUDIO Whirling Riposte ffcc05e830e46e65
+AUDIO Iron Slice 266dc2a9cbddb18c
+AUDIO Heavy Chop 75b0f7cbb9eef50e
+AUDIO Reckless Slice 5d25499c23d4c46f
+AUDIO Grim Cleave 8fcaca75efb7ba40
+AUDIO Swift Cleave 87783abe29871f25
+AUDIO Keen Cleave 57a26a9476141de7
+AUDIO Swift Thrust 9617f9c2777c2065
+AUDIO Reckless Thrust 71a7ae4dab9a3e28
+AUDIO Brutal Bash 4895a55286087863
+AUDIO Grim Chop 5f5d80bbf1e8bb82
+AUDIO Reckless Clash f7e3f115c8673744
+AUDIO Keen Swing 5b99e4b65dfc4a79
+AUDIO Whirling Swing 314fdab23296b907
+AUDIO Swift Riposte 6bef489c436dcc7d
+AUDIO Iron Clash 336c68252d217a6e
+AUDIO Razor Cleave 2e8258352029406e
+AUDIO Iron Cleave ea517d733ac07240
+AUDIO Heavy Slice 8d708465835ce79e
+AUDIO Swift Chop 41bb25b131b55406
+AUDIO Whirling Chop 0c3938d881b737c1
+AUDIO Searing Blaze f5b257aeda9ff213
+AUDIO Searing Torch 919d1310f26aa3a1
+AUDIO Kindled Ignite 5ea8f2df92afcab0
+AUDIO Kindled Flare 6ea39ed26ad84e51
+AUDIO Smoldering Ignite ee7cccc54c0e47bc
+AUDIO Searing Flare 1475ea7948aaacc2
+AUDIO Blazing Torch 7ca156645c2fc8e9
+AUDIO Searing Ignite 9477ff29867eebb6
+AUDIO Kindled Flame 3d9e1b5c15ca6c2f
+AUDIO Molten Scorch bcbaf9a1d839f38e
+AUDIO Infernal Flare 3846b6262a39f883
+AUDIO Molten Flame 5ff9609755dcdafa
+AUDIO Ashen Whoosh 22c6a3e28efdace7
+AUDIO 8-Bit Ding d04402b483ecd153
+AUDIO Pixel Fanfare 3f9b021a015bcec5
+AUDIO Retro Ding 3816b1f7884e25e0
+AUDIO Retro Pickup 9f5e61cb45e39e6c
+AUDIO Retro Jingle 01865b0cbd8b65a9
+AUDIO Turbo Bounce 1d2b755abc8e689d
+AUDIO Pixel Pickup 63eaa4c25b0af4eb
+AUDIO Pixel Score 2760c0bc9bea31ab
+AUDIO Arcade Jump 74ed09667527cef5
+AUDIO High Jingle 5e95a21c535967bf
+AUDIO 8-Bit Fanfare 6dd917da5a0b5267
+AUDIO Chiptune Bounce 91804a55a72eae56
+AUDIO Arcade Jingle d9571d87cd2b4d4e
+AUDIO Chiptune Ding 73631b9c29e0d2f9
+AUDIO Bonus Bounce 9e36d95d8cf7b3e0
+AUDIO Ionized Leak a94c0bde1cef5601
+AUDIO Alien Surge 7706ac19336e6ea0
+AUDIO Warp Field 020d9485b4bdd52e
+AUDIO Radioactive Scan 571393fe664d535b
+AUDIO Reactor Surge 9608493e6afd9773
+AUDIO Toxic Surge 0f099272eac646a5
+AUDIO Warp Scan 97ba61c2bb78c511
+AUDIO Toxic Hum 4411b4cebe0c97fb
+AUDIO Ionized Charge fd48c0a52af948d0
+AUDIO Quantum Pulse a0e2ba701d21ac9d
+AUDIO Alien Field 7514cbd540b947fc
+AUDIO Ionized Alarm 5dd9d0cf680ed42e
+AUDIO Photon Whoosh 20e772fafaf316b1
+AUDIO Photon Charge 1c843a4d26d38fd6
+AUDIO Photon Drip fb9d4b10f782af1b
+AUDIO Ionized Beam 6b14a43f83d7787a
+AUDIO Photon Surge e04b2c1279d53acb
+AUDIO Reactor Beam 4ba35d729aae2b13
+AUDIO Reactor Charge 210a9b1bd371338c
+AUDIO Squishy Plop 48e9f72da8e9c07a
+AUDIO Goofy Plop d7619b9815a54711
+AUDIO Silly Blorp f1d10f3035dfbfa7
+AUDIO Goofy Splat 20520cc91eed9476
+AUDIO Zany Squish 38bb9e3bd94501f0
+AUDIO Silly Wobble 7603475bc95723d6
+AUDIO Zany Wobble 24042e72dfa9e15b
+AUDIO Bouncy Pop 6e7b3e6991dec1e2
+AUDIO Squishy Boing 6592983b6bc1c638
+AUDIO Zany Splat 6b2d344a55ab5987
+AUDIO Loony Wobble 7009d0098f73fc62
+AUDIO Slippery Sproing 4286866e7514eb51
+AUDIO Wobbly Plop 9e83e2962ba2a803
+AUDIO Bouncy Sproing c21df8e3befdb75a
+AUDIO Silly Boing 48cd71849a9fc8d5
+AUDIO Loony Squeak be414981add94258
+AUDIO 8-Bit Coin 58a7036f022e9852
+AUDIO 8-Bit Jump 78668f42803a14f5
+AUDIO 8-Bit Blip 918a9acc02c04ebd
+AUDIO Pocket Zap 0e8c789f6e69a5b2
+AUDIO Pocket Coin 94a8c9e76f361e00
+AUDIO Pocket Powerup 48b39828b12d7e09
+AUDIO Super Chime 6f01fdf9bf2c2eae
+AUDIO Super Coin 30396dd9d9a6b62c
+AUDIO Super Hit d3c0cf6d3a5f773c
+AUDIO Mega Shot 107d3fb2c9ebe1fd
+AUDIO Mega Bass a894707f7020250e
+AUDIO Mega Zap decf935bcd265942
+AUDIO Turbo Laser 97477f01f90a1f86
+AUDIO Turbo Powerup e38b7e09a784f19c
+AUDIO Turbo Blip 2e06b6a6131dab85
+AUDIO Woodgrain Buzz 6b9fc98297039305
+AUDIO Woodgrain Zap 929c82867fb8a5bf
+AUDIO Woodgrain Boom 709575091dee5ff6
+AUDIO SID Bass 1b1b3fa974a07a30
+AUDIO SID Zap 477527567289e169
+AUDIO SID Lead 844d7c371734c1aa
+AUDIO 8-Bit Laser c78fd7a807bfba41
+AUDIO 8-Bit Powerup 208ef0b2403133ff
+AUDIO 8-Bit Hit 7a16bae347e50ae0
+AUDIO 8-Bit 1UP 1a37feed2a6e03e2
+AUDIO Pocket Jump eb4777a1294995be
+AUDIO Pocket Blip 55311d311a71d1aa
+AUDIO Pocket Hit ef222f8e80547cbf
+AUDIO Pocket Select 97012a24b3d357f3
+AUDIO Super Powerup d1091af696ccfcf5
+AUDIO Super Zap 2f797e694c743fd4
+AUDIO Super Sparkle 58f2de3c65a5624b
+AUDIO Super Fanfare da38d605d6d6e486
+AUDIO Mega Punch 006ec978ea545dcb
+AUDIO Mega Explosion 37eb013c12b08117
+AUDIO Mega Lead 9bae59ef22adea4a
+AUDIO Mega Hit d9d899f550004734
+AUDIO Turbo Coin 3a7f413cdd7bbbc7
+AUDIO Turbo Zap dd465b0ac7408aaf
+AUDIO Turbo Hit 3a32cbc53d41affa
+AUDIO Turbo Chime 70d8f658736d66a1
+AUDIO Woodgrain Blip 7b4b72ae0bd810eb
+AUDIO Woodgrain Hit bd86d137a2d3d1ca
+AUDIO Woodgrain Jump fac62a8a63c3159f
+AUDIO Woodgrain Shot 3d0e3a163fe36669
+AUDIO SID Coin 44ad5efab4b81aed
+AUDIO SID Blip 3804f3ac9220b033
+AUDIO SID Pluck f57d339c6a215ee3
+AUDIO SID Sweep 7233f75f8fee8e9c
+AUDIO Bell e8bbcbac508129d7
+AUDIO Church Bell 9ed842092001afaa
+AUDIO Hand Bell 32215ac5bb0cba94
+AUDIO Wind Chime 40a5827f39cf19fe
+AUDIO Kalimba f989c6488650534f
+AUDIO Music Box Note 00f00a08a2061209
+AUDIO Glass Ping 00f0e6cc4dd4f7b1
+AUDIO Marimba c93accb4565d0877
+AUDIO Vibraphone a24bf13e86a190b9
+AUDIO Metal Clang bec0967e6c7eb193
+AUDIO Gong db1f7125bb1c8a02
+AUDIO Triangle Ting b93a7a86391bcf67
+AUDIO Cathedral Bell f967369878217ce9
+AUDIO Spring Chime 0293053dbb3f13ec
+AUDIO Grain Cloud 81c38f7cbf5dfef5
+AUDIO Shimmer Wash 63b90f25fd021420
+AUDIO Time Freeze 030fe39a03cc4555
+AUDIO Stutter Glitch c3310067a8122f28
+AUDIO Granular Drone d5c7ce49b73e2860
+AUDIO Pixie Dust daf5593b4c575e5a
+AUDIO Aah Choir 62610c10a44a6865
+AUDIO Robot Voice 0ebf40478b07a5c8
+AUDIO Monster Vowel e765c31688e7ce7f
+AUDIO Alien Chatter ae19748a10046ab5
+AUDIO Pixie Voice a7532fbc0b5e149f
+AUDIO Ghost Wail d050989b7c6f939c
+AUDIO Ooo Drone beaef402af7b15af
+AUDIO Vowel Talk 3cd0357f4bea3b7c
+AUDIO Wah Voice bb8d19aa01e48adb
+AUDIO FM Piano 52d06762dc912eb1
+AUDIO FM Bell acf82563156cb896
+AUDIO FM Bass e5126c950bf13436
+AUDIO Metallic Clang 2cab8a56583606f1
+AUDIO Glassy Keys 00f580e57961bbd4
+AUDIO Digital Brass 62bf87ecaef633b3
+AUDIO FM Growl d8c01a7745e62810
+AUDIO Additive Organ 25ce97278fbccefe
+AUDIO Bubble Drop 930a091f724c2db4
+AUDIO Droplet Plink 82de5bbda8f5cc5a
+AUDIO Bubbling Stream a4cbbf844d2317c5
+AUDIO Boiling Pot 50d3302178a838bc
+AUDIO Underwater 9609712dc14518fa
+AUDIO Pouring Water 3799ca7655a58491
+AUDIO Lava Bloop 77182ad6f42c38b7
+AUDIO Sci-Fi Bloop f91ed9425a6ff823
+AUDIO Crackling Fire bb695772e31b24db
+AUDIO Heavy Rain 31542043b308d96a
+AUDIO Frying Sizzle 1203447a5b93791f
+AUDIO Geiger Counter 7329b787f8de952e
+AUDIO Electric Sparks 7c962fc718a4737a
+AUDIO Gravel Steps 200db4441a66df59
+AUDIO Crowd Applause 85d05d4f9fd9f16c
+AUDIO Static Hiss 9728902020eb736f
+AUDIO Analog Kick 1d3b06015c61b47c
+AUDIO Classic Kick f25acb0364f12566
+AUDIO Punch Kick c17f25fc2066be87
+AUDIO Snare 4a3bee97365ad120
+AUDIO Tight Snare aca8e9e7eb8284bc
+AUDIO Rimshot 6acecb0e41732e19
+AUDIO Clap 5ca6a1e0a57fe5d1
+AUDIO Closed Hat 36a88995c7b73a92
+AUDIO Open Hat 76ed048dcfc375c6
+AUDIO Low Tom 69e73aaf8bbee6e2
+AUDIO High Tom 7eceaa53401433e2
+AUDIO Crash Cymbal 213afe6bdbd892c8
+AUDIO Ride Cymbal ffe702e516725f18
+AUDIO Cowbell a9ab2f4a08c2d1bf
+AUDIO Woodblock 5ebd98bcd449b089
+AUDIO Shaker dd939c84a9338a55
+AUDIO Warm Pad 18db6a9ce55f6925
+AUDIO Choir Aah d51471d93217c5ca
+AUDIO Sci-Fi Drone 77e68c0f9920d222
+AUDIO Glass Pad 93435125b2eaeecc
+AUDIO Deep Drone c82c361b48645cfe
+AUDIO Shimmer Pad 2c7f28b1b1a21564
+AUDIO Power Hum f80dcca2f2aa79f1
+AUDIO Angelic Wash e029c5e6bf4ac9e3
+AUDIO Say Hello a1a0f837b39481e0
+AUDIO Game Over Voice 61c034052156c8c6
+AUDIO Warning fcce3f55f5f95f38
+AUDIO Robot Yes 631d1e4e0e82cd65
+AUDIO Robot No fdee786872d85f81
+AUDIO Level Up Vox 6415c287a1198e58
+AUDIO System Ready d58e845b1b66496a
+AUDIO Monster Speak c4ae64539996bce4
+AUDIO Phaser Pad 061502eb6f67000a
+AUDIO Chorus Keys 27d4989f8ebbbb0e
+AUDIO Ping-Pong Pluck ea5e90d23d6898dd
+AUDIO Brown Noise Wind 56a83694bf870b93
+AUDIO Fireworks 6d9a7227bd48f540
+AUDIO Car Engine f981465796efc6f6
+AUDIO Helicopter dfcc78bc0844e4ed
+AUDIO Plane Flyby 3051856ab16ea5a5
+AUDIO Train 578ae0c7468d4608
+AUDIO Chainsaw 220d30b2d7daa3db
+AUDIO Tubular Bell cc7aa6649f420b71
+AUDIO Grain Storm 3deff5b8387c5829
+AUDIO Frozen Choir c975fb674849e5f4
+AUDIO Glitch Rain 9d708069cae15436
+AUDIO Warped Tape 33f86cba3342bb5d
+AUDIO Cloud Bloom 78b18c6f8c0c4420
+AUDIO Micro Stutter 52a996cd7462aba6
+AUDIO Whispering Grains 35267d3ff4d119d2
+AUDIO Dust Devil a51058ffecff2956
+AUDIO Grain Riser 17b7d74332cc4572
+AUDIO Nasal Ee 31029efe42938a55
+AUDIO Throat Sing 1ff0e9cb42959a28
+AUDIO Whisper Breath 6ee6343a7b97aef9
+AUDIO Chant Loop 87f19e4ec1aeeba1
+AUDIO Yawn Stretch 27c05c3a83f8362d
+AUDIO Baby Coo 9d24f79c06980dd5
+AUDIO Cave Drip ce6682fa22af106d
+AUDIO Big Splash edd399099e1b0774
+AUDIO Fizzy Soda 4a47adfc437913d9
+AUDIO Gulp Swallow c5f0d2d287163861
+AUDIO Water Swirl cc78b22dbe02702c
+AUDIO Sewer Drip eceb0114f0558f6f
+AUDIO Geyser Burst 93c51b45baa0332c
+AUDIO Popcorn 4c31aee6936e07b3
+AUDIO Bubble Wrap 5c3d35b2c998d8d7
+AUDIO Radio Interference 388651814e5b82b0
+AUDIO Distant Fireworks 8d18a385907a6840
+AUDIO Leaf Litter 4ef2ec7012082bc1
+AUDIO Sparkler 0ba56444e26e194f
+AUDIO Hail on Metal 48251092738cdc97
+AUDIO Dark Ambient Bed 5a4e1950beba2743
+AUDIO Cold Vacuum 87234b263d4a3495
+AUDIO Solar Wind 6f49cf68cb445df9
+AUDIO Monastery Drone 052e222d69c3b722
+AUDIO Neon Hum f79973902e7475c1
+AUDIO Dream Bell Pad c3eb02c7fcae6304
+AUDIO Player One 38c72f97380d8faa
+AUDIO Insert Coin f203b9724e4c730d
+AUDIO Mission Failed 740475a0a42641bf
+AUDIO Access Denied d7514d3d72ca3590
+AUDIO Ready Set Go a3c80a855ec8713a
+AUDIO Nice Work d937e568b10e5e09
+AUDIO Self Destruct 192bead69cb64d4f
+AUDIO Ice Skid 319e7c3560ac9d22
+AUDIO Water Wade a167042228941a9f
+AUDIO Cabinet Close 78aaf9b570ccfed6
+AUDIO Metal Locker acaa6496505e7d27
+AUDIO Key Jingle 20ed1c80828ed8dd
+AUDIO Vault Door 7465047ce92e441b
+AUDIO Trapdoor Creak bf9076d4634617bb
+AUDIO Reverse Piano f6b63a17f5d07b4a
+AUDIO Reverse Snare 8eb1146c43607e71
+AUDIO Reverse Laser 6eaeb6da3d1cbde7
+AUDIO Reverse Gong 9e7fa7508c8cb187
+AUDIO Downlifter 35772778f2bb4d57
+AUDIO Braam Riser 8a5beb1268f3648d
+AUDIO Portal Inhale 0149085b0784ec6c
+AUDIO Tine Keys dfa0ce1d776713da
+AUDIO FM Marimba 0b795f6472156efd
+AUDIO FM Xylophone e9bd77841e65a83d
+AUDIO Crystal Mallet 9080965af26434d1
+AUDIO FM Clav b81c860bfeb9bff6
+AUDIO Steel Drum 57f6c039d90dacac
+AUDIO FM Harp 189384e8531fd397
+AUDIO Bell Lead 00f71b1b28ff30e2
+AUDIO Digital Flute ed91303b9b03fd26
+AUDIO Rubber Bass 2c1096b67b38d3ff
+AUDIO Digital Choir 7340a0cfa1f00bbe
+AUDIO Chip Arp 6ea73cbb47b56942
+AUDIO Wood Step 55cf7ccba618841a
+AUDIO Stone Step 2e4220883ddfc56d
+AUDIO Grass Step b6d8fdad4dbed66e
+AUDIO Snow Step db8725817f92f1e2
+AUDIO Sand Step 93f858b3a313a5cc
+AUDIO Mud Step bfb9f42c31aecbe1
+AUDIO Puddle Step b8f291651ca9469e
+AUDIO Metal Grate Step fba706582b5988eb
+AUDIO Ladder Rung dc815e40582504d5
+AUDIO Heavy Landing 5f2b22c6cfbc9403
+AUDIO Armor Step 3e2cb244c11ebe43
+AUDIO Sprint Cadence eb3b235cf9043017
+AUDIO Cloth Rustle 9b96499e5bfd1329
+AUDIO Wooden Door Open 94622f7caa998a27
+AUDIO Door Slam 817b951dd2ac0ee8
+AUDIO Latch Click 0b4c22e46fc31f47
+AUDIO Chest Open 118af47d180af294
+AUDIO Drawer Slide e4e9938f4ef45618
+AUDIO Heavy Gate 9663ac71e5b77fc0
+AUDIO Sliding Door d3604745b9d142ec
+AUDIO Elevator Ding 4e1571a098d6b2bd
+AUDIO Safe Tumbler 0309e0f4368a2c31
+AUDIO Lock Bolt 03cbff49a02d6004
+AUDIO Reverse Cymbal ec21667bef263226
+AUDIO Reverse Bell a27dd42315dae936
+AUDIO Suction Whoosh 573c76e7877ebc5e
+AUDIO Riser Swell 6717f138409c551d
+AUDIO Reverse Vocal 891fd26f58b1aedc
+AUDIO Backwards Splash 79033142cd76a007
+AUDIO Rewind Tape a34acb6d9a339aac
+AUDIO Reverse Impact 55d894eb478304f8
+AUDIO Springy Boing 439117ab4ea22aa6
+AUDIO Flying Saucer dcc9566d7149da38
+AUDIO Ascend Chime 5d7934931a5a14ba
+AUDIO Robot Chuckle 7511d29c0142cf1b
+AUDIO Ominous Heartbeat fc59a563fb7a9c60
+AUDIO Camera Shutter ac70b232d42c6bd1
+AUDIO Goopy Slurp 7dd435c5314ebd3a
+AUDIO Ricochet Zing 855bbbd9e72f1670
+AUDIO Stardust Chime 45887bd4b89c6985
+AUDIO Bouncy Blip ed788d11eb9cd448
+AUDIO Trumpet 7d6250b995583abe
+AUDIO Trombone 987f32cc6a3df4ad
+AUDIO French Horn c910b4e876d954e1
+AUDIO Tuba f344cbbb733cce8e
+AUDIO Brass Section 38ed9b3248d59e1b
+AUDIO Brass Stab 89b9b8838f3a60f4
+AUDIO Muted Trumpet 1968744dbe9e88c2
+AUDIO Sci-Fi Brass d5669737b85c18d8
+AUDIO Square Lead 1a70d7431a4c950e
+AUDIO Pulse Lead f3ab62e7290a8862
+AUDIO Triangle Lead 6343a08b11833032
+AUDIO Pluck 361a225dfca5dbea
+AUDIO Modal Bell 19f84e003d4e60dd
+AUDIO Sub Bass b0068b6f6df5ab80
+AUDIO Saw Bass 3dddd4201a1dc58f
+AUDIO Square Bass e2cccbda36c7487b
+AUDIO Saw Pad cf5756a6fd994fbf
+AUDIO Additive Pad 209a8884adcf8da5
+AUDIO Organ 20fa0478ead511c1
+AUDIO Stab 00199ad94556ffd2
+AUDIO Dist Guitar 378daacb5942c11c
+AUDIO Clean Guitar 04f2fd2c634ab7a9
+AUDIO E-Piano 99a1c0b8b0a0d203
+AUDIO Brass 25af6b7297044393
+AUDIO Choir 17ea775655e29113
+AUDIO 808 Bass 7303861cec5e3ff9
+AUDIO Pick Bass 32664d3743a2608e
+AUDIO Growl Bass d7b80b7ec5f083f3
+AUDIO Power Chords 9d3cb3698ba3e47e
+AUDIO Strings 46bb2f68b91341c5
+AUDIO Palm Mute 2724f2d854af2d25
+AUDIO Screamer Lead bc4e7546733a868b
+AUDIO Pinch Harmonic c523f889efa98302
+AUDIO Anvil 1b294c789efa9ff3
+AUDIO Bass Chug 25244036a71403c5
+AUDIO Dist Bass 64483374123aa01b
+AUDIO Chug Guitar b167080510bd3946
+AUDIO Detuned Wall 5d8eee725b5b7727
+AUDIO Doom Chord 000e27a6bda94875
+AUDIO Industrial Stab d92054f07e189ca3
+AUDIO FM Shred fc488be0ef01c16d
+AUDIO FM Chug dbcca5d0bab9647b
+AUDIO Clang Lead ddc77dbfe227714a
+AUDIO FM Power e948a7cf445a59ce
+AUDIO FM Growl Bass 168a5093b68469be
+AUDIO Sitar ee8d0df6887362d5
+AUDIO Flute 38c0e79da934bfb0
+AUDIO Ice Bells 8a3f3a5e25ed6507
+AUDIO Drone Bass 6349b66115bd6ea4
+AUDIO Pizz Strings e1583b3fa42ba992
+AUDIO Harpsichord 099fa7e86f668041
+AUDIO Theremin 004e8cd1cab875ca
+AUDIO Pipe Organ ba32af8996bee492
+AUDIO Comp Guitar e2752da84cf5b2e3
+AUDIO Upright Bass bfe5a6f54a2cb6e6
+AUDIO Bowed Bass 1ac1fde74e2c74ac
+AUDIO Low Reed bfa6a113a7e41ac6
+AUDIO Glockenspiel f92940fcef3d7f7f
+AUDIO Horn Section e366a6aacde44265
+AUDIO Wind Pad b0c77d3542679c8a
+AUDIO Piano 405192ac146215a5
+AUDIO Harp 5805b644d20406df
+AUDIO Accordion 98601370513750d7
+AUDIO Solo Violin 5b8966b5230af8c6
+AUDIO Shakuhachi a0cb117c782709e9
+AUDIO Temple Bell fa740ea1352a32e0
+AUDIO Tremolo Strings df832c7e6d42dd15
+AUDIO Slide Guitar 503b499a81dc2fcd
+AUDIO Surf Guitar 68bef24a8ba7443d
+AUDIO Vocal Pad 3d447178705826f7
+AUDIO Low Chant dc0c961993badcae
+AUDIO Toy Piano faf1312aac0d049f
+AUDIO Harmonica bb435ec7553c9c36
+AUDIO Tine Comp 3ecf293f00332c88
+AUDIO Slap Bass e3684026ccac4e0b
+AUDIO Koto 25466d235d980b4c
+AUDIO Shamisen fdd24c16bb64bd8f
+AUDIO Erhu c7feef4a81117c6f
+AUDIO Dizi 3bf49ecee9758595
+AUDIO Nylon Guitar db33a7a47c24b433
+AUDIO Rasgueado 42b7fc16c934492f
+AUDIO Banjo 87e5481da8254c84
+AUDIO Pedal Steel 622d15ba1bbc18ad
+AUDIO Whistle 83ffc9264589d481
+AUDIO Soprano 9d9e858538851494
+AUDIO Celesta a0cd10d16199ef82
+AUDIO Fiddle 3c103edab5d4576f
+AUDIO Lead Vocal bcdfefd89c68b691
+AUDIO Female Vocal 329993e88eb5ee73
+AUDIO Child Voice 1f821454682a467f
+AUDIO Whisper b64c3417570bf42c
+AUDIO Vocal Ahh c6c6f47df1ff987e
+AUDIO Bass Voice 165acbbdd24966ba
+AUDIO Finger Bass eced42e956714e64
+AUDIO Fretless Bass eec78389e2435588
+AUDIO Acid Bass 2e606462e53a89e5
+AUDIO Dub Bass ed495feaae36832b
+AUDIO Pedal Bass c85272822bdc6003
+AUDIO Saxophone beefb84ff7577b0c
+AUDIO Ocarina 6cdfcdcac630ce03
+AUDIO Cello 33db1a4836795111
+AUDIO Mandolin e6efb11ddf43ebbe
+AUDIO Ukulele e39fb1284d832a61
+AUDIO Honky-tonk da01b4c53e7cd98e
+AUDIO Funk Keys 60be1458d9b7680d
+AUDIO Tape Strings cd8397154ef19914
+AUDIO Guitarron 1d5b1fc9f6796a28
+AUDIO Dulcimer 0d12bdab5eeb305a
+AUDIO Funk Guitar c40bbbc1495f54b4
+AUDIO Clarinet 8b8ee8fd55fecf82
+AUDIO Bandoneon 3867880aac8d6263
+AUDIO Xylophone ab6d5f694d67bb32
+AUDIO Super Saw c065436015c5edd5
+AUDIO Jazz Piano d2d6d3e2c41de079
+AUDIO Calliope de30ecdf2bc1cf02
+AUDIO Sho 2523bedff20f92d6
+AUDIO Deep Pad 855442b5acdfb5c2
+AUDIO Bowed Metal 5cb21bdfab5debf8
+AUDIO Bass Reed 281b3d087e3555fb
+AUDIO Koto Bass 3c816476f3a61ca5
+AUDIO Harp Comp 90145f0bb451cada
+AUDIO Reed Section 1f864696d3eb8b5d
+AUDIO Didgeridoo 5d6bf420459fe799
+AUDIO Grand Piano f311b4a44135ed89
+AUDIO Acoustic Guitar 44c327a4c510685b
+AUDIO Mandolin Chop 7c784bba16a778a9
+AUDIO Nylon Comp 7b434d6ccc59b05f
+AUDIO Ukulele Comp 677bb97ddd0587b6
+AUDIO FM Lead 20a876b8865e0d29
+AUDIO FM Stab 91a7b7fcddf3d0e5
+AUDIO Cursor Move f00c6c2ce0f420b5
+AUDIO Cursor Tick 3779b79f6df6a1a6
+AUDIO Cursor Blip 18048679209207ce
+AUDIO Error a0afd2507dacc385
+AUDIO Denied 322f820d75057ef2
+AUDIO Paint Stroke c8094008dae3aff1
+AUDIO Boot-Up Chime 41ac071db73bfe72
+AUDIO Processing Beeps def8d1a2afd5db13
+AUDIO Sax Riff 8d095eecd1ff53f5
+AUDIO Trumpet Fanfare 1e7a511928d784e8
+AUDIO Door Knock 1db0e82b54b45332
+AUDIO Crowd Cheer 40f485254c9bf7de
+AUDIO Shop Bell b71eae4e529c506d
+AUDIO Vortex Whoosh d9e1abd17cfb3648
+AUDIO Heavenly Chime b8a53889a1eb96f8
+AUDIO Heavenly Fizzle f44cfd9bbd0a75b6
+AUDIO Glass Clink f3d260961502a4b1
+AUDIO TV Power Off bae05882a92667e1
+AUDIO Thud 67b09df88e537777
+AUDIO Airplane Takeoff c5f651e907eec8d2
+AUDIO Airplane Landing 3796415771144296
+AUDIO Cash Register 165aebf3ccab7e3a
+AUDIO Harp Glissando 7eb22cc5c0d2cb9e
+AUDIO Tambourine b916082da2632bf0
+AUDIO Typewriter Clack 176d20082b5672df
+AUDIO Cello Pluck bb7934af31faa564
+AUDIO Kazoo 8c34904c4feca3ed
+AUDIO Cluck da474484e8529e3b
+AUDIO Chain Clink 24c5ef378553ffe4
+AUDIO Sword Ting 00f8f640fe29c37f
+AUDIO Countdown Beep d9dff93e231f6b6b
+AUDIO Countdown Go ed4aa9583705b041
+AUDIO Modem Chirp e2259fd3f96e3a7c
+AUDIO Servo Chime c78346ae19cdd1ef
+AUDIO Tesla Coil 5182c41a07db6185
+AUDIO Bubbling Flask b898f5dd2e7a4f18
+AUDIO Knife Switch e9d1b604e18f3491
+AUDIO Shears Snip eb1aa3d172a9e40c
+AUDIO Petal Scatter 451e9eb7e6681616
+AUDIO Cape Whoosh 7a3a72e54a9a466e
+AUDIO Finger Snap 6c6c0de89227f107
+AUDIO Sax Sigh 57a053d9c0d26358
+AUDIO Harmonica Bend db60e4f923e13e0e
+AUDIO Cymbal Swell 9c303387a4831480
+AUDIO Van Horn 7da36ccd6007f3d8
+AUDIO Watering Can c97752814d4f4b20
+AUDIO Spade Dig f6051d6526a5f666
+AUDIO Teacup Ting 2d10774df566ae88
+AUDIO Wax Seal 8ab42daf8a50ae34
+AUDIO Cell Door Clang b886f2aecd1cd1d1
+AUDIO Knuckle Crack 00b79206843a2ae1
+AUDIO Brush Clatter cbed27fcf0b3bb95
+AUDIO Dead Tone c6d405d04d208171
+AUDIO Void Thump 0a955a622ae618ad
+AUDIO Brush Tap 5ec5f0e0eb9f7d91
+AUDIO Contented Hum a91b80628dd3e2df
+AUDIO Palette Scrape 132b23d7ee092168
+AUDIO Visor Clank 297cf5c87055acfd
+AUDIO Gauntlet Creak 0732624a14940ab7
+AUDIO Triumphant Clank ecc5a3b558134b90
+AUDIO Coin Tumble 265bfd259c0fc5ca
+AUDIO Gold Bar Clunk b96cdc43b99e26ac
+AUDIO Distant Cluck a52ce4b39b9808fe
+AUDIO Feather Rustle c8d63e8e70cb773f
+AUDIO Chord Swell 34adae8622b18479
 AUDIO nonorm:Coin 9b44f2f52967386e
 AUDIO nonorm:Laser bfdaabc91508b1fe
 AUDIO nonorm:Jump 29a16949ca59543e
@@ -983,4 +975,4 @@ AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH e645d08d0a381ea2 over 983
+AUDIOHASH d67d595d3847fa70 over 975
