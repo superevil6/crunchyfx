@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 4449963 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 ed02c43749097565dea616d00da39b0742446c6261635d2f86bfb358858f7260
+// GENERATED from crunchyCore/suite.js @ d82674f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 040d6f52fd77e9ebe99ee0ba826b27ba15b287a92d1b3e76a5fbadcc27d78d14
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -23,11 +23,11 @@
 // each desktop app's capability scope (src-tauri/capabilities: opener:allow-open-url), which opens only
 // the hosts listed there. A link outside that scope does nothing on desktop.
 
-const SUITE_BUILD = 7;
+const SUITE_BUILD = 8;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
-    web: "https://crunchytile.com/", desktop: "" },
+    web: "https://crunchytile.com/", desktop: "https://sevi66.itch.io/crunchytile" },
   { id: "ui", name: "CrunchyUI", icon: "▣", pxi: "window", accent: "#7ea6ff",
     what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
     web: "https://crunchyui.com/", desktop: "" },
