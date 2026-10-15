@@ -593,14 +593,21 @@ try {
 // Neither app ever suspended the context, so both hit it. Suspending it a few seconds after the last
 // sound ends means there's no live stream to underrun; the next play resumes it (deferred start above
 // covers the async-resume race), and a click/keypress re-warms it via the capture listeners below.
-let idleTimer = null;
+let idleTimer = null, idleAt = 0;
 const IDLE_SUSPEND_SEC = 3;   // suspend this many seconds AFTER the last sound finishes (tunable)
+// The suspend only ever moves LATER: a click that wakes the context (warmAudio) while a long sound plays must not cut
+// it off. (2026-10-16, AJ's 1.2.0 test: the click-to-warm listeners woke the context and nothing put it back to sleep,
+// so a long stretch of clicks without sounds (saving a kit to the Library, the Library's cards) left it running
+// silent: PipeWire's underrun clicks, and in WebKit playback that stopped until a restart.)
 function armIdleSuspend(soundSec) {
+  const at = Date.now() + (soundSec + IDLE_SUSPEND_SEC) * 1000;
+  if (idleTimer && at <= idleAt) return;
   if (idleTimer) clearTimeout(idleTimer);
+  idleAt = at;
   idleTimer = setTimeout(() => {
-    idleTimer = null;
+    idleTimer = null; idleAt = 0;
     if (audioCtx && audioCtx.state === "running") audioCtx.suspend().catch(() => {});
-  }, (soundSec + IDLE_SUSPEND_SEC) * 1000);
+  }, at - Date.now());
 }
 
 function playBuffer(L, R) {
@@ -621,7 +628,7 @@ function playBuffer(L, R) {
     ctx.resume().then(() => src.start()).catch(() => { try { src.start(); } catch (e) {} });
     // Still not running a moment later = the browser is blocking sound (autoplay policy, a muted tab): SAY so,
     // instead of a silent Play (2026-10-14 usability round).
-    setTimeout(() => { if (ctx.state !== "running") nowSay("Sound is blocked by the browser: click anywhere on the page, then Play", "warn"); }, 700);
+    setTimeout(() => { if (ctx.state !== "running") nowSay("No sound: check your audio output (volume, headphones, the device), click the page, then Play again", "warn"); }, 700);
   }
   nowPlaying(L.length / SR);
   armIdleSuspend(L.length / SR);   // (re)schedule idle auto-suspend from the end of THIS sound
@@ -631,8 +638,10 @@ function playBuffer(L, R) {
 // Warm/unlock the audio device on the FIRST user interaction anywhere (not just Play), so by the
 // time a sound plays the context is already running instead of racing the async resume. Idempotent
 // (ensureCtx guards) + capture-phase so it runs ahead of the app's own handlers.
+// A wake with no sound to follow is put back to sleep like any other (armIdleSuspend), never left running silent.
+function warmAudio() { ensureCtx(); armIdleSuspend(0); }
 ["pointerdown", "keydown", "touchstart"].forEach((ev) =>
-  window.addEventListener(ev, ensureCtx, { capture: true, passive: true }));
+  window.addEventListener(ev, warmAudio, { capture: true, passive: true }));
 
 // Render the current state, play it, draw it, and log it to history.
 function play(label) {

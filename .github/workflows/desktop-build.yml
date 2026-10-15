@@ -2,7 +2,8 @@ name: Desktop build (Windows + Linux)
 
 # Builds native installers when you push a version tag (e.g. v1.0.0), and can be
 # run on demand from the Actions tab. Produces a DRAFT GitHub Release with the
-# installers attached: Windows .exe (NSIS), Linux .deb and .AppImage.
+# installers attached: Windows .exe (NSIS) and the Linux .deb (wrapped as the Flatpak, which is what ships). No AppImage:
+# its bundled GStreamer/GL can't reach a rolling distro's PipeWire or new GPUs (no sound on CachyOS, 2026-10-16).
 #
 # On a TAG push it ALSO uploads the Windows build straight to itch.io via butler, so the paid
 # binaries never sit on a public surface. The GitHub release stays a DRAFT on purpose —
@@ -26,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04 # Linux: .deb + .AppImage
+          - platform: ubuntu-22.04 # Linux: .deb (→ the Flatpak)
           - platform: windows-latest # Windows: .exe (NSIS)
     runs-on: ${{ matrix.platform }}
     steps:
@@ -68,7 +69,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "CrunchySFX ${{ github.ref_name }}"
-          releaseBody: "Desktop builds of CrunchySFX. Windows installer + Linux .deb/.AppImage attached below."
+          releaseBody: "Desktop builds of CrunchySFX. Windows installer + Linux .deb attached below (the Flatpak ships on itch)."
           releaseDraft: true
           prerelease: false
 
@@ -105,8 +106,7 @@ jobs:
       # so it works on bleeding-edge distros (Arch/CachyOS/Steam Deck, RDNA-4-era GPUs) where the
       # AppImage's bundled GL libs blank-screen. Building here on ubuntu-22.04 (glibc 2.35) is also
       # REQUIRED — a .deb built on a newer host needs a glibc the GNOME 46 runtime doesn't have.
-      # The .AppImage is still attached to the draft release, but is NOT pushed to itch until it's
-      # been verified on a non-bleeding-edge machine.
+      # (No AppImage is built since 1.2.1: the Flatpak, from the .deb, is the Linux product.)
       - name: Install flatpak tooling + runtime
         if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/v')
         run: |
