@@ -103,7 +103,7 @@
     return ok(root.classList.contains("set-overlay") && !root.hidden && fmt && root.querySelector("#updMsg") &&
               root.querySelector("#prefNormalize").checked === true && root.querySelector("#prefPromptSave").checked === true &&
               root.querySelector("#prefCheckUpdates").checked === false &&
-              labels.join("|") === "Export format|Normalize loudness|Getting started|Prompt on preset save|Check for updates on launch|Updates" &&
+              labels.join("|") === "Export format|Normalize loudness|Getting started|Prompt on preset save|Check for updates on launch|Updates|What does the desktop app add?" &&   // the last since crunchyCore settings.js 3
               !document.querySelector(".settings-box"), labels.join("|"));
   });
   await t("settings/each-preference-still-works-and-keeps-its-key", function () {
@@ -440,7 +440,7 @@
   await t("suite/the-other-tools-in-the-same-game", async function () {
     M.put(GODOT + "/crunchy/tile/meadow/meadow.crunchy", JSON.stringify({ format: "crunchy-asset", kind: "design", name: "Meadow", files: ["meadow.png"] }));
     M.put(GODOT + "/crunchy/tile/cave/cave.crunchy", JSON.stringify({ format: "crunchy-asset", kind: "design", name: "Cave", files: ["cave.png"] }));
-    projRefreshSuite();
+    await projRefreshSuite();          // waited for: the suite view reads every other tool's folder (more since plant.js 12)
     await settle();
     const row = lib().querySelector('.lib-suite-row[data-key="tile"]');
     row.querySelector("button").click();

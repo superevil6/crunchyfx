@@ -52,16 +52,21 @@
     return ok(atBoot.every(function (v, i) { return v === V.localStorage.store[STATIC[i]]; }) && scopeMode === "xy" && prefs.tourSeen === true && histItems.length === 2 &&
               document.querySelector(".macro").classList.contains("collapsed"));
   });
+  // crunchyCore desktop.js 2: the button opens the DESKTOP TOUR (four panels; the last has "Get it on itch.io" when the
+  // store link exists, as SFX's does)
   t("desktop-button/one-button-in-the-controls-with-the-core-dialog", function () {
     const b = document.querySelector(".desk-cta");
     b.click();
-    const d = document.querySelector(".desk-overlay");
-    const items = Array.from(d.querySelectorAll(".desk-adds li b")).map(function (x) { return x.textContent; });
-    d.querySelector(".desk-foot button.primary").click();
-    d.querySelector(".desk-close").click();
+    const d = document.querySelector(".dtour-overlay");
+    const nextBtn = function () { return Array.from(d.querySelectorAll("button")).find(function (x) { return /^(Next|Done)$/.test(x.textContent); }); };
+    for (let i = 0; i < 3; i++) nextBtn().click();
+    const get = d.querySelector(".dtour-get");
+    if (get) get.click();
+    d.querySelector('[aria-label="Close"]').click();
+    const gone = !document.querySelector(".dtour-overlay") || document.querySelector(".dtour-overlay").hidden;
     return ok(b && b.parentElement.classList.contains("controls-right") && /Get the desktop app/.test(b.textContent) && b.querySelector(".pxi") &&
-              items.length === 5 && items[0] === "Planted in your game." && opened[opened.length - 1] === "https://sevi66.itch.io/crunchysfx" && d.hidden &&
-              !document.getElementById("steambtn"), items.join("|"));
+              !!get && opened[opened.length - 1] === "https://sevi66.itch.io/crunchysfx" && gone &&
+              !document.getElementById("steambtn"), String(opened[opened.length - 1]));
   });
   t("desktop-button/no-pro-premium-or-unlock-anywhere-visible", function () {
     document.getElementById("settingsBtn").click();
@@ -81,7 +86,7 @@
     tour.click();
     const toured = root.hidden && !document.querySelector(".tour").hidden;
     endTour(false);
-    return ok(labels.join("|") === "Export format|Normalize loudness|Getting started" && off && normalizeOut === true && toured &&
+    return ok(labels.join("|") === "Export format|Normalize loudness|Getting started|What does the desktop app add?" && off && normalizeOut === true && toured &&
               !root.querySelector("#prefPromptSave") && !root.querySelector("#prefCheckUpdates") && root.querySelector("#fmtRate"), labels.join("|"));
   });
   t("legacy/v1.1-share-links-open-to-the-same-audio", function () {

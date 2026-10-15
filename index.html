@@ -4313,9 +4313,9 @@ const library = libraryMount({
 });
 function soundGroup(a) { const c = a.data.categories; return Array.isArray(c) && c.length && typeof c[0] === "string" ? c[0] : "Sounds"; }
 function projRefreshSuite() {
-  if (!project) { projSuite = []; return; }
+  if (!project) { projSuite = []; return Promise.resolve(); }
   const P = project;
-  plantSuiteView(P).then((v) => { if (project === P) { projSuite = v; library.refresh(); } }).catch(() => { projSuite = []; });
+  return plantSuiteView(P).then((v) => { if (project === P) { projSuite = v; library.refresh(); } }).catch(() => { projSuite = []; });   // a promise, so a caller can wait for it
 }
 function libraryShow() { if (!library.isOpen()) { library.open(); projRefreshSuite(); } }
 function libraryToggle() { if (library.isOpen()) library.close(); else libraryShow(); }
