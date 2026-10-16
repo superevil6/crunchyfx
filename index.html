@@ -1,30 +1,77 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CrunchySFX — sound effect generator</title>
+<title>CrunchySFX: free CC0 sound effect generator for Godot &amp; Unity</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#111015">
-<meta name="description" content="Free, from-scratch sound-effect generator in your browser — coins, lasers, explosions, robot voices, bells and more. Make a sound, share it as a link, export a WAV.">
+<meta name="description" content="Free browser sound effect generator for games: 20+ synthesis engines, 900+ presets, WAV export for Godot and Unity. No samples, no AI. Your sounds are CC0.">
 <link rel="canonical" href="https://crunchysfx.com/">
 <!-- Open Graph / Twitter card: a shared CrunchySFX link unfurls into a branded
      "click to hear" card on Reddit / Discord / HN / social. Absolute URLs point at
      the production domain; the card activates once crunchysfx.com is live (a crawler
      can't fetch a link before the site exists). Per-sound titles are injected at the
-     edge — see functions/_middleware.js. -->
+     edge — see worker.js (functions/_middleware.js is its Pages twin). -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CrunchySFX">
-<meta property="og:title" content="CrunchySFX — make &amp; share sound effects">
-<meta property="og:description" content="Click to hear this sound. A free, from-scratch sound-effect generator — coins, lasers, explosions, robot voices, bells. Make your own and share it as a link.">
+<meta property="og:title" content="CrunchySFX: free CC0 sound effect generator for Godot &amp; Unity">
+<meta property="og:description" content="Free browser sound effect generator for games: 20+ synthesis engines, 900+ presets, WAV export for Godot and Unity. No samples, no AI. Your sounds are CC0.">
 <meta property="og:url" content="https://crunchysfx.com/">
 <meta property="og:image" content="https://crunchysfx.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="CrunchySFX — a from-scratch sound effect generator">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="CrunchySFX — make &amp; share sound effects">
-<meta name="twitter:description" content="Click to hear this sound. A free, from-scratch sound-effect generator. Make your own and share it as a link.">
+<meta name="twitter:title" content="CrunchySFX: free CC0 sound effect generator for Godot &amp; Unity">
+<meta name="twitter:description" content="Free browser sound effect generator for games: 20+ synthesis engines, 900+ presets, WAV export for Godot and Unity. No samples, no AI. Your sounds are CC0.">
 <meta name="twitter:image" content="https://crunchysfx.com/og.png">
+<!-- THE SEARCH-ENGINE PASS (2026-10-16, worklog): what a crawler reads. tests/seo.test.mjs (run by the wiring test) keeps the
+     title, description, cards and this JSON-LD in agreement, and the words (the About text, its FAQ and FAQPage, the suite
+     footer) on about.html (AJ: the About section under the app made the page scroll). worker.js still rewrites the
+     og:/twitter: tags and <title> per sound for ?s= links; nothing else. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "CrunchySFX",
+  "url": "https://crunchysfx.com/",
+  "description": "Free browser sound effect generator for games: 20+ synthesis engines, 900+ presets, WAV export for Godot and Unity. No samples, no AI. Your sounds are CC0.",
+  "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "Sound effect generator",
+  "operatingSystem": "Web, Windows, Linux",
+  "isAccessibleForFree": true,
+  "image": "https://crunchysfx.com/og.png",
+  "author": {
+    "@type": "Person",
+    "name": "superevil6"
+  },
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Web version",
+      "price": "0",
+      "priceCurrency": "USD",
+      "url": "https://crunchysfx.com/"
+    },
+    {
+      "@type": "Offer",
+      "name": "Desktop app (Windows, Linux)",
+      "price": "6",
+      "priceCurrency": "USD",
+      "url": "https://sevi66.itch.io/crunchysfx"
+    }
+  ],
+  "featureList": [
+    "20+ synthesis engines: subtractive, FM and 4-operator FM, Karplus-Strong pluck, modal bells, granular, additive, formant and text-to-speech voices, impact and whoosh foley",
+    "900+ presets in 30+ categories",
+    "Randomize, Breed, Foundry and variation packs",
+    "WAV export: 22.05, 44.1 or 48 kHz, 16 or 24-bit, stereo or mono, optional loop point",
+    "Sounds shared as links",
+    "Everything you create is CC0 (public domain)",
+    "No AI, no samples"
+  ]
+}
+</script>
 <!-- crunchy-base.css: the Crunchy suite's shared look, GENERATED from crunchyCore (tools/pull-core.mjs). It loads
      FIRST so styles.css (SFX's layout and accent) wins any tie. -->
 <link rel="stylesheet" href="crunchy-base.css">
@@ -161,7 +208,7 @@
   <h2>License</h2>
   <p><strong>Your sounds are yours — free and clear.</strong> Every sound you create or export with CrunchySFX is released under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0 1.0 (public domain)</a>. Use them in anything — commercial games, videos, apps, whatever — forever. <strong>No attribution required, no credit, no strings.</strong> You never need to mention CrunchySFX.</p>
   <p>The built-in engine synthesizes everything from scratch — no third-party samples. If you <strong>import your own audio</strong>, the CC0 dedication above doesn't extend to that clip: its licensing is your responsibility.</p>
-  <p class="tool-notice">CrunchySFX (the app) &copy; 2026 superevil6 — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.</p>
+  <p class="tool-notice">CrunchySFX (the app) &copy; 2026 superevil6 — all rights reserved. The CC0 dedication above covers the <em>sounds you create</em>, not this tool's source code.<span data-web> · <a href="about.html" data-web>About CrunchySFX</a></span></p>
 </footer>
 
 <script src="presets.js"></script>
@@ -4934,6 +4981,9 @@ if (isDesktop) {
 // ADDS. The web makes every sound, free and CC0; the desktop keeps them, organises them and plants them in your game.
 // (Replaces SFX's own web CTA and its "Coming soon" modal.)
 // ============================================================================================
+// The other way round (2026-10-16): the About section and the suite footer under the app are for people (and search
+// engines) landing on the website, so the desktop app, which is already installed, leaves them out.
+if (isDesktop) document.querySelectorAll("[data-web]").forEach(function (e) { e.hidden = true; });
 desktopMount("sfx", {
   place: document.querySelector(".controls-right"),
   adds: [

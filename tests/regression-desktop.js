@@ -77,6 +77,11 @@
     return ok(isDesktop && shown(document.getElementById("libraryBtn")) && shown(document.getElementById("mypresets")) &&
               document.getElementById("projSave") && document.getElementById("projOpen") && !document.querySelector(".desk-cta") && !document.querySelector(".desk-overlay"));
   });
+  // THE SEARCH-ENGINE PASS (2026-10-16, worklog): the About link (to the website's about.html) is web only
+  await t("gate/no-website-about-link", function () {
+    const a = document.querySelector('a[href="about.html"]');
+    return ok(a && !shown(a), a ? "shown" : "no About link at all");
+  });
   await t("legacy/the-v1.1-store-is-read-as-it-was", function () {
     const want = JSON.parse(V.localStorage.store["crunchyfx.userpresets.v1"]).items, cats = JSON.parse(V.localStorage.store["crunchyfx.usercats.v1"]).cats;
     return ok(atBoot === LEGACY.map(function (k) { return V.localStorage.store[k]; }).join("\u0000") &&

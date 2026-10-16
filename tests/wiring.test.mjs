@@ -34,6 +34,16 @@ t("the audio baseline is kept", existsSync(join(root, "tests/audio-hash.expected
 t("the legacy browser keys are still the ones v1.1 used", ["crunchyfx.userpresets.v1", "crunchyfx.usercats.v1", "crunchyfx.mywaves.v1", "crunchyfx.history.v1", "crunchyfx.prefs.v1"]
   .every((k) => html.indexOf('"' + k + '"') >= 0));
 
+// THE SEARCH-ENGINE PASS (2026-10-16, worklog): title, description, cards, JSON-LD, the About FAQ, the suite footer (against
+// suite.js), robots.txt, sitemap.xml and the IndexNow key. Its own file, the same in every Crunchy app (crunchyTile's model).
+{
+  const { spawnSync } = await import("node:child_process");
+  const r = spawnSync(process.execPath, [join(root, "tests/seo.test.mjs")], { encoding: "utf8" });
+  const lines = (r.stdout + r.stderr).trim().split("\n");
+  t("search-engine pass: " + (r.status === 0 ? lines[lines.length - 1].replace(/^PASS · /, "") : "node tests/seo.test.mjs"), r.status === 0,
+    lines.filter((l) => l.startsWith("FAIL ")).join("; "));
+}
+
 for (const l of ok) console.log("ok   " + l);
 for (const l of fail) console.log("FAIL " + l);
 console.log(fail.length ? `\nFAIL · wiring · ${fail.length} of ${ok.length + fail.length}` : `\nPASS · wiring · ${ok.length}`);

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About CrunchySFX: free CC0 sound effect generator</title>
+<meta name="description" content="What CrunchySFX is: a free sound effect generator for games in your browser. Every sound is synthesized, with no AI and no samples, and is CC0.">
+<link rel="canonical" href="https://crunchysfx.com/about">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.png" sizes="32x32" type="image/png">
+<meta name="theme-color" content="#111015">
+<!-- THE ABOUT PAGE (2026-10-16, worklog): web only, static, no script. tests/seo.test.mjs keeps the FAQPage below equal to
+     the visible FAQ word for word and the suite footer equal to suite.js's links. Counts are floors (DISCOVERABILITY.md):
+     21 engines in ENGINE_CATS, 933 presets in 33 categories when written. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is CrunchySFX free for commercial use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Every sound you create or export with CrunchySFX is CC0 1.0, which puts it in the public domain: use it in commercial games, videos and apps, with no attribution and no royalties. Audio you import yourself keeps its own licence. The web version is free."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does CrunchySFX use AI or samples?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Every sound is synthesized from scratch by hand-written DSP code: oscillators, filters, plucked strings, bell resonators, FM, granular clouds and formant voices. There is no AI model and no sample library in the app."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I use the sounds in Godot or Unity?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Export a WAV and drop it in. In Godot 4, put it in res:// and play it with an AudioStreamPlayer; in Unity, put it in Assets/ and play it with an AudioSource. Variation packs and Sound Kits download as a zip of WAVs with a README that says the same."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What can it export?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "WAV files at 22.05, 44.1 or 48 kHz, 16-bit or 24-bit, stereo or mono, with an optional loop point for ambience and drones. A sound can also be shared as a link that recreates it exactly."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is it different from sfxr or bfxr?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "sfxr and bfxr are great, and their sounds are free to use too. CrunchySFX goes past chip blips: 20+ engines including Karplus-Strong plucks, modal bells, granular textures, 4-operator FM and text-to-speech voices, 900+ presets, breeding, and packs of variations so a repeated sound doesn't repeat exactly."
+      }
+    }
+  ]
+}
+</script>
+<link rel="stylesheet" href="crunchy-base.css">
+<style>
+  :root { --accent: #ffd23f; --accent-dk: #a8841a; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font); }
+  .page { max-width: 76ch; margin: 0 auto; padding: 20px 16px 8px; }
+  .back { display: inline-block; margin: 0 0 28px; font-family: var(--head); font-size: 13px; color: var(--accent); }
+  h1 { margin: 0 0 16px; font-family: var(--head); font-size: 24px; line-height: 1.25; text-transform: uppercase; color: var(--accent); }
+  h2 { margin: 30px 0 8px; font-family: var(--head); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); }
+  h3 { margin: 18px 0 4px; font-size: 15px; color: var(--ink); }
+  p { margin: 0 0 14px; }
+  .faq p, li { color: var(--muted); }
+  ul { margin: 0; padding-left: 20px; }
+  a { color: var(--accent); overflow-wrap: anywhere; }
+  strong { color: var(--ink); }
+  .suitelinks { margin-top: 36px; border-top: 2px solid var(--drop); background: var(--panel); color: var(--muted); font-size: 13px; }
+  .suitelinks .in { max-width: 76ch; margin: 0 auto; padding: 18px 16px 28px; }
+  .suitelinks p { margin: 0 0 8px; }
+  .suitelinks ul { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <a class="back" href="index.html">Open CrunchySFX, the sound effect generator</a>
+  <h1>Free CC0 sound effect generator</h1>
+  <p>CrunchySFX makes sound effects for games, in your browser: coins, jumps, lasers, explosions, hits, UI clicks,
+    footsteps, magic, monsters, robot voices, bells and drones. Pick one of 900+ presets in 30+ categories or press
+    Randomize, shape it with plain-language sliders or the full synth, and export a WAV. Breed nine offspring of a sound
+    and keep the ones you like, build new ones by kind and console style in the Foundry, or make a pack of variations so
+    a sound you play a hundred times never repeats exactly.</p>
+  <p>It is made for game developers who need their sounds now and don't want to dig through sample sites or worry about
+    licences. A WAV drops straight into Godot, Unity, GameMaker or any engine: 22.05, 44.1 or 48 kHz, 16-bit or 24-bit,
+    stereo or mono, with an optional loop point. A Sound Kit makes a whole set for your game in one era at once, and any
+    sound can be shared as a link that opens it again exactly.</p>
+  <p>Every sound is synthesized from scratch by hand-written DSP code, with 20+ engines: classic oscillators,
+    Karplus-Strong plucks, modal bells, granular clouds, additive pads, 4-operator FM, formant voices and text-to-speech,
+    and impact and whoosh foley. There are no samples and no AI in the app, and every sound is rendered on your own machine.
+    <strong>Every sound you create with CrunchySFX is CC0</strong>: use it in anything, commercial included, with no
+    attribution. Audio you import or record yourself keeps its own licence.</p>
+  <p>The web version is free and has every engine and tool. The <a href="https://sevi66.itch.io/crunchysfx">desktop app on
+    itch.io</a> ($6, Windows and Linux) adds workflow around the same sounds: it saves them straight into your game's
+    folder, updates them in place, keeps a Library and your own presets, and opens and saves project files.</p>
+  <h2>Things you can make</h2>
+  <ul>
+    <li>Jumps, coins, power-ups and 8-bit blips for a platformer, in the style of a classic console</li>
+    <li>Lasers, gunshots, explosions, sword hits and punches</li>
+    <li>Menu clicks, confirms, cancels and error buzzes for your game's UI</li>
+    <li>Robot voices, monster growls and words spoken from text you type</li>
+    <li>Fire crackle, rain, bubbles, footsteps, doors and whooshes</li>
+    <li>Bells, plucks, pads and looping drones for ambience</li>
+  </ul>
+  <h2>Questions</h2>
+  <div class="faq">
+    <h3>Is CrunchySFX free for commercial use?</h3>
+    <p>Yes. Every sound you create or export with CrunchySFX is CC0 1.0, which puts it in the public domain: use it in commercial games, videos and apps, with no attribution and no royalties. Audio you import yourself keeps its own licence. The web version is free.</p>
+    <h3>Does CrunchySFX use AI or samples?</h3>
+    <p>No. Every sound is synthesized from scratch by hand-written DSP code: oscillators, filters, plucked strings, bell resonators, FM, granular clouds and formant voices. There is no AI model and no sample library in the app.</p>
+    <h3>How do I use the sounds in Godot or Unity?</h3>
+    <p>Export a WAV and drop it in. In Godot 4, put it in res:// and play it with an AudioStreamPlayer; in Unity, put it in Assets/ and play it with an AudioSource. Variation packs and Sound Kits download as a zip of WAVs with a README that says the same.</p>
+    <h3>What can it export?</h3>
+    <p>WAV files at 22.05, 44.1 or 48 kHz, 16-bit or 24-bit, stereo or mono, with an optional loop point for ambience and drones. A sound can also be shared as a link that recreates it exactly.</p>
+    <h3>How is it different from sfxr or bfxr?</h3>
+    <p>sfxr and bfxr are great, and their sounds are free to use too. CrunchySFX goes past chip blips: 20+ engines including Karplus-Strong plucks, modal bells, granular textures, 4-operator FM and text-to-speech voices, 900+ presets, breeding, and packs of variations so a repeated sound doesn't repeat exactly.</p>
+  </div>
+</main>
+<footer class="suitelinks">
+<div class="in">
+  <p>CrunchySFX is part of the Crunchy suite: free tools that make the art and sound for your game, with no generative
+    AI, and everything they make is CC0.</p>
+  <ul>
+    <li><a href="https://crunchytile.com/">CrunchyTile</a>: pixel-art tilesets</li>
+    <li><a href="https://crunchyvfx.com/">CrunchyVFX</a>: sprite effects</li>
+    <li><a href="https://crunchybgm.com/">CrunchyBGM</a>: game music</li>
+    <li><a href="https://crunchyui.com/">CrunchyUI</a>: game UI</li>
+  </ul>
+  <p>Desktop apps on itch.io: <a href="https://sevi66.itch.io/crunchytile">CrunchyTile</a> ·
+    <a href="https://sevi66.itch.io/crunchysfx">CrunchySFX</a>. Made by superevil6.</p>
+</div>
+</footer>
+</body>
+</html>

@@ -48,6 +48,13 @@
     return ok(!isDesktop && !document.getElementById("libraryBtn") && !document.getElementById("libDock") && !document.getElementById("plantSave") &&
               !document.getElementById("projSave") && !document.getElementById("dragOut") && !shown(document.getElementById("mypresets")) && !shown(document.getElementById("userCats")));
   });
+  // THE SEARCH-ENGINE PASS (2026-10-16, worklog): the words live on about.html (AJ: the About section under the app made
+  // the page scroll); the app page keeps its own layout and shows one plain About link in the licence footer
+  t("seo/an-about-link-on-the-web-and-no-about-section-on-the-app-page", function () {
+    const a = document.querySelector('footer.license a[href="about.html"]');
+    return ok(shown(a) && /About/.test(a.textContent) && !document.querySelector("section.about") && !document.querySelector("footer.suitelinks"),
+              a ? a.textContent : "no About link in the licence footer");
+  });
   t("legacy/v1.1-prefs-and-history-read-as-they-were", function () {
     return ok(atBoot.every(function (v, i) { return v === V.localStorage.store[STATIC[i]]; }) && scopeMode === "xy" && prefs.tourSeen === true && histItems.length === 2 &&
               document.querySelector(".macro").classList.contains("collapsed"));
