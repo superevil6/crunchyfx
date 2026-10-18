@@ -1,6 +1,6 @@
 // CrunchySFX — the synthesis core: one patch object in, stereo audio out.
 //
-// Extracted from index.html so the engine can be exported and reused (CrunchyVFX synthesises
+// Extracted from index.html so the engine can be exported and reused (CrunchyVFX synthesizes
 // its matched sounds with this exact code). Loaded via <script src="synth.js"> AFTER dsp.js and
 // BEFORE the main <script> — classic scripts share one global scope, like presets.js.
 //
@@ -369,7 +369,7 @@ function renderPatch(st, opts) {
         //   1. The loop reads the NEXT sample as well as the current one, so it is `ksN - 0.5`
         //      samples long and sounds SR/(ksN - 0.5), not SR/ksN. That half-sample is
         //      unconditional, so NO pitch was in tune — not one.
-        //   2. `round()` quantises, so neighbouring semitones are out by DIFFERENT amounts. That
+        //   2. `round()` quantizes, so neighboring semitones are out by DIFFERENT amounts. That
         //      is worse than a uniform offset: a uniform one is a key change nobody can hear,
         //      this one detunes intervals against each other. Measured downstream in CrunchyBGM
         //      across the 25 records that use this wave: 26.1% of generated notes over 10 cents
@@ -560,7 +560,7 @@ function renderPatch(st, opts) {
     // self-oscillated at Nyquist once cutoff neared SR/4, which turned bright sounds
     // into 22 kHz buzz that plays back as clicks/silence.
     // WAH_OCTAVES 1.5: a Cry Baby sweeps roughly 400 Hz to 2 kHz, which is a little over two
-    // octaves peak to peak — so ±1.5 from centre at full depth, and the record picks its own centre
+    // octaves peak to peak — so ±1.5 from center at full depth, and the record picks its own center
     // with `cutoff`.
     const wah = wahOn ? wahDepth * 1.5 * -Math.cos(2 * Math.PI * wahRate * lt) : 0;
     let cut = baseCut * Math.pow(2, filtEnv * 3 * prog + wah);

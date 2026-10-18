@@ -107,7 +107,7 @@ else {
       bad.push(`the desktop offer (${self.desktop}, ${self.price})`);
     if (!/Windows/.test(os) || !/Linux/.test(os)) bad.push("operatingSystem names the desktop's Windows and Linux");
   } else if (desk || /Windows|Linux|mac/i.test(os)) bad.push("a desktop offer or OS, but suite.js has no store page");
-  if (/"license"/.test(JSON.stringify(app))) bad.push("a `license` (that would be the CODE's licence, which is not CC0)");
+  if (/"license"/.test(JSON.stringify(app))) bad.push("a `license` (that would be the CODE's license, which is not CC0)");
   check(!bad.length, `index.html SoftwareApplication JSON-LD (${offers.length} offer${offers.length === 1 ? "" : "s"})`,
     "index.html SoftwareApplication JSON-LD: " + bad.join(", "));
 }

@@ -1,9 +1,9 @@
 // Generate og.png, the link-preview card (1200 × 630), with the app's own engine.   node tools/make-og.mjs
 //
-// Like CrunchyTile's card (its tools/make-og.mjs): drawn in code, pixel art doubled by nearest-neighbour so it stays
+// Like CrunchyTile's card (its tools/make-og.mjs): drawn in code, pixel art doubled by nearest-neighbor so it stays
 // crisp in a feed, no text (the title and description come from the og: tags in index.html). Four presets rendered by
 // the SHIPPING synth (dsp.js + synth.js + presets.js, PARAMS' defaults sliced from index.html as tools/export-synth.py
-// does), each as an oscilloscope trace in the scope's own colours (--wave orange, --sel cyan) on the suite's dark base
+// does), each as an oscilloscope trace in the scope's own colors (--wave orange, --sel cyan) on the suite's dark base
 // (crunchy-base.css --bg / --panel), with the app's yellow accent.
 //
 // --check regenerates it in memory and compares with the file on disk.
@@ -25,7 +25,7 @@ vm.runInContext(readFileSync(join(root, "presets.js"), "utf8"), ctx, { filename:
 // PARAMS names consts defined elsewhere in index.html (WAVES …): carry each one it asks for, as export-synth.py does
 let deps = "";
 for (let tries = 0; ; tries++) {
-  // a fresh sandbox each try: a failed run still holds its `const PARAMS` (its name, uninitialised)
+  // a fresh sandbox each try: a failed run still holds its `const PARAMS` (its name, uninitialized)
   const pc = vm.createContext({ Math });
   try { vm.runInContext(deps + html.slice(p0, p1 + 3) + "\nglobalThis.__PARAMS = PARAMS;", pc); ctx.__PARAMS = pc.__PARAMS; break; }
   catch (e) {
@@ -35,7 +35,7 @@ for (let tries = 0; ; tries++) {
   }
 }
 
-// One preset's samples, left and right, normalised as the app plays it.
+// One preset's samples, left and right, normalized as the app plays it.
 function render(name) {
   const st = {};
   for (const p of ctx.__PARAMS) st[p[0]] = p[5];
@@ -54,7 +54,7 @@ const rect = (x0, y0, w, h, v) => { for (let y = y0; y < y0 + h; y++) for (let x
 
 // FOUR SCOPES, one sound each, zoomed to a window where its shape shows (a coin's square, a laser's saw, a cartoon
 // boing's sine, an explosion's noise in wider columns), the sample at each 2 px column drawn as a stepped trace 3 px tall, the
-// steps joined vertically, over a dotted grid and a centre line. The lanes alternate the scope's two channel colours.
+// steps joined vertically, over a dotted grid and a center line. The lanes alternate the scope's two channel colors.
 const SR = ctx.SR || 44100;
 // [preset, window start, end (s), column px]: four different shapes, square, saw, sine and noise
 const LANES = [["Coin", 0.004, 0.030, 2], ["Laser", 0.010, 0.040, 2], ["Cartoon Boing", 0.020, 0.150, 2], ["Explosion", 0.020, 0.060, 4]];
@@ -75,7 +75,7 @@ LANES.forEach(([name, t0, t1, COL], i) => {
     const y = mid - Math.round(v * amp / ROW) * ROW, xs = x0 + c * COL;
     const lo = prev === null ? y : Math.min(prev, y), hi = prev === null ? y : Math.max(prev, y);
     for (let yy = lo; yy <= hi + ROW - 1; yy++) for (let k = 0; k < COL; k++) put(xs + k, yy, br);
-    // a darker body between the trace and the centre line, so each wave reads as a filled shape
+    // a darker body between the trace and the center line, so each wave reads as a filled shape
     for (let yy = Math.min(y + ROW, mid); yy < Math.max(y, mid); yy++) if (px[yy * W + xs] !== br) for (let k = 0; k < COL; k++) put(xs + k, yy, dk);
     prev = y;
   }

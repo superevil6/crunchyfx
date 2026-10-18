@@ -1135,7 +1135,7 @@ window.PRESETS = {
   // The engine-showcase categories (granular / particle / bubble / additive / formant / speech)
   // were seeded with just 6–9 demos each when their engine shipped. These fill them out so every
   // section of the browser is worth opening; each one is a different USE of its engine, not a
-  // jittered copy of its neighbours.
+  // jittered copy of its neighbors.
 
   // Bells / Mallets — the one gap was the orchestral tubular bell (long, low, hollow).
   "Tubular Bell": { wave:10, freq:262, modalPartials:8, modalInharm:0.55, modalDecay:2.8, modalBright:0.55, attack:0.002, hold:0.008, decay:0.1, sustain:1, release:0.8, cutoff:13000, reso:0.1, width:0.6, reverb:0.35, reverbSize:0.8, duration:2.0,

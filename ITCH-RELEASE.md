@@ -66,7 +66,7 @@ butler status sevi66/crunchysfx      # both channels should show the new version
 3. **Never upload a locally-built Linux binary.** It links CachyOS's bleeding-edge glibc/GL and will
    break on other distros. Local builds are for *your* testing only; CI's ubuntu-22.04 build is the
    one that ships. (See the glibc/AppImage notes in `flatpak/com.crunchysfx.app.yml`.)
-4. **Don't "modernise" the Linux runner to `ubuntu-latest`.** ubuntu-22.04 (glibc 2.35) is
+4. **Don't "modernize" the Linux runner to `ubuntu-latest`.** ubuntu-22.04 (glibc 2.35) is
    deliberately OLDER than the GNOME 46 Flatpak runtime (2.37). Bumping it reintroduces
    ``version `GLIBC_2.39' not found``.
 5. **Version bump before tagging** — if `tauri.conf.json` says 1.0.0 but the tag says v1.0.1, the

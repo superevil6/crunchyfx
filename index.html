@@ -476,7 +476,7 @@ const PARAM_HELP = {
   subOsc: "Adds a tone an octave lower underneath: more weight and bass.",
   ringMod: "Ring mod: multiplies the sound by a second tone: metallic, bell-like, robotic.",
   ringFreq: "Pitch of the ring mod's second tone: changes which metallic notes you hear.",
-  noiseColor: "Colour of the hiss: 0 = bright white noise, more = darker and rumblier.",
+  noiseColor: "Color of the hiss: 0 = bright white noise, more = darker and rumblier.",
   boom: "Adds a deep, falling bass thump underneath: weight for explosions and big hits.",
   boomFreq: "Pitch of the boom: lower = deeper.",
   boomDrop: "How far the boom's pitch falls as it plays (in octaves): the 'whump' of a kick drum.",
@@ -497,11 +497,11 @@ const PARAM_HELP = {
   driveOS: "Drive quality: higher = cleaner, smoother distortion (less fizzy harshness). Slower to render.",
   bitcrush: "Bit depth: fewer bits = the grainy, crunchy sound of old consoles. 16 = clean.",
   downsample: "Lowers the sample rate: more = lo-fi, aliased, old-console grit. 1 = clean.",
-  width: "Stereo width: 0 = centred (mono), more = spread wide across left and right.",
+  width: "Stereo width: 0 = centered (mono), more = spread wide across left and right.",
   reverb: "Reverb: the echoey sound of a room or a hall. How much of it you hear.",
   reverbSize: "How big the reverb's room is: a closet to a cathedral.",
   reverbTone: "How bright the reverb is: dark and soft to bright and splashy.",
-  convMix: "A more realistic reverb, modelled on a real kind of space. How much of it you hear.",
+  convMix: "A more realistic reverb, modeled on a real kind of space. How much of it you hear.",
   convType: "Which kind of space the realistic reverb models: a room, a hall, a metal plate, a spring, or your own file.",
   convSize: "How long the realistic reverb rings (seconds).",
   convTone: "How bright the realistic reverb is.",
@@ -534,7 +534,7 @@ const WAVE_HELP = {
   FM: "Simple FM: one tone bending another. Bells, electric pianos, metallic zaps.",
   organ: "A few stacked tones like an organ: warm, full.",
   "half-sine": "A sine with half cut away: soft but with a little edge.",
-  pluck: "A plucked string, physically modelled: guitars, harps, plinks.",
+  pluck: "A plucked string, physically modeled: guitars, harps, plinks.",
   sample: "Your own audio (Import WAV or Record), reshaped by every control here.",
   modal: "A struck object that rings: bells, bars, metal, wood, mallets.",
   granular: "Chops a sound into tiny grains and scatters them: textures, clouds, glitches.",
@@ -555,7 +555,7 @@ const CONSOLE_HELP = {
   "Super": "Like the SNES: warmer, softer, with a little echo.",
   "Mega": "Like the Mega Drive / Genesis: twangy, metallic FM.",
   "Turbo": "Like the PC Engine / TurboGrafx-16: bright little wavetable tones.",
-  "Woodgrain": "Like the Atari 2600 (the wood-panelled one): harsh, detuned, very crunchy.",
+  "Woodgrain": "Like the Atari 2600 (the wood-paneled one): harsh, detuned, very crunchy.",
   "SID": "Like the Commodore 64's SID chip: shimmering, squelchy filtered pulses.",
   "1-Bit": "Like a ZX Spectrum or a PC speaker: a raw on-off beeper buzz.",
   "Pokey": "Like the Atari 8-bit computers' POKEY chip: resonant, gritty buzz.",
@@ -791,7 +791,7 @@ async function downloadWav(L, R, name, title) {
   if (T && T.dialog && T.fs) {
     try {
       const path = await T.dialog.save({ defaultPath: name, filters: [{ name: "WAV audio", extensions: ["wav"] }] });
-      if (path) await T.fs.writeFile(path, new Uint8Array(buffer));   // user cancelled -> path is null
+      if (path) await T.fs.writeFile(path, new Uint8Array(buffer));   // user canceled -> path is null
       return path ? String(path).split(/[\\/]/).pop() : false;      // what was saved (the export confirmation names it)
     } catch (e) { console.warn("crunchysfx: native save failed, falling back to browser download —", e); }
   }
@@ -1235,7 +1235,7 @@ const ENGINE_CATS = [
   ["Foley",       [19, 20]],                   // impact, whoosh
   ["Your own",    [9, 12]],                    // sample, custom
 ];
-// Preset colour-coding: one hue per synthesis FAMILY (6 is scannable — 21 engine hues would not
+// Preset color-coding: one hue per synthesis FAMILY (6 is scannable — 21 engine hues would not
 // be, and most presets cluster in Oscillators anyway). Chosen to read on the dark theme without
 // competing with the orange accent. Used by makePresetButton + the legend + custom-category chips.
 const FAMILY_COLORS = {
@@ -1887,7 +1887,7 @@ function presetClick(name) {
 function makePresetButton(name) {
   const b = document.createElement("button");
   b.textContent = name;
-  const fam = familyOf((PRESETS[name] || {}).wave);   // colour-code by synthesis family
+  const fam = familyOf((PRESETS[name] || {}).wave);   // color-code by synthesis family
   b.dataset.fam = fam;
   b.style.setProperty("--fam", FAMILY_COLORS[fam]);
   b.title = "Click: load " + name + " · click again: a fresh variation of it · " + fam;
@@ -1918,10 +1918,10 @@ sectionDefs.forEach(([cat, names], idx) => {
   sections.push({ details, buttons });
 });
 
-// Legend for the preset colour-coding, directly under the search box.
+// Legend for the preset color-coding, directly under the search box.
 const famLegend = document.createElement("div");
 famLegend.className = "fam-legend";
-famLegend.title = "Preset colours show which synthesis engine family the sound uses";
+famLegend.title = "Preset colors show which synthesis engine family the sound uses";
 famLegend.innerHTML = ENGINE_CATS
   .map(([label]) => '<span class="fam-key"><i style="background:' + FAMILY_COLORS[label] + '"></i>' + label + '</span>')
   .join("");
@@ -2126,7 +2126,7 @@ async function savePreset() {
   if (isDesktop && prefs.promptPresetSave && T && T.dialog && T.fs) {
     try {
       const path = await T.dialog.save({ defaultPath: fname + ".json", filters: [{ name: "CrunchySFX preset", extensions: ["json"] }] });
-      if (path) await T.fs.writeFile(path, new TextEncoder().encode(json));   // null = user cancelled
+      if (path) await T.fs.writeFile(path, new TextEncoder().encode(json));   // null = user canceled
       return;
     } catch (e) { console.warn("crunchysfx: native preset save failed, falling back —", e); }
   }
@@ -2559,7 +2559,7 @@ KB_WHITE.forEach((w) => {
 KB_BLACK.forEach((b) => {
   const el = document.createElement("button");
   el.className = "kb-black"; el.dataset.semi = b.s;
-  el.style.left = ((b.after + 1) * (100 / KB_WHITE.length)) + "%";   // centred on the white-key boundary
+  el.style.left = ((b.after + 1) * (100 / KB_WHITE.length)) + "%";   // centered on the white-key boundary
   el.innerHTML = '<span class="kb-lbl">' + b.k + '</span>';
   kbKeys.appendChild(el);
 });
@@ -3621,7 +3621,7 @@ function renderUserCats() {
         item.dataset.uccat = c.id;
         const btn = document.createElement("button");
         btn.className = "uc-item-btn";
-        btn.style.setProperty("--fam", FAMILY_COLORS[r.fam] || "");   // same engine-family colour-coding
+        btn.style.setProperty("--fam", FAMILY_COLORS[r.fam] || "");   // same engine-family color-coding
         btn.textContent = (r.kind === "u" ? "★ " : "") + r.name + (r.sample ? " ♪" : "");
         btn.title = r.kind === "u" ? "Your saved sound — click to load" : "Click for a fresh " + r.name + "-like variation";
         btn.addEventListener("click", () => { if (!ucSuppressClick) ucApply(it); });
@@ -3797,7 +3797,7 @@ async function batchExportUserPresets() {
   let dir;
   try { dir = await T.dialog.open({ directory: true, title: "Choose a folder for the WAV files" }); }
   catch (e) { console.warn("crunchysfx: folder pick failed —", e); alert("Could not open the folder picker: " + e.message); return; }
-  if (!dir) return;   // cancelled
+  if (!dir) return;   // canceled
   const tpl = (document.getElementById("mpNameTpl") || {}).value || "{name}";
   const total = userPresets.length;
   const used = new Set();
@@ -3841,7 +3841,7 @@ async function saveProject() {
   if (!(T && T.dialog && T.fs)) { alert("Saving projects is a desktop-app feature."); return; }
   try {
     const path = await T.dialog.save({ defaultPath: "untitled.crunchysfx", filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx"] }] });
-    if (!path) return;   // cancelled
+    if (!path) return;   // canceled
     const bytes = new TextEncoder().encode(JSON.stringify(buildProject()));
     await T.fs.writeFile(path, bytes);
   } catch (e) { console.warn("crunchysfx: save project failed —", e); alert("Could not save the project: " + e.message); }
@@ -3852,7 +3852,7 @@ async function openProject() {
   let path;
   try { path = await T.dialog.open({ filters: [{ name: "CrunchySFX project", extensions: ["crunchysfx", "crunchyfx"] }] }); }
   catch (e) { console.warn("crunchysfx: open dialog failed —", e); alert("Could not open the file picker: " + e.message); return; }
-  if (!path) return;   // cancelled
+  if (!path) return;   // canceled
   try {
     const bytes = await T.fs.readFile(path);
     const data = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)));
@@ -3981,7 +3981,7 @@ function styleShaper(styleName) {
 }
 
 // Fresh batch. type: "mutate" = mutate the editor sound; "random" = full-range chaos (old
-// behaviour, mostly duds); "any" = a random archetype per tile; otherwise an archetype name.
+// behavior, mostly duds); "any" = a random archetype per tile; otherwise an archetype name.
 // styleName overlays a console flavor (see STYLES); "Generic" leaves the sound unstyled.
 // Expand a (possibly sparse) patch to a full genome — every param present, defaults filled in.
 // Styling MUST run on this: a style does Math.max(g.reverb, …) etc., and an archetype patch
@@ -4978,7 +4978,7 @@ if (isDesktop) {
 // ============================================================================================
 // THE DESKTOP GATE (crunchyCore desktop.js; crunchyTile TILE-DESIGN.md §108): on the web, the ONE "Get the desktop
 // app" button (it appears because suite.js carries SFX's itch link) and its dialog, saying plainly what the desktop
-// ADDS. The web makes every sound, free and CC0; the desktop keeps them, organises them and plants them in your game.
+// ADDS. The web makes every sound, free and CC0; the desktop keeps them, organizes them and plants them in your game.
 // (Replaces SFX's own web CTA and its "Coming soon" modal.)
 // ============================================================================================
 // The other way round (2026-10-16): the About section and the suite footer under the app are for people (and search
@@ -4990,7 +4990,7 @@ desktopMount("sfx", {
     ["Planted in your game.", "Point it at your game's folder once (Godot, Unity, or any folder): every sound you save lands in crunchy/sfx/ as the WAV Export gives, with a small file beside it that reopens the sound exactly."],
     ["Updated in place.", "Replace on a card re-exports it under the same path, so your game's references keep working; a newer CrunchySFX marks what it would export differently, and Update all brings them up to date."],
     ["The Library.", "Every sound you planted, as waveforms you can play, beside the editor, with what your other Crunchy tools planted in the same game (Ctrl+L)."],
-    ["My Presets and categories.", "Keep, name and organise your own sounds; plant them into a game in one go; export them all to a folder; save and open .crunchysfx project files."],
+    ["My Presets and categories.", "Keep, name and organize your own sounds; plant them into a game in one go; export them all to a folder; save and open .crunchysfx project files."],
     ["Native files.", "Real Save and Open dialogs, recording and imports kept with your sounds, and dragging a WAV straight out into your editor or engine."],
   ],
 });
@@ -5049,7 +5049,7 @@ function showTourStep(i) {
   tourEl.querySelector(".tour-skip").style.visibility = last ? "hidden" : "visible";
   const els = step.target ? Array.from(document.querySelectorAll(step.target)).filter((e) => e.getClientRects().length) : [];
   // a `top` step lands on its TOP (just under the sticky controls): the preset list is taller than the screen, and
-  // centring it showed the middle of the list (2026-10-15 usability round)
+  // centering it showed the middle of the list (2026-10-15 usability round)
   if (els.length) { if (step.top) scrollToBelowControls(els[0]); else els[0].scrollIntoView({ block: "center", inline: "nearest" }); }
   const r = els.length ? tourUnionRect(els) : null;
   if (r) {

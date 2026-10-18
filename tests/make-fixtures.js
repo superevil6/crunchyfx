@@ -58,7 +58,7 @@
     for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^crunchyfx\./.test(k)) store[k] = localStorage.getItem(k); }
     put("localStorage", { store: store, upAudio: upAudio });
 
-    // a project file, as Save project writes it (buildProject is what saveProject serialises)
+    // a project file, as Save project writes it (buildProject is what saveProject serializes)
     applyPreset(PRESETS[Object.keys(PRESETS)[42]], "Editor sound");
     sequence = [{ genome: genomeFromState(), label: "Step one" }, { genome: snapOf(sounds[1].patch), label: "Step two" }];
     const proj = buildProject();

@@ -12,12 +12,12 @@
     /* SFX's accent is yellow (CONSOLIDATION-PLAN.md §9). Text on an accent fill is the base's dark --on-accent. */
     --accent: #ffd23f;
     --accent-dk: #a8841a;
-    /* CONTENT colours, split off the chrome so the accent change does not repaint the sound. The scope and
+    /* CONTENT colors, split off the chrome so the accent change does not repaint the sound. The scope and
        every thumbnail draw the left channel in this orange and the right in --sel's cyan (hard-coded on the
        canvases); the lit piano key and the riff's playing step are "the sound now", so they share the orange. */
     --wave: #ff7a45;
     --wave-dk: #c25326;
-    --sel: #45d0ff;   /* the selected riff step: the one the keys write into (was --accent2, now the base's grey --info) */
+    --sel: #45d0ff;   /* the selected riff step: the one the keys write into (was --accent2, now the base's gray --info) */
   }
   * { box-sizing: border-box; }
   body {

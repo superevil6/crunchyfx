@@ -432,7 +432,7 @@ function makeImpact(n, tone, decay, punch, grit, seed) {
 }
 
 // ---------- Whoosh / air (sword swings, whips, arrows, thrown things, cloth) ----------
-// The "pass-by" gesture: turbulent noise through a bandpass whose CENTRE FREQUENCY and AMPLITUDE
+// The "pass-by" gesture: turbulent noise through a bandpass whose CENTER FREQUENCY and AMPLITUDE
 // both swell up and fall together (that coupling is what makes a swing read as a swing — hard to
 // fake with a plain envelope + filter sweep). Builds ONE gesture over `n` samples; render() reads
 // it at `lt` so it retriggers per burst shot (combos), with `n` set to one shot's slot. Deterministic
@@ -443,7 +443,7 @@ function makeWhoosh(n, tone, sweep, body, peak, seed) {
   if (n < 2) return out;
   let s = (seed >>> 0) || 0x51ce5ab1;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 * 2 - 1; };
-  const fcBase = 300 * Math.pow(13, tone);          // ~300 Hz (dull) .. ~3.9 kHz (sharp) band centre
+  const fcBase = 300 * Math.pow(13, tone);          // ~300 Hz (dull) .. ~3.9 kHz (sharp) band center
   const sweepOct = 0.5 + sweep * 2.5;               // octaves the band rises at mid-swing
   const Q = 0.7 + body * 6;                          // broad/airy .. narrow/whistly
   const pk = 0.15 + peak * 0.6;                      // where amplitude + pitch peak (early flick .. late swing)
@@ -664,8 +664,8 @@ function buildFormantSpeechPlan(n, text, rate) {
 // ---------- Master finishing stage ----------
 // DC blocker: a one-pole highpass at ~18 Hz, always on. In place, no gate.
 //
-// WHY IT IS NEEDED, when the oscillator is already DC-centred: it is, and `drive` undoes it. A
-// centred 25%-duty pulse sits at +1.5 for a quarter of the cycle and −0.5 for three quarters — no
+// WHY IT IS NEEDED, when the oscillator is already DC-centered: it is, and `drive` undoes it. A
+// centered 25%-duty pulse sits at +1.5 for a quarter of the cycle and −0.5 for three quarters — no
 // DC, but amplitude-ASYMMETRIC — and tanh squashes the tall positive spike far harder than the
 // shallow negative one. The mean goes negative, worse the narrower the duty and the harder the
 // drive. Measured on single notes downstream in CrunchyBGM: 50% duty is clean, 25% reads −0.27,
@@ -676,12 +676,12 @@ function buildFormantSpeechPlan(n, text, rate) {
 //   1. A one-shot with an offset STEPS the signal on and off, so a sound used repeatedly in a game
 //      lays a low-frequency thump under every trigger. In a sequenced context — CrunchyBGM playing
 //      one of these as an instrument — it reads as a constant rumble, which is how it was found.
-//   2. It corrupts loudness normalisation. `rawPeak` in renderPatch is measured across the offset,
-//      so a driven narrow-pulse sound looks louder than it is and gets normalised DOWN. Removing
+//   2. It corrupts loudness normalization. `rawPeak` in renderPatch is measured across the offset,
+//      so a driven narrow-pulse sound looks louder than it is and gets normalized DOWN. Removing
 //      the offset first makes NORM_TARGET mean what it says.
 //
 // Cold-started on purpose, unlike CrunchyBGM's version of this: a sound effect begins at silence,
-// so there is nothing to prime from and the settling IS the correct behaviour. (BGM's buffer is a
+// so there is nothing to prime from and the settling IS the correct behavior. (BGM's buffer is a
 // seamless loop, so it primes on the tail or its own transient lands on the loop point.) The ~9 ms
 // time constant is well below the shortest attack here and a highpass passes transients anyway, so
 // the click at the front of a percussive sound survives intact.

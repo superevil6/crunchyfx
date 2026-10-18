@@ -121,7 +121,7 @@ because a later change moves every path.
 `src-tauri/build.rs`, and the `cp` line in `.github/workflows/desktop-build.yml`. Make sure `.assetsignore`
 doesn't match any of them.
 
-**Glue code**, modelled on the "PROJECTS AND THE LIBRARY" section of Tile's `index.html`:
+**Glue code**, modeled on the "PROJECTS AND THE LIBRARY" section of Tile's `index.html`:
 - `projDo` is the one queue for all file work.
 - Open, New and Recent, with the last project reopened at start-up.
 - `persistUserPresets` and `persistUserCats` write into the project while one is open, the same way Tile's

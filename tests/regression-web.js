@@ -49,11 +49,11 @@
               !document.getElementById("projSave") && !document.getElementById("dragOut") && !shown(document.getElementById("mypresets")) && !shown(document.getElementById("userCats")));
   });
   // THE SEARCH-ENGINE PASS (2026-10-16, worklog): the words live on about.html (AJ: the About section under the app made
-  // the page scroll); the app page keeps its own layout and shows one plain About link in the licence footer
+  // the page scroll); the app page keeps its own layout and shows one plain About link in the license footer
   t("seo/an-about-link-on-the-web-and-no-about-section-on-the-app-page", function () {
     const a = document.querySelector('footer.license a[href="about.html"]');
     return ok(shown(a) && /About/.test(a.textContent) && !document.querySelector("section.about") && !document.querySelector("footer.suitelinks"),
-              a ? a.textContent : "no About link in the licence footer");
+              a ? a.textContent : "no About link in the license footer");
   });
   t("legacy/v1.1-prefs-and-history-read-as-they-were", function () {
     return ok(atBoot.every(function (v, i) { return v === V.localStorage.store[STATIC[i]]; }) && scopeMode === "xy" && prefs.tourSeen === true && histItems.length === 2 &&
@@ -484,6 +484,30 @@
     const kept = JSON.stringify(kitG()) === JSON.stringify(before) && document.getElementById("kitEra").value === "8-Bit";
     kitClose();
     return ok(closed && kept && kitModal.hidden);
+  });
+
+
+  // AMERICAN SPELLING (AJ, 2026-10-18: "no British spelling … wipe it out everywhere in all apps"; the suite rule).
+  // CrunchyUI's copy/on-screen-text-uses-american-spelling, ported: every word the page holds (visible or in a closed
+  // dialog), every title / placeholder / alt / aria-label, every option, and the words that reach the screen from
+  // data: row labels, row tooltips, tour steps and preset names. The same word-boundary list as Tile's and UI's rows.
+  t("copy/on-screen-text-uses-american-spelling", function () {
+    const BRIT = /\b(\w*colour\w*|grey|greys|greyed|greying|greyish|greyscale|\w*armour\w*|armoury|centre|centres|centred|centring|centrepiece|behaviour\w*|favourites?|favour(s|ed|ing)?|\w*neighbour\w*|honour\w*|harbour\w*|rumour\w*|flavour\w*|odour\w*|vapour\w*|humour\w*|labour\w*|saviour|valour|splendour|licences?|defences?|offences?|fibres?|metres?|litres?|theatres?|calibre|lustre|sombre|spectres?|sceptres?|catalogue\w*|analogue|programmes?|jewellery|jeweller\w*|mould\w*|plough\w*|aluminium|cheques?|travell(ed|ing|er)|cancell(ed|ing)|modell(ed|ing)|labell(ed|ing)|fuell(ed|ing)|panelling|whilst|amongst|learnt|spelt|sulphur\w*|manoeuvre\w*|maths|storeys?|kerb|tyres?|artefacts?|(organ|real|recogn|custom|random|normal|optim|minim|maxim|visual|initial|synthes|serial|summar|stabil|categor|character|util|special|sanit|quant|material|raster|harmon|author|local|equal|neutral|synchron|crystall|styl|general|personal|ideal|final|priorit|emphas|apolog|memor|vapor|color|standard|modern|parameter)is(e|ed|es|ing|ation|ations|er|able))\b/i;
+    const bad = [];
+    const look = function (where, s) { const m = String(s || "").match(BRIT); if (m) bad.push(where + ": " + m[0] + " in " + JSON.stringify(String(s).trim().slice(0, 50))); };
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) if (!n.parentElement.closest("script, style, #dombanner")) look("text", n.nodeValue);
+    ["placeholder", "title", "alt", "aria-label"].forEach(function (a) {
+      document.querySelectorAll("[" + a + "]").forEach(function (e) { look("@" + a, e.getAttribute(a)); });
+    });
+    document.querySelectorAll("optgroup").forEach(function (g) { look("optgroup", g.label); });
+    PARAMS.forEach(function (p) { look("row " + p[0], p[1]); look("section of " + p[0], p[7]); });
+    Object.keys(PARAM_HELP).forEach(function (k) { look("tip " + k, PARAM_HELP[k]); });
+    TOUR.forEach(function (s) { look("tour", s.title); look("tour", s.body); });
+    Object.keys(PRESETS).forEach(function (k) { look("preset", k); });
+    // NEGATIVE: the list catches what it is for and passes look-alikes
+    const sane = BRIT.test("Colour of the hiss") && BRIT.test("centred") && BRIT.test("organise") && !BRIT.test("noise") && !BRIT.test("Color");
+    return ok(!bad.length && sane, (sane ? "" : "the word list itself · ") + bad.slice(0, 8).join(" · "));
   });
 
 

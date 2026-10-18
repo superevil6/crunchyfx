@@ -4,7 +4,7 @@ Developer tooling. Nothing here ships — the app never loads any of it.
 
 ## The synth export
 
-CrunchyVFX synthesises its matched sounds with **this** engine, not a reimplementation of it. The
+CrunchyVFX synthesizes its matched sounds with **this** engine, not a reimplementation of it. The
 boundary is one generated file:
 
 ```sh
@@ -49,7 +49,7 @@ behind an `await` would never appear in the shot.
 
 ## A note on the extraction
 
-`synth.js` was carved out of `index.html` and is meant to be *byte-identical in behaviour*. That
+`synth.js` was carved out of `index.html` and is meant to be *byte-identical in behavior*. That
 was verified by hashing every preset's rendered audio (and encoded WAV) before and after against
 the pre-extraction commit — 780 checks, all identical. If you refactor in here, do the same:
 render everything, hash it, compare. Ear-checking a few presets will not catch a drifted filter
