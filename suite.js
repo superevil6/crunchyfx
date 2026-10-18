@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 0dfc8c4 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 5b8235197b50dfa6c8d46dac2906a50f18552f7416cad7232777512283d35e23
+// GENERATED from crunchyCore/suite.js @ 0486825 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 552b09300aff781a84b7e814e3bfec9bebd5e6adabb07db4b7c0363a28155f74
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -25,7 +25,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 10;
+const SUITE_BUILD = 11;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -46,10 +46,11 @@ const CRUNCHY_SUITE = [
   { id: "character", name: "CrunchyCharacter", icon: "♟", pxi: "person", accent: "#ff5c8a",
     what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
     web: "", desktop: "" },
-  // Added 2026-10-13 (build 6): CrunchyItems (SUITE-LINKS §5). No domain or store page yet.
-  { id: "items", name: "CrunchyItems", icon: "⚔", pxi: "sword", accent: "#a6e22e",
+  // Added 2026-10-13 (build 6) as CrunchyItems (SUITE-LINKS §5). Build 11 (2026-10-18): renamed CrunchyItem (AJ: "misnamed
+  // by me"), live on the web at crunchyitem.com. The id stays "items" (every app's tests and links key on it).
+  { id: "items", name: "CrunchyItem", icon: "⚔", pxi: "sword", accent: "#a6e22e",
     what: "Item icons for RPGs: swords, bows, potions, keys and gems at 16, 24 and 32 px, ready for Godot and RPG Maker.",
-    web: "", desktop: "" },
+    web: "https://crunchyitem.com/", desktop: "" },
   // Added 2026-10-14 (build 7): CrunchyShader (crunchyTile SHADER-HANDOFF.md). No domain or store page yet.
   { id: "shader", name: "CrunchyShader", icon: "◐", pxi: "shade", accent: "#36d6e7",
     what: "Pixel-art shaders: looks, eras, CRT, sprite flashes and screen transitions, ready for Godot and the web.",

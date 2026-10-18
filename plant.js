@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 0dfc8c4 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 2322777838ef3c6a677edefcc85cdeee251638e767f134a3b22acb98cbb3c098
+// GENERATED from crunchyCore/plant.js @ 0486825 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 b295b2790f107c4f620aa7887b9f84eaf0b5ed7097ee37483d0aeff81ad14eaf
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -49,18 +49,18 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 12;
+const PLANT_BUILD = 13;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
 const PLANT_SUITE = {
   tile: ["tile", "Tile"], ui: ["ui", "UI"], sfx: ["sfx", "SFX"],
   vfx: ["vfx", "VFX"], bgm: ["bgm", "BGM"], character: ["character", "Character"],
-  items: ["items", "Items"],                                         // build 11: CrunchyItems
+  items: ["item", "Item"],                                           // build 11: CrunchyItems; build 13: renamed CrunchyItem (crunchy/item/)
   shader: ["shader", "Shader"],                                      // build 12: CrunchyShader
 };
 const PLANT_SUITE_NAMES = { tile: "CrunchyTile", ui: "CrunchyUI", sfx: "CrunchySFX", vfx: "CrunchyVFX", bgm: "CrunchyBGM", character: "CrunchyCharacter",
-                            items: "CrunchyItems", shader: "CrunchyShader" };
+                            items: "CrunchyItem", shader: "CrunchyShader" };
 
 // ---- paths ------------------------------------------------------------------------------------------------------
 function plantJoin() {
