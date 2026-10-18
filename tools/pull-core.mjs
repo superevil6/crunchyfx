@@ -72,7 +72,7 @@ ${HOOK_MARK}. Rewritten on every pull: do not edit (an app that
 cd "$(git rev-parse --show-toplevel)" || exit 1
 exec node tools/pull-core.mjs --precommit
 `;
-const appGit = (...a) => { try { return execFileSync("git", a, { cwd: app, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch (e) { return null; } };
+const appGit = (...a) => { try { return execFileSync("git", a, { cwd: app, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 28 }).toString().trim(); } catch (e) { return null; } };
 function writeHook() {
   const p = join(app, HOOK);
   if (existsSync(p) && !readFileSync(p, "utf8").includes(HOOK_MARK)) return "own";     // the app's own hook: left alone
@@ -111,7 +111,7 @@ if (precommit) {
   process.exit(0);
 }
 
-const git = (...a) => execFileSync("git", a, { cwd: core, stdio: ["ignore", "pipe", "ignore"] }).toString();
+const git = (...a) => execFileSync("git", a, { cwd: core, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 28 }).toString();
 const atCommit = (commit, f) => { try { return git("show", commit + ":" + f); } catch (e) { return null; } };
 const haveCore = existsSync(join(core, SELF));
 
