@@ -1,10 +1,10 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ 7cd64e5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 03e97d05dc991472b0423f0e0a34489b8c50a0a4bfeac3aa12401e65eea143f3
+// GENERATED from crunchyCore/crunchy-icons.js @ cae0419 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 58cbbf13a9f44f429c4c8943c54db8cec4f36271cc6070713da4ac326ac856ba
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
 // CANONICAL HERE; every Crunchy tool copies it unchanged, with crunchy-base.css (which styles `.pxi`). Emoji read
-// as "generated" and differ per platform; these are 12 x 12 masks, one CSS pixel per cell, in the text's colour.
-// Shapes follow CrunchyUI's icon outlines (icons.js), placed by hand at this size, where a straight rasterise smears.
+// as "generated" and differ per platform; these are 12 x 12 masks, one CSS pixel per cell, in the text's color.
+// Shapes follow CrunchyUI's icon outlines (icons.js), placed by hand at this size, where a straight rasterize smears.
 //
 // A DOM component, like suite.js: it touches the DOM only inside functions, so it loads anywhere.
 //   <button data-icon="cog">Settings</button>   ->  crunchyIconsApply(document) puts the icon before the label
@@ -14,7 +14,7 @@
 // preview sheet shows them in); a name is never reused or removed. Add a batch per adoption round, not one per idea:
 // every stamp bump is a follow-up in every app that has pulled (pull-core moves the app's `want` for it).
 
-const CRUNCHY_ICONS_BUILD = 10;
+const CRUNCHY_ICONS_BUILD = 11;
 
 const CRUNCHY_ICONS = {
   // DOWNLOAD, LINK and GRID (build 2) — the three a header still needed an emoji for. Drawn for
@@ -767,7 +767,7 @@ const CRUNCHY_ICONS = {
   ],
 };
 
-// One path of unit squares: crisp at any whole zoom, and the colour is the text's (fill: currentColor in .pxi).
+// One path of unit squares: crisp at any whole zoom, and the color is the text's (fill: currentColor in .pxi).
 function crunchyIcon(name) {
   const rows = CRUNCHY_ICONS[name];
   if (!rows) return null;

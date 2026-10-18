@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 7cd64e5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 552b09300aff781a84b7e814e3bfec9bebd5e6adabb07db4b7c0363a28155f74
+// GENERATED from crunchyCore/suite.js @ cae0419 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 47cb6a280e9aa3ead8b02fed3443a730aa0c0844bf954f5bf5fecedb3e956aa9
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -9,7 +9,7 @@
 // suiteMount("<its id>", …). CHANGE A LINK OR A LINE IN crunchyCore, so the apps never disagree about each other.
 // Its styles are the `suite-*` block in crunchy-base.css.
 //
-// EACH TOOL IN ITS OWN COLOUR (build 4, CONSOLIDATION-PLAN.md §9): `accent` is that app's --accent, set on its row
+// EACH TOOL IN ITS OWN COLOR (build 4, CONSOLIDATION-PLAN.md §9): `accent` is that app's --accent, set on its row
 // as --tool, so the list reads as siblings. `pxi` names its pixel icon (crunchy-icons.js); an app that has not pulled
 // the icons yet shows the text glyph in `icon` instead.
 //
@@ -25,7 +25,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 11;
+const SUITE_BUILD = 12;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",

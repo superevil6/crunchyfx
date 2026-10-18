@@ -1,10 +1,10 @@
-// GENERATED from crunchyCore/desktop.js @ 7cd64e5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 486a1148801cacc927754643173c16f283dd800974f2111b38837a72860608ff
+// GENERATED from crunchyCore/desktop.js @ cae0419 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 23437ac9a6d4f4d10beb0386f8e4fa1bd4bb054d2fcb8fabe7002c07fcb1cdb1
 "use strict";
 // THE DESKTOP GATE AND THE WEB'S ONE INVITATION (CONSOLIDATION-PLAN.md §2–§3; crunchyTile TILE-DESIGN.md §11).
 //
 // The rule every Crunchy tool keeps: the desktop sells WORKFLOW, never generation. The web version makes everything,
-// free, unwatermarked and CC0; the desktop app keeps, organises and delivers it into your game.
+// free, unwatermarked and CC0; the desktop app keeps, organizes and delivers it into your game.
 //
 //   - Anything marked `data-desktop` is simply ABSENT on the web: a dead control you can click is worse than none.
 //   - The web shows ONE "Get the desktop app" button, saying plainly what the desktop ADDS. Never "unlock",
@@ -46,7 +46,7 @@
 //   The pitch names the price when suite.js gives the tool a `price` (desktopTourPitch).
 // Entry points: the web's "Get the desktop app" (desktopMount) opens it; settings.js (build 3) adds a row for it.
 
-const DESKTOP_BUILD = 3;
+const DESKTOP_BUILD = 4;
 
 function desktopIs() { return typeof window !== "undefined" && !!window.__TAURI__; }
 
@@ -321,7 +321,7 @@ function desktopTourThumb(w, name, i, canvas) {
   art.draw(px, n, rnd, String(name).toLowerCase(), i, w.accent);
 }
 
-// The painters, one per app's kind of asset (`art` in DESKTOP_TOUR_APPS). Each gets px(colour, x, y, w, h), the size,
+// The painters, one per app's kind of asset (`art` in DESKTOP_TOUR_APPS). Each gets px(color, x, y, w, h), the size,
 // a seeded rnd, the sample's name in lower case, its place and the app's accent.
 const DESKTOP_TOUR_ART = {
   tile: { size: 16, draw: function (px, n, rnd, name, i) {             // terrain: a lit top band over ground, flecks

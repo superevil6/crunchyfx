@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 7cd64e5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 de03149f7dd63efd4fcafebceb82e75ab64ed259aa682900317cd489e9545606 */
+/* GENERATED from crunchyCore/crunchy-base.css @ cae0419 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 6069ea8cde626674b83e92da8fc13d6b757563360e84878145771b644ffc23b1 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,11 +18,11 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 8;
+  --base-build: 9;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
-     artwork against --panel and --panel2 (best-separated colour must clear 25 from each ground; headroom 2.4 at
+     artwork against --panel and --panel2 (best-separated color must clear 25 from each ground; headroom 2.4 at
      build 1), so moving --panel or --panel2 is a change to a consumer's test data. Name it in CHANGELOG.md. */
   --bg: #111015;
   --panel: #1a1820;
@@ -102,7 +102,7 @@ input[type="checkbox"]:checked::before { transform: scale(1); }
 input[type="checkbox"]:checked { border-color: var(--accent); }
 input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 
-/* PIXEL ICONS (crunchy-icons.js): 12 x 12 cells, one CSS pixel each, in the text's colour */
+/* PIXEL ICONS (crunchy-icons.js): 12 x 12 cells, one CSS pixel each, in the text's color */
 .pxi { width: 12px; height: 12px; flex: none; vertical-align: -1px; margin-right: 6px; fill: currentColor;
        shape-rendering: crispEdges; }
 
@@ -170,7 +170,7 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .lib-suite-row .lib-meta { flex: 1; }
 
 /* THE CRUNCHY SUITE (suite.js). Each row carries its tool's accent as --tool (suite.js sets it): a stripe on the left,
-   its icon, and the "you're here" mark, so the apps read as siblings, each in its own colour. */
+   its icon, and the "you're here" mark, so the apps read as siblings, each in its own color. */
 .suite-overlay[hidden] { display: none !important; }
 .suite-overlay { position: fixed; inset: 0; z-index: 260; background: rgba(8, 7, 12, 0.78); display: flex;
                  align-items: center; justify-content: center; padding: 16px; }
