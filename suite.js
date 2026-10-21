@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/suite.js @ 6732019 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/suite.js @ 5d03558 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 47cb6a280e9aa3ead8b02fed3443a730aa0c0844bf954f5bf5fecedb3e956aa9
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
