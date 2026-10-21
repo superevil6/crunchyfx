@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/feedback.js @ 4108e9a by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/feedback.js @ 2b3153f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 d9e4f56f5f85ab54ea5c0e2c18b381a04108182ef8e282ac4e806de5fad9d800
 "use strict";
 // Crunchy suite — FEEDBACK: one "Send feedback" for every Crunchy tool (AJ, 2026-10-12: "we need a feedback loop for
