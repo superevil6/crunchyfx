@@ -8,7 +8,8 @@
 # The site is only: index.html, about.html (the static About page, served at /about; web only, never in build.rs),
 # robots.txt, sitemap.xml, the IndexNow key file (<32 hex>.txt; tests/seo.test.mjs checks none is matched here), crunchy-base.css, styles.css, presets.js, dsp.js, synth.js, crunchy-icons.js,
 # suite.js, project-app.js, plant.js, library.js, settings.js, desktop.js, feedback.js (the planted Library, Settings, the
-# desktop gate and the feedback dialog: the web build loads them too, and they must stay unmatched below), the icons, og.png — and
+# desktop gate and the feedback dialog: the web build loads them too, and they must stay unmatched below), the icons, og.png,
+# wordmark.png (the header logo) — and
 # version.json, which the desktop app's update check FETCHES, so it must never be listed here.
 #
 # LOCAL RUNS NEED flatpak/ CLEANED FIRST. This file filters the asset list AFTER wrangler has walked

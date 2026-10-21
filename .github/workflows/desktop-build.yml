@@ -41,7 +41,7 @@ jobs:
       # library, styles.css the UI). build.rs copies them too; this is belt-and-suspenders.
       - name: Prepare frontend
         shell: bash
-        run: mkdir -p dist && cp index.html dsp.js presets.js synth.js crunchy-icons.js suite.js project-app.js plant.js library.js settings.js desktop.js feedback.js crunchy-base.css styles.css dist/
+        run: mkdir -p dist && cp index.html dsp.js presets.js synth.js crunchy-icons.js suite.js project-app.js plant.js library.js settings.js desktop.js feedback.js crunchy-base.css styles.css wordmark.png dist/
 
       - name: Install Linux webview deps
         if: matrix.platform == 'ubuntu-22.04'
