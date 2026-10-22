@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 36ba26a by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 b295b2790f107c4f620aa7887b9f84eaf0b5ed7097ee37483d0aeff81ad14eaf
+// GENERATED from crunchyCore/plant.js @ 960fa5f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 4956982e67a5a579566c3534a8a31a0dd13a032eb2b5a9d3d5888021690ef789
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -49,7 +49,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 13;
+const PLANT_BUILD = 14;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -286,7 +286,10 @@ async function plantSlugFor(P, kind, name) {
 // asset here. Nothing else in the folder is touched.
 // Build 10: also "scripts", for an app's RUNTIME scripts (CrunchyTile's Rule Tile classes: a tile asset's script cannot
 // live under Editor/, which Unity leaves out of a build). No asset slug takes either name.
-const PLANT_SUPPORT_FILE = "_support" + PLANT_EXT, PLANT_SUPPORT_RESERVED = ["editor", "scripts"];
+// Build 14: also "combined", for a file built FROM every asset of the app in this game (CrunchyTile's combined/game.tres:
+// one Godot TileSet holding every planted tileset, TILE-DESIGN §146). The same rules: written only by the app, removed
+// with its last asset here, and no asset slug takes the name.
+const PLANT_SUPPORT_FILE = "_support" + PLANT_EXT, PLANT_SUPPORT_RESERVED = ["editor", "scripts", "combined"];
 function plantSupportOk(rel) {
   return plantSafeRel(rel) && rel.slice(-PLANT_EXT.length) !== PLANT_EXT && PLANT_SUPPORT_RESERVED.indexOf(rel.split("/")[0].toLowerCase()) >= 0 && rel.indexOf("/") > 0;
 }
