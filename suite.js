@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 960fa5f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 47cb6a280e9aa3ead8b02fed3443a730aa0c0844bf954f5bf5fecedb3e956aa9
+// GENERATED from crunchyCore/suite.js @ 30f5311 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 18f6995969e4548905c3528a609c2f8b966b5dd12ce1983418c34bc4689f30d7
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -25,7 +25,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 12;
+const SUITE_BUILD = 13;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -50,7 +50,7 @@ const CRUNCHY_SUITE = [
   // by me"), live on the web at crunchyitem.com. The id stays "items" (every app's tests and links key on it).
   { id: "items", name: "CrunchyItem", icon: "⚔", pxi: "sword", accent: "#a6e22e",
     what: "Item icons for RPGs: swords, bows, potions, keys and gems at 16, 24 and 32 px, ready for Godot and RPG Maker.",
-    web: "https://crunchyitem.com/", desktop: "" },
+    web: "https://crunchyitem.com/", desktop: "https://sevi66.itch.io/crunchyitem", price: "$6" },   // desktop 1.0.0, 2026-10-21
   // Added 2026-10-14 (build 7): CrunchyShader (crunchyTile SHADER-HANDOFF.md). No domain or store page yet.
   { id: "shader", name: "CrunchyShader", icon: "◐", pxi: "shade", accent: "#36d6e7",
     what: "Pixel-art shaders: looks, eras, CRT, sprite flashes and screen transitions, ready for Godot and the web.",
