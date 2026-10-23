@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/library.js @ bcabdad by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 7d9468f6e4232b432d098e79c7e9beeb62db686374cb7826c3607b7aa4232ddb
+// GENERATED from crunchyCore/library.js @ 7546382 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 209c6702d7c70a5eb3fc507f78c00233f366c53b274cd8fbfde5f8e8c04115a9
 "use strict";
 // CrunchyTile — THE LIBRARY (TILE-DESIGN.md §79): a visual asset viewer over a project, as a PORTABLE
 // COMPONENT. AJ, 2026-10-09: "a visual project/asset viewer is a very obvious oversight in ALL of the
@@ -42,7 +42,47 @@
 //   });
 //   lib.open(); lib.close(); lib.refresh(); lib.status("Saved."); lib.isOpen();
 
-const LIBRARY_BUILD = 5;
+const LIBRARY_BUILD = 6;
+
+// ASK (build 6, AJ 2026-10-23): a small dialog for a question that guards a person's work. A guard's "press again" lived in
+// the status line, out of sight from the Library, so the next ordinary double click went straight through it.
+//   libraryAsk({ title, message, list: [lines], yes: "Delete anyway", no: "Keep it", danger }) → Promise<boolean>
+// The SAFE answer (no) has the focus and is what Escape, Enter on it, a click outside and closing give; `yes` must be
+// pressed. One dialog at a time: a second ask while one is open answers no.
+let libraryAskOpen = false;
+function libraryAsk(o) {
+  o = o || {};
+  if (libraryAskOpen) return Promise.resolve(false);
+  libraryAskOpen = true;
+  return new Promise(function (resolve) {
+    const el = function (tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+    const root = el("div", "set-overlay lib-ask"), panel = el("div", "set-panel lib-ask-panel");
+    root.setAttribute("role", "alertdialog"); root.setAttribute("aria-modal", "true");
+    const h = el("h2", "set-title", o.title || "Are you sure?");
+    h.id = "libAskTitle"; root.setAttribute("aria-labelledby", h.id);
+    panel.appendChild(h);
+    if (o.message) panel.appendChild(el("p", "setsub lib-ask-msg", o.message));
+    if (o.list && o.list.length) {
+      const ul = el("ul", "lib-ask-list");
+      o.list.slice(0, 12).forEach(function (t) { ul.appendChild(el("li", "", t)); });
+      if (o.list.length > 12) ul.appendChild(el("li", "", "… and " + (o.list.length - 12) + " more"));
+      panel.appendChild(ul);
+    }
+    const row = el("div", "lib-ask-acts"), yes = el("button", o.danger === false ? "" : "lib-ask-yes", o.yes || "Yes"), no = el("button", "primary", o.no || "Cancel");
+    yes.type = "button"; no.type = "button";
+    yes.dataset.act = "yes"; no.dataset.act = "no";
+    const done = function (v) { root.remove(); libraryAskOpen = false; resolve(v); };
+    yes.addEventListener("click", function () { done(true); });
+    no.addEventListener("click", function () { done(false); });
+    root.addEventListener("click", function (e) { if (e.target === root) done(false); });
+    root.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); } });
+    row.appendChild(yes); row.appendChild(no);
+    panel.appendChild(row);
+    root.appendChild(panel);
+    document.body.appendChild(root);
+    no.focus();
+  });
+}
 
 function libraryMount(opts) {
   let root = null, grid = null, statusEl = null, searchEl = null, query = "", kind = "", tab = null, busy = false;
