@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ d862a8f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 18f6995969e4548905c3528a609c2f8b966b5dd12ce1983418c34bc4689f30d7
+// GENERATED from crunchyCore/suite.js @ 32851d3 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 b5650fffe8aa24d1454b6773b16584115a8be898048fbc5214ec8ef7c006276d
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -25,14 +25,14 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 13;
+const SUITE_BUILD = 14;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
     web: "https://crunchytile.com/", desktop: "https://sevi66.itch.io/crunchytile", price: "$6" },
   { id: "ui", name: "CrunchyUI", icon: "▣", pxi: "window", accent: "#7ea6ff",
     what: "Game UI: panels, buttons, bars, frames, slots, cursors and icons, with 9-slice insets.",
-    web: "https://crunchyui.com/", desktop: "" },
+    web: "https://crunchyui.com/", desktop: "https://sevi66.itch.io/crunchyui", price: "$6" },   // desktop 1.0.0, 2026-10-22
   { id: "sfx", name: "CrunchySFX", icon: "♪", pxi: "speaker", accent: "#ffd23f",
     what: "Sound effects from scratch: coins, lasers, explosions, robot voices and more, as WAV.",
     web: "https://crunchysfx.com/", desktop: "https://sevi66.itch.io/crunchysfx", price: "$6" },
