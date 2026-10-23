@@ -442,16 +442,14 @@
   });
 
   // ---- the suite view, copied-in web zips, other engines ----
-  await t("suite/the-other-tools-in-the-same-game", async function () {
+  await t("suite/no-suite-section-in-the-library", async function () {
     M.put(GODOT + "/crunchy/tile/meadow/meadow.crunchy", JSON.stringify({ format: "crunchy-asset", kind: "design", name: "Meadow", files: ["meadow.png"] }));
     M.put(GODOT + "/crunchy/tile/cave/cave.crunchy", JSON.stringify({ format: "crunchy-asset", kind: "design", name: "Cave", files: ["cave.png"] }));
     await projRefreshSuite();          // waited for: the suite view reads every other tool's folder (more since plant.js 12)
     await settle();
-    const row = lib().querySelector('.lib-suite-row[data-key="tile"]');
-    row.querySelector("button").click();
-    await settle();
-    return ok(row && /CrunchyTile/.test(row.textContent) && /2 designs/.test(row.textContent) && /crunchy\/tile/.test(row.textContent) &&
-              /^open https:\/\/crunchytile\.com\//.test(M.log[M.log.length - 1]), row ? row.textContent : "no row");
+    // library.js 5 (AJ, 2026-10-22: it "takes up half the panel, and I don't think it's necessary"): the section that
+    // listed the other Crunchy tools' assets here is gone. The assets above stay seeded: later rows check they're untouched.
+    return ok(!lib().querySelector(".lib-suite, .lib-suite-row") && !/Also in this game/.test(lib().textContent), "the suite section is still drawn");
   });
   // THE WEB ZIP (2026-10-15 usability round): WAVs + a README only. Its crunchy-library/ copies (a planted-Library entry
   // per take, crunchyCore DESKTOP-ROADMAP.md §6.4) made Godot import every take twice; a take now comes back through the
