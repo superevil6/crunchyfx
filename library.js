@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/library.js @ 0edc74b by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 9514b82baa8360e28ab72b526f3197b1725f29a7c4129305068b0007cba1a5b5
+// GENERATED from crunchyCore/library.js @ d862a8f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 7d9468f6e4232b432d098e79c7e9beeb62db686374cb7826c3607b7aa4232ddb
 "use strict";
 // CrunchyTile — THE LIBRARY (TILE-DESIGN.md §79): a visual asset viewer over a project, as a PORTABLE
 // COMPONENT. AJ, 2026-10-09: "a visual project/asset viewer is a very obvious oversight in ALL of the
@@ -42,7 +42,7 @@
 //   });
 //   lib.open(); lib.close(); lib.refresh(); lib.status("Saved."); lib.isOpen();
 
-const LIBRARY_BUILD = 4;
+const LIBRARY_BUILD = 5;
 
 function libraryMount(opts) {
   let root = null, grid = null, statusEl = null, searchEl = null, query = "", kind = "", tab = null, busy = false;
@@ -188,20 +188,9 @@ function libraryMount(opts) {
       panel.appendChild(grid);
       drawGrid();
       }
-      const others = opts.suite ? opts.suite() : [];
-      if (others.length) {                                        // THE SUITE VIEW (build 2): read-only
-        const sv = el("div", "lib-suite");
-        sv.appendChild(el("h3", "lib-h", "Also in this game, from the Crunchy suite"));
-        others.forEach(function (o) {
-          const row = el("div", "lib-suite-row");
-          row.dataset.key = o.key;
-          row.appendChild(el("strong", "", o.name));
-          row.appendChild(el("span", "lib-meta", o.summary));
-          if (o.open) row.appendChild(button({ label: "Open " + o.name + " ↗", title: o.title, run: o.open }));
-          sv.appendChild(row);
-        });
-        panel.appendChild(sv);
-      }
+      // THE SUITE VIEW IS GONE (build 5, AJ 2026-10-22: "takes up half the panel, and I don't think it's necessary"). It
+      // listed the other Crunchy tools' assets in the same game, each with an Open button; the suite dialog (suite.js)
+      // already opens every tool. `opts.suite` is ignored now; plant.js's plantSuiteView still reads them for any later use.
     }
     statusEl = el("div", "lib-status", keepStatus);
     statusEl.setAttribute("aria-live", "polite");

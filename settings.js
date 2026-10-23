@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/settings.js @ 0edc74b by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 661aad65e8a71a7faf584f94ec313fd83d89b4bf626c5e077a6eab77d3fe9508
+// GENERATED from crunchyCore/settings.js @ d862a8f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 76837227b4ae3416ff3925de97570038d6da599d84b8bc83c69ad7232ebaa0e7
 "use strict";
 // THE SETTINGS DIALOG — one ⚙ Settings for every Crunchy tool (CONSOLIDATION-PLAN.md §2; crunchyTile TILE-DESIGN.md
 // §93.1, from CrunchyBGM's preferences dialog). PREFERENCES, which follow the person, not the design: never in a
@@ -23,7 +23,7 @@
 //            loaded: `tour` is the tool's suite id (default PROJECT_APP.suite); false leaves the row out
 // refresh() re-reads every check's get(): call it when a preference changes elsewhere. open() refreshes first.
 
-const SETTINGS_BUILD = 3;
+const SETTINGS_BUILD = 4;
 
 function settingsMount(opts) {
   opts = opts || {};
@@ -101,3 +101,37 @@ function settingsMount(opts) {
   if (opts.button) opts.button.addEventListener("click", open);
   return { open: open, close: close, refresh: refresh, isOpen: function () { return !!root && !root.hidden; } };
 }
+
+// ---- THE FIRST-RUN HINT (build 4, AJ 2026-10-22: "a sparkle effect ... so the user's eyes are drawn to it, without being
+// forced and overwhelmed"; first used on CrunchyUI's Creator button after its tour) --------------------------------------
+// crunchyHint(target, { key, ms }) → stop() | null
+//   Pixel sparkles twinkle round `target` and a hard 2 px outline steps on and off (the suite's look: square, stepped, no
+//   blur or glow), ONCE: `key` names a localStorage flag set the moment it shows, so it never shows twice (a browser that
+//   keeps nothing shows it at most once a visit). It stops on a click on the target, or after `ms` (default 20 s).
+//   Reduced motion: a still outline, no sparkles. Styled by the `crunchy-hint` block in crunchy-base.css. Returns null
+//   when it was already shown (or there is no target).
+function crunchyHint(target, opts) {
+  opts = opts || {};
+  if (!target) return null;
+  try { if (opts.key && localStorage.getItem(opts.key)) return null; } catch (e) { /* storage blocked: show it, once here */ }
+  try { if (opts.key) localStorage.setItem(opts.key, "1"); } catch (e) { /* best-effort */ }
+  target.classList.add("crunchy-hint");
+  const sparks = ["tl", "tr", "bl", "br"].map(function (pos) {
+    const s = document.createElement("span");
+    s.className = "crunchy-spark crunchy-spark-" + pos;
+    s.setAttribute("aria-hidden", "true");
+    target.appendChild(s);
+    return s;
+  });
+  let timer = 0;
+  const stop = function () {
+    clearTimeout(timer);
+    target.removeEventListener("click", stop, true);
+    target.classList.remove("crunchy-hint");
+    sparks.forEach(function (s) { if (s.parentNode) s.parentNode.removeChild(s); });
+  };
+  target.addEventListener("click", stop, true);
+  timer = setTimeout(stop, opts.ms || 20000);
+  return stop;
+}
+

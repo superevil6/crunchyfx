@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 0edc74b by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 6069ea8cde626674b83e92da8fc13d6b757563360e84878145771b644ffc23b1 */
+/* GENERATED from crunchyCore/crunchy-base.css @ d862a8f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 f7b353ae0c7b002a770d42d736063cbd6891b08c7b32e55f653a20994de77e15 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 9;
+  --base-build: 10;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -364,3 +364,27 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
   .dtour-file.new, .dtour-dock .lib-badge.hot { animation: none; }
   .dtour-dlg, .dtour-result, .dtour-guard, .dtour-btn { transition: none; }
 }
+
+/* THE FIRST-RUN HINT (settings.js crunchyHint, base-build 10): pixel sparkles round a control and a hard outline that
+   steps on and off. No blur, no glow, no easing: every keyframe is a step, as the suite's look asks. The sparkles are a
+   2 px square with four hard shadows (a plus), twinkling out of phase. */
+.crunchy-hint { position: relative; outline: 2px solid var(--accent); outline-offset: 2px;
+  animation: crunchy-hint-blink 1.2s steps(1, end) infinite; }
+@keyframes crunchy-hint-blink { 0% { outline-color: var(--accent); } 50% { outline-color: transparent; } }
+.crunchy-spark { position: absolute; width: 2px; height: 2px; background: var(--accent); pointer-events: none; opacity: 0;
+  animation: crunchy-spark 1.6s steps(1, end) infinite; }
+.crunchy-spark-tl { top: -9px; left: -7px; }
+.crunchy-spark-tr { top: -8px; right: -9px; animation-delay: .4s; }
+.crunchy-spark-bl { bottom: -9px; left: 30%; animation-delay: .8s; }
+.crunchy-spark-br { bottom: -7px; right: -8px; animation-delay: 1.2s; }
+@keyframes crunchy-spark {
+  0%   { opacity: 0; box-shadow: none; }
+  25%  { opacity: 1; box-shadow: none; }
+  50%  { opacity: 1; box-shadow: 0 -2px 0 var(--accent), 0 2px 0 var(--accent), -2px 0 0 var(--accent), 2px 0 0 var(--accent); }
+  75%  { opacity: 1; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crunchy-hint { animation: none; }
+  .crunchy-spark { display: none; }
+}
+
