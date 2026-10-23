@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ 32851d3 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 58cbbf13a9f44f429c4c8943c54db8cec4f36271cc6070713da4ac326ac856ba
+// GENERATED from crunchyCore/crunchy-icons.js @ c4a758b by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 127f78dd9285581628f0e286e26052736833cd0245273db263d5c70ee557fea6
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
 // CANONICAL HERE; every Crunchy tool copies it unchanged, with crunchy-base.css (which styles `.pxi`). Emoji read
@@ -14,7 +14,7 @@
 // preview sheet shows them in); a name is never reused or removed. Add a batch per adoption round, not one per idea:
 // every stamp bump is a follow-up in every app that has pulled (pull-core moves the app's `want` for it).
 
-const CRUNCHY_ICONS_BUILD = 11;
+const CRUNCHY_ICONS_BUILD = 12;
 
 const CRUNCHY_ICONS = {
   // DOWNLOAD, LINK and GRID (build 2) — the three a header still needed an emoji for. Drawn for
@@ -321,6 +321,21 @@ const CRUNCHY_ICONS = {
     "..###.......",
     ".###........",
     ".#..........",
+  ],
+  // TRASH (build 12, Tile's My presets, AJ 2026-10-23: "a trashcan to delete"): a lid with its handle over a slatted can.
+  trash: [
+    "....####....",
+    ".##########.",
+    ".##########.",
+    "............",
+    "..########..",
+    "..##.##.##..",
+    "..##.##.##..",
+    "..##.##.##..",
+    "..##.##.##..",
+    "..##.##.##..",
+    "..########..",
+    "...######...",
   ],
   upload: [
     ".....##.....",
