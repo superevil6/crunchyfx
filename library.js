@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/library.js @ ddbde76 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/library.js @ b4c4ef6 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 209c6702d7c70a5eb3fc507f78c00233f366c53b274cd8fbfde5f8e8c04115a9
 "use strict";
 // CrunchyTile — THE LIBRARY (TILE-DESIGN.md §79): a visual asset viewer over a project, as a PORTABLE
