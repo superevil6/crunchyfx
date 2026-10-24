@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ b4c4ef6 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 145cb78d4f4424dd47cb1e541cf9e5e45e28f304fc201c06744388a4f2061aff
+// GENERATED from crunchyCore/suite.js @ e9469bf by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 7be377fde736ec43f3da4b7b5f1be8557814b26912ab1ef9dba324c089b86151
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -25,7 +25,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 15;
+const SUITE_BUILD = 16;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -54,7 +54,7 @@ const CRUNCHY_SUITE = [
   // Added 2026-10-14 (build 7): CrunchyShader (crunchyTile SHADER-HANDOFF.md). No domain or store page yet.
   { id: "shader", name: "CrunchyShader", icon: "◐", pxi: "shade", accent: "#36d6e7",
     what: "Pixel-art shaders: looks, eras, CRT, sprite flashes and screen transitions, ready for Godot and the web.",
-    web: "https://crunchyshader.com/", desktop: "" },
+    web: "https://crunchyshader.com/", desktop: "https://sevi66.itch.io/crunchyshader", price: "$6" },   // desktop 1.0.0, 2026-10-23
 ];
 // The mission statement's one line (crunchy-suite.md §1). Quoted, never reworded.
 const SUITE_LINE = "Crunchy tools make the art and sound for your game, so you can spend your time on the game.";
