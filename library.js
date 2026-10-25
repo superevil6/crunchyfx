@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/library.js @ b392977 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 209c6702d7c70a5eb3fc507f78c00233f366c53b274cd8fbfde5f8e8c04115a9
+// GENERATED from crunchyCore/library.js @ 4154ee5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 f209e4a1c2585f7b4129268ffebdc16ac42c647b74a795ad3d679e04895194a2
 "use strict";
 // CrunchyTile — THE LIBRARY (TILE-DESIGN.md §79): a visual asset viewer over a project, as a PORTABLE
 // COMPONENT. AJ, 2026-10-09: "a visual project/asset viewer is a very obvious oversight in ALL of the
@@ -36,13 +36,14 @@
 //     actions[].when(item)  (build 3) show this card button only where it returns true (Re-export: only on a card
 //                           that has an update; Replace: only where the editor holds the same kind of thing)
 //     dock                 an element: the Library is a PANEL docked in it rather than an overlay dialog
-//     startHint, emptyHint the start screen's line and the empty grid's line (planted apps say "plant", not "link")
+//     startHint, emptyHint the start screen's line and the empty grid's line (planted apps say "plant", not "link");
+//                          emptyHint may be a function(tabKey) (build 7: CrunchyVFX's Game moments tab says how to make one)
 //     suite()              → [{ key, name, summary, title, open() }]   THE SUITE VIEW: what the other Crunchy tools
 //                            planted in the same game, read-only, each with a button that opens that tool
 //   });
 //   lib.open(); lib.close(); lib.refresh(); lib.status("Saved."); lib.isOpen();
 
-const LIBRARY_BUILD = 6;
+const LIBRARY_BUILD = 7;
 
 // ASK (build 6, AJ 2026-10-23): a small dialog for a question that guards a person's work. A guard's "press again" lived in
 // the status line, out of sight from the Library, so the next ordinary double click went straight through it.
@@ -243,7 +244,7 @@ function libraryMount(opts) {
       return (!tab || it.tab === tab) && (!kind || it.kind === kind) && (!q || it.name.toLowerCase().indexOf(q) >= 0 || String(it.group || "").toLowerCase().indexOf(q) >= 0);
     });
     if (!items.length) {
-      grid.appendChild(el("p", "lib-hint", q || kind ? "Nothing matches." : opts.emptyHint || "Nothing saved yet. Name a design and press “Save to project”."));
+      grid.appendChild(el("p", "lib-hint", q || kind ? "Nothing matches." : (typeof opts.emptyHint === "function" ? opts.emptyHint(tab) : opts.emptyHint) || "Nothing saved yet. Name a design and press “Save to project”."));
       return;
     }
     // grouped, in the order the groups first appear
