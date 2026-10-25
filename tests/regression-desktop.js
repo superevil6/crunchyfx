@@ -469,7 +469,7 @@
     const same3 = audio(render()) === audio(withState(files[3].item, function () { return render(); }));
     document.getElementById("plantSave").click();
     await settle();
-    return ok(zipped.length === 9 && zipped.every(function (z) { return z.name.indexOf("/") < 0; }) && links.length === 8 && same3 && card("step 4"), status());
+    return ok(zipped.length === 10 && zipped.every(function (z) { return z.name.indexOf("/") < 0; }) && links.length === 8 && same3 && card("step 4"), status());
   });
   await t("unity/plants-into-assets-crunchy-sfx", async function () {
     libButton("Close").click();

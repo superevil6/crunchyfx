@@ -29,6 +29,7 @@ SUITES = {
     "web": ("regression-web.js", ["fixtures/v1.1.js", "seed-v11.js"]),
     "fixtures": ("make-fixtures.js", []),
     "show": ("show-desktop.js", ["tauri-mock.js", "fixtures/v1.1.js", "seed-v11.js"]),     # a look, for wkshot.py
+    "pack": ("godot-pack.js", []),                                                        # tests/godot-pack.mjs runs it
     "godot": ("godot-plant.js", ["tauri-mock.js", "fixtures/v1.1.js", "seed-v11.js"]),   # tests/godot-check.mjs runs it     # ONCE, on the build being protected (see make-fixtures.js)
 }
 
@@ -49,7 +50,7 @@ def build(suite):
         page = page.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + pre, 1)
     banner = ('<div id="dombanner" style="position:fixed;left:0;right:0;top:0;z-index:99999;max-height:100vh;overflow:auto;'
               'padding:8px 12px;font:12px ui-monospace,monospace;background:#12441f;color:#9ff5b6;white-space:pre-wrap">'
-              'running…</div>') if suite not in ("audio", "fixtures", "godot", "show") else ""
+              'running…</div>') if suite not in ("audio", "fixtures", "godot", "show", "pack") else ""
     page = page.rstrip() + "\n" + banner + "\n<script>\n" + read(os.path.join(HERE, test)) + "\n</script>\n"
     path = os.path.join(HERE, "run-" + suite + ".html")
     with open(path, "w", encoding="utf-8") as fh:

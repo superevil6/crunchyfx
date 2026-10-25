@@ -124,7 +124,9 @@
     const opened = files[2].item && Object.keys(files[2].item).every(function (k) { return k[0] === "_" || !(k in state) || state[k] === files[2].item[k]; });
     normalizeOut = true; updateNormBtn();
     document.getElementById("varClose").click();
-    return ok(files.length === 8 && zipped.length === 9 && names.length === 9 && names.every(function (n) { return n.indexOf("/") < 0; }) && good &&
+    // (2026-10-24: + footstep.tres, the ready Godot AudioStreamRandomizer; tests/godot-pack.mjs loads it in real Godot)
+    return ok(files.length === 8 && zipped.length === 10 && names.length === 10 && names.every(function (n) { return n.indexOf("/") < 0; }) && good &&
+              names.indexOf("footstep.tres") >= 0 && /ExtResource\("8_take"\)/.test(new TextDecoder().decode(zipped.find(function (z) { return z.name === "footstep.tres"; }).data)) &&
               names.filter(function (n) { return /^footstep_0[1-8]\.wav$/.test(n); }).length === 8 && names[0] === "footstep_01.wav" &&
               /AudioStreamRandomizer/.test(rt) && !/crunchy-library/.test(rt) && links.length === 8 && validDates && opened,
               names.length + " names, " + links.length + " links, dates " + dates.slice(0, 2).join("/") + (opened ? "" : ", the link opened another sound"));
@@ -135,7 +137,7 @@
     const files = buildPackFiles(), zipped = packZipFiles(files);
     sequence = []; renderSeq();
     document.getElementById("varClose").click();
-    return ok(zipped.length === files.length + 1 && zipped.every(function (f) { return /^[^/]+\.(wav|txt)$/.test(f.name); }));
+    return ok(zipped.length === files.length + 2 && zipped.every(function (f) { return /^[^/]+\.(wav|txt|tres)$/.test(f.name); }));
   });
 
   // ---- the usability round (2026-10-14): one naming rule, a sound keeps its name, the tools' click rule, Variations ----

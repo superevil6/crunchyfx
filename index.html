@@ -3285,16 +3285,34 @@ function packReadme(files, seq) {
     first + " … " + last + "  (" + nowFmtText() + ")",
     "  The same sound, slightly different each time, matched in loudness (gated RMS), peaks at or below -3 dBFS.",
     "",
-    "Godot 4: put the WAVs in your project (res://), make an AudioStreamRandomizer (on an AudioStreamPlayer's Stream),",
-    "  and add each WAV to its Streams list (drag them from the FileSystem dock). Its Random Pitch and",
-    "  Random Volume Offset add more variety on top; leave them at 1 and 0 to play the takes as they are.",
+    "Godot 4: drop this folder anywhere in your project (res://). " + packTresName() + " is a ready AudioStreamRandomizer that",
+    "  holds every take: select an AudioStreamPlayer (or AudioStreamPlayer2D), drag " + packTresName() + " onto its Stream, then",
+    "    $AudioStreamPlayer.play()",
+    "  plays a different take each time (never the same one twice in a row). For even more variety, open " + packTresName(),
+    "  and raise Random Pitch (1.05 = up to about a semitone) or Random Volume Offset (a few dB).",
     "Unity: drop the WAVs into an AudioClip[] and play a random one.",
   ].concat(links.length ? ["", "Edit a take again: open its link (it opens in CrunchySFX with that exact sound).", ""].concat(links) : [])
    .concat([""]).join("\n");
 }
+// THE RANDOMIZER (2026-10-24, AJ's "from good to great" round): a ready Godot 4 AudioStreamRandomizer, hit.tres, beside
+// the takes, so the pack drops into a game in one step: set an AudioStreamPlayer's Stream to it and every play() picks
+// a take (never the same one twice in a row). The paths are RELATIVE to the .tres (hit_01.wav), so the folder works
+// wherever it lands under res:// (tests/godot-pack.mjs proves it in real Godot, from a subfolder). Pitch and volume
+// spread stay at Godot's neutral (1, 0 dB): the takes already differ, and the README says how to add more.
+function packTresName() { return fileStem(varBaseName()) + ".tres"; }
+function packTres(files) {
+  const L = ["[gd_resource type=\"AudioStreamRandomizer\" load_steps=" + (files.length + 1) + " format=3]", ""];
+  files.forEach((f, i) => L.push("[ext_resource type=\"AudioStream\" path=\"" + f.name + "\" id=\"" + (i + 1) + "_take\"]"));
+  L.push("", "[resource]", "playback_mode = 0", "random_pitch = 1.0", "random_volume_offset_db = 0.0", "streams_count = " + files.length);
+  files.forEach((f, i) => L.push("stream_" + i + "/stream = ExtResource(\"" + (i + 1) + "_take\")", "stream_" + i + "/weight = 1.0"));
+  return L.join("\n") + "\n";
+}
+// Everything a pack is: the takes, the randomizer, the README (the web zip and the desktop folder hold the same files)
 function packZipFiles(files) {
   const seq = files.some((f) => Array.isArray(f.item));
-  return files.map((f) => ({ name: f.name, data: f.data })).concat([{ name: "README.txt", data: new TextEncoder().encode(packReadme(files, seq)) }]);
+  return files.map((f) => ({ name: f.name, data: f.data })).concat([
+    { name: packTresName(), data: new TextEncoder().encode(packTres(files)) },
+    { name: "README.txt", data: new TextEncoder().encode(packReadme(files, seq)) }]);
 }
 async function exportPack() {
   const files = buildPackFiles();
@@ -3302,8 +3320,8 @@ async function exportPack() {
   if (T && T.dialog && T.fs) {                              // desktop: write into a chosen folder
     let dir; try { dir = await T.dialog.open({ directory: true, title: "Choose a folder for the variation pack" }); } catch (e) { return; }
     if (!dir) return;
-    for (const f of files) await T.fs.writeFile(dir + "/" + f.name, f.data);
-    varMsg.textContent = "✓ Exported " + files[0].name + " … " + files[files.length - 1].name + " to the chosen folder";
+    for (const f of packZipFiles(files)) await T.fs.writeFile(dir + "/" + f.name, f.data);
+    varMsg.textContent = "✓ Exported " + files[0].name + " … " + files[files.length - 1].name + ", " + packTresName() + " (for Godot) and a README to the chosen folder";
     nowSay("Exported " + files.length + " variations");
   } else {                                                  // web: one .zip
     const base = fileStem(varBaseName());
@@ -3312,7 +3330,7 @@ async function exportPack() {
     a.download = base + "_pack.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    varMsg.textContent = "✓ Saved " + base + "_pack.zip to your downloads: " + files.length + " WAVs (" + files[0].name + " …) and a README (how to use them in Godot or Unity)";
+    varMsg.textContent = "✓ Saved " + base + "_pack.zip to your downloads: " + files.length + " WAVs (" + files[0].name + " …), " + packTresName() + " (drop it on a Godot AudioStreamPlayer) and a README";
     nowSay("Saved " + base + "_pack.zip");
   }
 }
