@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 9192dd3 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 a46da8227c425361486bccebc06fda28db2e81ba23f3797846c24b4150f14dc8 */
+/* GENERATED from crunchyCore/crunchy-base.css @ 093dad2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 25722104248862f514259521f09bc31b9c3e254f712284fb4c1bcd80a822f281 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 11;
+  --base-build: 12;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -398,3 +398,27 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
   .crunchy-spark { display: none; }
 }
 
+
+/* THE GAME MOMENT MODAL (moments-ui.js, base-build 12; MOMENTS.md): nearly the whole window, a stage left (the target
+   and the moment played over it, pixel-scaled), the slots right, the feel and the actions under them. */
+.mom-panel { width: min(1080px, 100%); height: min(720px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.mom-head { display: flex; align-items: center; gap: 10px; }
+.mom-head .set-title { flex: 1; }
+.mom-top, .mom-feel, .mom-delays, .mom-acts, .mom-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.mom-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.mom-lab input[type=number] { width: 64px; }
+.mom-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 14px; }
+.mom-stage { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.mom-canvas { width: 100%; max-height: 100%; aspect-ratio: 160 / 112; image-rendering: pixelated; background: var(--bg);
+              border: 2px solid var(--line2); }
+.mom-say { font-size: 12px; color: var(--muted); min-height: 1.4em; }
+.mom-slots { overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.mom-slot { border: 1px solid var(--line); background: var(--panel2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.mom-slot h3 { margin: 0; font: 700 12px/1.3 var(--head); text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+.mom-slot select { width: 100%; }
+.mom-more { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.mom-more input[type=text] { flex: 1; min-width: 120px; }
+.mom-rescan { align-self: flex-start; }
+.mom-dl { font-size: 12px; color: var(--muted); }
+.mom-acts { justify-content: flex-end; }
+@media (max-width: 760px) { .mom-body { grid-template-columns: 1fr; } .mom-panel { height: 100%; } }

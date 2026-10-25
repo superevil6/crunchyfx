@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 9192dd3 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 8080c51a11e7b1a038f761c85afcd42653a8c27b3ea8eff498058ac9d12c2914
+// GENERATED from crunchyCore/plant.js @ 093dad2 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 cb7cfcdcbb46fba2046be5a0d0978ad325a17bebcce0154e8f0652b7eef55d33
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -38,7 +38,7 @@
 //
 // PURE, like project.js: no DOM, no app state. The file system is PASSED IN as `fs`, an object of async functions
 // (the Tauri fs plugin fits as is, see plantTauriFs; tests pass an in-memory one):
-//   exists(path) → bool   readTextFile(path) → string   readDir(path) → [{ name, isDirectory }]
+//   exists(path) → bool   readTextFile(path) → string   readFile(path) → bytes (build 16, optional)   readDir(path) → [{ name, isDirectory }]
 //   mkdir(path, { recursive })   writeTextFile(path, text)   writeFile(path, Uint8Array)   remove(path)
 // The app supplies PROJECT_APP (its project-app.js): id, name, suite (its key below), kinds, valid(kind, d), and
 // optionally gameDirs (below) and generated: { <engine>: ["<folder>"] }, an asset's subfolder that the app's own
@@ -55,7 +55,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 15;
+const PLANT_BUILD = 16;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -64,9 +64,13 @@ const PLANT_SUITE = {
   vfx: ["vfx", "VFX"], bgm: ["bgm", "BGM"], character: ["character", "Character"],
   items: ["item", "Item"],                                           // build 11: CrunchyItems; build 13: renamed CrunchyItem (crunchy/item/)
   shader: ["shader", "Shader"],                                      // build 12: CrunchyShader
+  moments: ["moments", "Moments"],                                   // build 16: GAME MOMENTS (moments.js), the suite's own
 };
 const PLANT_SUITE_NAMES = { tile: "CrunchyTile", ui: "CrunchyUI", sfx: "CrunchySFX", vfx: "CrunchyVFX", bgm: "CrunchyBGM", character: "CrunchyCharacter",
-                            items: "CrunchyItem", shader: "CrunchyShader" };
+                            items: "CrunchyItem", shader: "CrunchyShader", moments: "Game moments" };
+// AN ASSET'S APP (build 16): a handle may carry its own `app` (moments.js's MOMENT_APP: game moments belong to no one
+// tool, they are the suite's, in crunchy/moments/), else it is the opening app's PROJECT_APP, as every build before.
+function plantApp(P) { return (P && P.app) || PROJECT_APP; }
 
 // ---- paths ------------------------------------------------------------------------------------------------------
 function plantJoin() {
@@ -106,7 +110,7 @@ const PLANT_GAME = "@game/";
 function plantGameRel(path) { return typeof path === "string" && path.indexOf(PLANT_GAME) === 0 ? path.slice(PLANT_GAME.length) : null; }
 // A game file this app may write here: a file directly in one of the folders it names for this engine.
 function plantGameOk(P, rel) {
-  const dirs = PROJECT_APP.gameDirs && PROJECT_APP.gameDirs[P.engine];
+  const A = plantApp(P), dirs = A.gameDirs && A.gameDirs[P.engine];
   if (!Array.isArray(dirs) || !plantSafeRel(rel)) return false;
   return dirs.some(function (d) { return rel.indexOf(d) === 0 && rel.length > d.length && rel.slice(d.length).indexOf("/") < 0; });
 }
@@ -154,18 +158,19 @@ function plantHash(files, version) {
 // ---- the sidecar -------------------------------------------------------------------------------------------------
 // Pure: also what a WEB zip carries beside its exports (DESKTOP-ROADMAP.md §6.4), so a web export can be adopted later.
 //   kind, name   the asset;   fields   the kind's own data, `s` above all;   files   [{ path, data }] as written
-function plantSidecar(kind, name, fields, files, appVersion, created) {
-  const now = new Date().toISOString();
-  return Object.assign({ format: PLANT_FORMAT, version: PLANT_VERSION, app: PROJECT_APP.id, suite: PROJECT_APP.suite,
+function plantSidecar(kind, name, fields, files, appVersion, created, app) {
+  const now = new Date().toISOString(), A = app || PROJECT_APP;
+  return Object.assign({ format: PLANT_FORMAT, version: PLANT_VERSION, app: A.id, suite: A.suite,
     appVersion: appVersion || "" }, fields, {
     kind: kind, name: String(name).trim(), files: files.map(function (f) { return f.path; }),
     hash: plantHash(files), created: created || now, modified: now });
 }
 function plantSidecarFile(slug, sidecar) { return { path: slug + PLANT_EXT, data: JSON.stringify(sidecar, null, 2) + "\n" }; }
-function plantSidecarValid(d) {
+function plantSidecarValid(d, app) {
   if (!d || typeof d !== "object" || d.format !== PLANT_FORMAT || typeof d.name !== "string" || !d.name.trim()) return false;
   if (!Array.isArray(d.files) || !d.files.every(plantSafeRel)) return false;
-  return !!(PROJECT_APP.kinds[d.kind] && PROJECT_APP.valid(d.kind, d));
+  const A = app || PROJECT_APP;
+  return !!(A.kinds[d.kind] && A.valid(d.kind, d));
 }
 
 // ---- open --------------------------------------------------------------------------------------------------------
@@ -175,6 +180,13 @@ async function plantOpen(fs, dir) {
   const P = { fs: fs, dir: dir, engine: engine, rel: plantChildRel(engine, PROJECT_APP.suite), assets: [], skipped: [] };
   await plantScan(P);
   return P;
+}
+// A SIBLING HANDLE (build 16) on another app's child of the same game, as that app: (P, MOMENT_APP) opens
+// crunchy/moments/ so plantPut / plantDelete / plantScan work there with that app's kinds and checks.
+async function plantOpenAs(P, app) {
+  const Q = { fs: P.fs, dir: P.dir, engine: P.engine, rel: plantChildRel(P.engine, app.suite), assets: [], skipped: [], app: app };
+  await plantScan(Q);
+  return Q;
 }
 async function plantScan(P) {
   P.assets = []; P.skipped = [];
@@ -186,7 +198,7 @@ async function plantScan(P) {
     if (!(await P.fs.exists(side))) continue;                    // a folder of the app's that is not an asset
     let d = null;
     try { d = JSON.parse(await P.fs.readTextFile(side)); } catch (err) { d = null; }
-    if (!plantSidecarValid(d)) { P.skipped.push(plantJoin(P.rel, e.name, e.name + PLANT_EXT)); continue; }
+    if (!plantSidecarValid(d, plantApp(P))) { P.skipped.push(plantJoin(P.rel, e.name, e.name + PLANT_EXT)); continue; }
     P.assets.push({ slug: e.name, kind: d.kind, name: d.name, data: d });
   }
   P.assets.sort(function (x, y) { return x.name.localeCompare(y.name); });
@@ -324,7 +336,7 @@ async function plantSupport(P, files) {
   const listed = prev ? prev.files.filter(plantSupportOk) : [];
   files.forEach(function (f) { if (listed.indexOf(f.path) < 0) listed.push(f.path); });
   const writeList = function (paths, h) {
-    return fs.writeTextFile(plantJoin(base, PLANT_SUPPORT_FILE), JSON.stringify({ format: "crunchy-support", app: PROJECT_APP.id, files: paths, hash: h }, null, 2) + "\n");
+    return fs.writeTextFile(plantJoin(base, PLANT_SUPPORT_FILE), JSON.stringify({ format: "crunchy-support", app: plantApp(P).id, files: paths, hash: h }, null, 2) + "\n");
   };
   await fs.mkdir(base, { recursive: true });
   await writeList(listed, "");
@@ -721,7 +733,7 @@ function plantUsedMessage(used, verb) {
 async function plantPut(P, req) {
   const fields = Object.assign({}, req.fields);
   const probe = Object.assign({ format: PLANT_FORMAT, files: [] }, fields, { kind: req.kind, name: String(req.name || "") });
-  if (!plantSidecarValid(probe)) throw new Error("plantPut: not a valid " + req.kind);
+  if (!plantSidecarValid(probe, plantApp(P))) throw new Error("plantPut: not a valid " + req.kind);
   (req.files || []).forEach(function (f) {
     if (!plantSafeRel(f.path) || f.path.slice(-PLANT_EXT.length) === PLANT_EXT) throw new Error("plantPut: refused path " + f.path);
     const g = plantGameRel(f.path);
@@ -735,7 +747,7 @@ async function plantPut(P, req) {
     const g = plantGameRel(f.path);
     if (g === null || mine[f.path] || !(await fs.exists(plantJoin(P.dir, g)))) continue;
     const other = P.assets.find(function (a) { return a.data.files.indexOf(f.path) >= 0; });
-    throw new Error(g + " is already in the game" + (other ? ", written for " + other.name : ", and " + PROJECT_APP.name + " did not write it") +
+    throw new Error(g + " is already in the game" + (other ? ", written for " + other.name : ", and " + plantApp(P).name + " did not write it") +
       ": give this one another name" + (other ? ", or Replace that one" : ", or move that file") + ".");
   }
   const slug = await plantSlugFor(P, req.kind, req.name);
@@ -752,7 +764,7 @@ async function plantPut(P, req) {
   const fresh = [];
   // (a new asset's folder is new, and a game file already there stopped it above: everything it writes is fresh)
   for (const f of req.files) if (!have[f.path] && (!prev || !(await fs.exists(plantFileAt(P, dir, f.path))))) fresh.push(f.path);
-  const journal = Object.assign(plantSidecar(req.kind, req.name, fields, [], req.appVersion, prev ? prev.data.created : null),
+  const journal = Object.assign(plantSidecar(req.kind, req.name, fields, [], req.appVersion, prev ? prev.data.created : null, plantApp(P)),
                                 { files: owned.concat(fresh), hash: "", pending: true });
   const remember = function (side) {
     const asset = { slug: slug, kind: req.kind, name: side.name, data: side };
@@ -775,7 +787,7 @@ async function plantPut(P, req) {
       for (const old of owned) if (!keep[old] && plantWritable(P, old)) await plantRemoveWritten(P, plantFileAt(P, dir, old));
       await plantPrune(P, dir);                                       // subfolders the old export had and this one does not
     }
-    const side = plantSidecar(req.kind, req.name, fields, req.files, req.appVersion, prev ? prev.data.created : null);
+    const side = plantSidecar(req.kind, req.name, fields, req.files, req.appVersion, prev ? prev.data.created : null, plantApp(P));
     const sf = plantSidecarFile(slug, side);
     await fs.writeTextFile(plantJoin(dir, sf.path), sf.data);         // the asset is complete only now
     return remember(side);
@@ -814,7 +826,7 @@ async function plantDelete(P, a) {
   const fs = P.fs, dir = plantAssetDir(P, a);
   for (const f of a.data.files) if (plantSafeRel(f) && plantWritable(P, f)) await plantRemoveWritten(P, plantFileAt(P, dir, f));
   await plantRemoveWritten(P, plantJoin(dir, a.slug + PLANT_EXT));
-  const gen = PROJECT_APP.generated && PROJECT_APP.generated[P.engine];
+  const A = plantApp(P), gen = A.generated && A.generated[P.engine];
   if (Array.isArray(gen)) for (const g of gen) if (plantSafeRel(g) && g.indexOf("/") < 0) await plantRemoveTree(P, plantJoin(dir, g));
   await plantPrune(P, dir);                                           // the export's own subfolders, now empty
   await plantRemoveEmptyDir(P, dir);
@@ -914,7 +926,7 @@ async function plantLinkersOf(P, slug) {
       plantLinks({ data: x.d }).forEach(function (l) {
         if (l.suite !== PROJECT_APP.suite || l.slug !== slug) return;
         out.push({ suite: key, slug: x.slug, kind: x.d.kind, name: x.d.name, file: l.file, mode: l.mode,
-                   label: PLANT_SUITE_NAMES[key] + "'s " + x.d.kind + " “" + x.d.name + "”" });
+                   label: key === "moments" ? "the game moment “" + x.d.name + "”" : PLANT_SUITE_NAMES[key] + "'s " + x.d.kind + " “" + x.d.name + "”" });
       });
     }
   }
@@ -927,6 +939,7 @@ function plantTauriFs(T) {
   return {
     exists: function (p) { return T.exists(p); },
     readTextFile: function (p) { return T.readTextFile(p); },
+    readFile: function (p) { return T.readFile(p); },              // build 16: bytes (the game moment modal's PNG and WAV)
     readDir: function (p) { return T.readDir(p).then(function (es) { return es.map(function (e) { return { name: e.name, isDirectory: !!e.isDirectory }; }); }); },
     mkdir: function (p, o) { return T.mkdir(p, o); },
     writeTextFile: function (p, t) { return T.writeTextFile(p, t); },
