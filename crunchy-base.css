@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 4154ee5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 05f6fd10183c7d51d191470fe81e81ae45540d7d2c8a5b720167534b50af4c13 */
+/* GENERATED from crunchyCore/crunchy-base.css @ ff11364 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 fa030747536bf95b7f508f33a44963770dc041220ee5190c0bfe1d60093a98f2 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 13;
+  --base-build: 14;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -434,3 +434,59 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .mom-dl { font-size: 12px; color: var(--muted); }
 .mom-acts { justify-content: flex-end; }
 @media (max-width: 760px) { .mom-body { grid-template-columns: 1fr; overflow: auto; } .mom-panel { height: 100%; } .mom-canvas { flex: none; height: auto; aspect-ratio: 160 / 112; } }
+
+/* THE PALETTE EDITOR (palette-ui.js, base-build 14; PALETTES.md): the moment window's shape. The ramps left (a row of
+   swatches each, light to dark), the chosen color and the preview right; each column keeps to its own box and scrolls
+   on its own, so nothing spills over the actions (the moment window's first layout bug, not repeated). */
+.pal-panel { width: min(1080px, 100%); height: min(720px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.pal-panel > :not(.pal-body) { flex: none; }
+.pal-head { display: flex; align-items: center; gap: 10px; }
+.pal-head .set-title { flex: 1; }
+.pal-top, .pal-acts, .pal-tools, .pal-pickrow, .pal-mvrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.pal-top input[type=text] { width: 180px; }
+.pal-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.pal-n { width: 56px; }
+.pal-paste { display: flex; gap: 8px; align-items: flex-start; }
+.pal-paste[hidden] { display: none; }
+.pal-paste textarea { flex: 1; min-width: 0; resize: vertical; font: 12px/1.4 var(--head); background: var(--bg); color: var(--ink); border: 1px solid var(--line2); padding: 6px; }
+.pal-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 14px; overflow: hidden; }
+.pal-ramps, .pal-side { overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;
+  scrollbar-width: auto; scrollbar-color: auto; }
+/* a scrollbar that always shows (WebKitGTK's overlay bars hide; see .mom-slots) */
+.pal-ramps::-webkit-scrollbar, .pal-side::-webkit-scrollbar { width: 8px; }
+.pal-ramps::-webkit-scrollbar-track, .pal-side::-webkit-scrollbar-track { background: var(--bg); }
+.pal-ramps::-webkit-scrollbar-thumb, .pal-side::-webkit-scrollbar-thumb { background: var(--line2); }
+.pal-ramps > *, .pal-side > * { flex: none; }
+.pal-info { font-size: 12px; color: var(--muted); }
+.pal-ramp, .pal-pick, .pal-prev { border: 1px solid var(--line); background: var(--panel2); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+.pal-rhead { display: flex; align-items: center; gap: 6px; }
+.pal-rname { flex: 1; min-width: 60px; font: 700 12px/1.3 var(--head); text-transform: uppercase; letter-spacing: .04em; color: var(--accent);
+  background: transparent; border: 1px solid transparent; padding: 3px 4px; }
+.pal-rname:hover, .pal-rname:focus { border-color: var(--line2); background: var(--bg); }
+.pal-setmode .pal-rhead { justify-content: space-between; }
+.pal-rcount { font-size: 12px; color: var(--muted); min-width: 1.5em; text-align: right; }
+.pal-icon { padding: 4px 6px; }
+.pal-asset { font-size: 12px; padding: 3px 8px; }
+.pal-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 36px; }
+/* a swatch is its color: no step shadow, a 1 px frame; the chosen one a 2 px accent frame; drop marks a bar before */
+.pal-sw { width: 32px; height: 32px; padding: 0; border: 1px solid var(--drop); box-shadow: none; cursor: grab; position: relative; }
+.pal-sw:hover { box-shadow: none; transform: none; outline: 1px solid var(--line2); outline-offset: 1px; }
+.pal-sw.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pal-sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.pal-sw.drag { opacity: .35; }
+.pal-sw.before::before, .pal-add.before::before { content: ""; position: absolute; left: -4px; top: -2px; bottom: -2px; width: 3px; background: var(--accent); }
+.pal-add { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; }
+.pal-empty { font-size: 12px; color: var(--muted); }
+.pal-icon .pxi, .pal-add .pxi { margin-right: 0; }
+.pal-panel button:disabled { opacity: .45; cursor: default; }
+.pal-pick h3, .pal-prev h3 { margin: 0; font: 700 12px/1.3 var(--head); text-transform: uppercase; letter-spacing: .04em; color: var(--accent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-picker { width: 56px; height: 36px; padding: 2px; border: 1px solid var(--line2); background: var(--bg); cursor: pointer; }
+.pal-hex { width: 96px; font-family: var(--head); }
+.pal-mv { min-width: 32px; padding: 4px 8px; }
+.pal-balls, .pal-host { display: block; max-width: 100%; height: auto; align-self: flex-start; image-rendering: pixelated; background: var(--bg); border: 2px solid var(--line2); }
+.pal-host[hidden] { display: none; }
+.pal-say { font-size: 12px; color: var(--muted); min-height: 1.4em; }
+.pal-note { font-size: 12px; color: var(--muted); }
+.pal-gap { flex: 1; }
+@media (max-width: 760px) { .pal-body { grid-template-columns: 1fr; overflow: auto; } .pal-ramps, .pal-side { overflow: visible; } .pal-panel { height: 100%; } }

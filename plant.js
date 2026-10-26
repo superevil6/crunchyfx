@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 4154ee5 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 cb7cfcdcbb46fba2046be5a0d0978ad325a17bebcce0154e8f0652b7eef55d33
+// GENERATED from crunchyCore/plant.js @ ff11364 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 40c091ad68a2d75061ded1f192e225a2478a9863ef5c80cc0985c56c5009b90c
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -55,7 +55,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 16;
+const PLANT_BUILD = 17;
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -65,9 +65,10 @@ const PLANT_SUITE = {
   items: ["item", "Item"],                                           // build 11: CrunchyItems; build 13: renamed CrunchyItem (crunchy/item/)
   shader: ["shader", "Shader"],                                      // build 12: CrunchyShader
   moments: ["moments", "Moments"],                                   // build 16: GAME MOMENTS (moments.js), the suite's own
+  palettes: ["palettes", "Palettes"],                                // build 17: SHARED PALETTES (palette.js), the suite's own
 };
 const PLANT_SUITE_NAMES = { tile: "CrunchyTile", ui: "CrunchyUI", sfx: "CrunchySFX", vfx: "CrunchyVFX", bgm: "CrunchyBGM", character: "CrunchyCharacter",
-                            items: "CrunchyItem", shader: "CrunchyShader", moments: "Game moments" };
+                            items: "CrunchyItem", shader: "CrunchyShader", moments: "Game moments", palettes: "Palettes" };
 // AN ASSET'S APP (build 16): a handle may carry its own `app` (moments.js's MOMENT_APP: game moments belong to no one
 // tool, they are the suite's, in crunchy/moments/), else it is the opening app's PROJECT_APP, as every build before.
 function plantApp(P) { return (P && P.app) || PROJECT_APP; }
@@ -918,19 +919,28 @@ async function plantLinkState(P, l) {
   return l.mode === "embed" && String(d.hash || "") !== l.hash ? "changed" : "ok";
 }
 // WHO LINKS TO an asset of this app (`slug`), across every app here: [{ suite, slug, kind, name, file, mode, label }].
+// "This app" is the HANDLE's (build 17: plantApp(P), so a palette deleted through plantOpenAs(P, PALETTE_APP) finds the
+// assets that link to the palette; before, it looked for links to the opening app's own suite).
 async function plantLinkersOf(P, slug) {
-  const out = [];
+  const out = [], own = plantApp(P).suite;
   for (const key of Object.keys(PLANT_SUITE)) {
     for (const x of await plantReadChild(P, key)) {
-      if (key === PROJECT_APP.suite && x.slug === slug) continue;
+      if (key === own && x.slug === slug) continue;
       plantLinks({ data: x.d }).forEach(function (l) {
-        if (l.suite !== PROJECT_APP.suite || l.slug !== slug) return;
-        out.push({ suite: key, slug: x.slug, kind: x.d.kind, name: x.d.name, file: l.file, mode: l.mode,
-                   label: key === "moments" ? "the game moment “" + x.d.name + "”" : PLANT_SUITE_NAMES[key] + "'s " + x.d.kind + " “" + x.d.name + "”" });
+        if (l.suite !== own || l.slug !== slug) return;
+        out.push({ suite: key, slug: x.slug, kind: x.d.kind, name: x.d.name, file: l.file, mode: l.mode, label: plantLabelOf(key, x.d) });
       });
     }
   }
   return out;
+}
+
+// How the removal guard names an asset to a person: "CrunchyVFX's effect “Fireball”"; the suite's own kinds by what they
+// are: "the game moment “Hit”", "the palette “Moonlit keep”", "the color set “Fire”" (build 17).
+function plantLabelOf(key, d) {
+  if (key === "moments") return "the game moment “" + d.name + "”";
+  if (key === "palettes") return (d.kind === "colorset" ? "the color set “" : "the palette “") + d.name + "”";
+  return PLANT_SUITE_NAMES[key] + "'s " + d.kind + " “" + d.name + "”";
 }
 
 // ---- the desktop's file system -------------------------------------------------------------------------------------
