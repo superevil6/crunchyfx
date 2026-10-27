@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/settings.js @ 2d1c3ee by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/settings.js @ 20d6cb4 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 76837227b4ae3416ff3925de97570038d6da599d84b8bc83c69ad7232ebaa0e7
 "use strict";
 // THE SETTINGS DIALOG — one ⚙ Settings for every Crunchy tool (CONSOLIDATION-PLAN.md §2; crunchyTile TILE-DESIGN.md
