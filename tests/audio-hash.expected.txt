@@ -976,3 +976,23 @@ AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
 AUDIOHASH d67d595d3847fa70 over 975
+# SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
+AUDIO x:ir:Coin:1 5cfd7548039d3a9d
+AUDIO x:ir:Coin:0.4 ffce912929480e8c
+AUDIO x:ir:Laser:1 a6950da6aeefe1fb
+AUDIO x:ir:Laser:0.4 5fb761fdac017e32
+AUDIO x:ir:Explosion:1 988d81986d05aa2b
+AUDIO x:ir:Explosion:0.4 72cd2880738fc767
+AUDIO x:granular-sample:0 bd22e8753db266c6
+AUDIO x:granular-sample:1 45c852229e3e1273
+AUDIO x:breed:0 0fb8f5343002ad5b
+AUDIO x:breed:1 abd5c80fa2fdba3c
+AUDIO x:breed:2 2af9440b802e8120
+AUDIO x:breed:cross 1f90822731bf0e00
+AUDIO x:vary:0 7d417460f4983f6f
+AUDIO x:vary:1 d9aeac04788741fb
+AUDIO x:vary:2 89ef2fa083260a2d
+AUDIO x:vary:3 b4e27d3e5293301d
+AUDIO x:pack:tres 0ee5611ee441bcfb
+AUDIO x:pack:zip bffcf6003cb0fb71
+AUDIOXHASH 6cbf7afb8b60a818 over 18

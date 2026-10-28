@@ -489,6 +489,101 @@
   });
 
 
+  // ---- SFX 1.3 FOUNDATION (SFX-1.3-PLAN.md): SFX_EXTRAS at every site, withState's own audio. Each row has a negative.
+  const peakOfR = function (r) { let m = 0; for (let i = 0; i < r.L.length; i++) m = Math.max(m, Math.abs(r.L[i]), Math.abs(r.R[i])); return m; };
+  const sameR = function (a, b) { return a.L.length === b.L.length && a.L.every(function (v, i) { return v === b.L[i]; }) && a.R.every(function (v, i) { return v === b.R[i]; }); };
+  const without = function (g, k) { const o = Object.assign({}, g); delete o[k]; return o; };
+  t("extras/the-table-lists-the-drawn-waves-and-the-speech-text-with-neutral-defaults", function () {
+    return ok(JSON.stringify(SFX_EXTRAS) === JSON.stringify({ customWave: "", customWaveB: "", speechText: "" }), JSON.stringify(SFX_EXTRAS));
+  });
+  // Bug 1: mutateGenome / crossGenome copied PARAMS only, so a bred speech sound lost its text and went silent.
+  t("extras/a-bred-speech-sound-still-speaks", function () {
+    const parent = withState({ wave: 17, speechText: "game over", duration: 0.9 }, genomeFromState);
+    const kids = [mutateGenome(parent, BREED_AMT), crossGenome(parent, parent), mutateGenome(crossGenome(parent, parent), BREED_AMT)];
+    const bad = [];
+    kids.forEach(function (g, i) {
+      if (g.speechText !== "game over") bad.push("child " + i + " text " + JSON.stringify(g.speechText));
+      if (peakOfR(withState(g, render)) <= AUDIBLE_FLOOR) bad.push("child " + i + " is silent");
+    });
+    // NEGATIVE: without its text (what Breed made before) the speech sound is silent, and the child sounds different
+    // without it (a mutation can add noise or a sub, so the child itself need not go fully silent)
+    const silentBefore = peakOfR(withState(without(parent, "speechText"), render)) <= AUDIBLE_FLOOR &&
+                         !sameR(withState(kids[0], render), withState(without(kids[0], "speechText"), render));
+    return ok(!bad.length && silentBefore, bad.join(" · ") + (silentBefore ? "" : " · negative: a textless speech sound was not silent"));
+  });
+  t("extras/a-bred-custom-wave-sound-keeps-its-drawing-and-is-not-a-plain-sine", function () {
+    const drawn = new Float32Array(256);
+    for (let k = 0; k < 256; k++) drawn[k] = k < 128 ? 0.9 : -0.9;            // a square, drawn
+    const parent = withState({ wave: 12, customWave: customWaveToB64(drawn), customWaveB: customWaveToB64(drawn.map(function (v, k) { return k < 64 ? 1 : -0.3; })), duration: 0.3 }, genomeFromState);
+    const child = mutateGenome(parent, BREED_AMT), crossed = crossGenome(parent, withState({ wave: 0 }, genomeFromState));
+    const sine = withState(without(without(child, "customWave"), "customWaveB"), render);
+    const kept = child.customWave === parent.customWave && child.customWaveB === parent.customWaveB;
+    // a crossed child's drawings follow the parent that gave it its wave
+    const follows = crossed.wave === 12 ? crossed.customWave === parent.customWave : !("customWave" in crossed);
+    return ok(kept && follows && !sameR(withState(child, render), sine), (kept ? "" : "drawing lost · ") + (follows ? "" : "cross took the wrong parent's drawing"));
+  });
+  // Bug 2: applyPreset wrote ANY key into state (riff, a newer build's key, a hand-made link's).
+  t("extras/an-unknown-key-in-a-preset-never-reaches-state", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset({ wave: 17, freq: 333, speechText: "hello", bogusKey: 7, riff: { p: [60, null], bpm: 120 }, __proto2: 1 }, "Probe");
+      const leaked = ["bogusKey", "riff", "__proto2"].filter(function (k) { return k in state; });
+      // NEGATIVE: known keys DO land (a PARAMS row and an extra)
+      return ok(!leaked.length && state.freq === 333 && state.speechText === "hello", "leaked: " + leaked.join(", ") + " freq " + state.freq + " text " + state.speechText);
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("extras/load-from-history-brings-the-text-and-drawing-back-and-clears-them-for-a-sound-without", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      loadSnapshot({ wave: 17, speechText: "load me", duration: 0.5 }, "Probe");
+      const got = state.speechText;
+      loadSnapshot({ wave: 0, duration: 0.2 }, "Probe 2");
+      // NEGATIVE: a sound without text leaves none behind (reset, not kept from the one before)
+      return ok(got === "load me" && state.speechText === "", "got " + JSON.stringify(got) + ", then " + JSON.stringify(state.speechText));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("extras/share-link-history-and-undo-carry-every-extra", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset({ wave: 12, customWave: "AQID", customWaveB: "BAUG", speechText: "x" }, "Probe");
+      const link = decodePatch(encodePatch()).s, snap = snapshotState();
+      const all = ["customWave", "customWaveB", "speechText"].every(function (k) { return link[k] === state[k] && snap[k] === state[k]; });
+      const differs = !sameState(snap, Object.assign({}, snap, { customWaveB: "" }));   // NEGATIVE: sameState sees an extra change
+      return ok(all && differs && sameState(snap, JSON.parse(JSON.stringify(snap))), JSON.stringify(link));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  // Foundation 3: withState swaps the snapshot's OWN sample / IR / Normalize when given, and puts the editor's back.
+  t("withstate/a-snapshot-renders-with-its-own-sample-ir-and-normalize-then-the-editor-is-untouched", function () {
+    const keepS = sampleBuf, keepIR = customIR, keepN = normalizeOut;
+    const smp = new Float32Array(8000); for (let k = 0; k < smp.length; k++) smp[k] = Math.sin(k * 0.05) * 0.8;
+    const irL = new Float32Array(3000), irR = new Float32Array(3000); for (let k = 0; k < 3000; k++) { irL[k] = Math.sin(k * 0.3) * Math.exp(-k / 600); irR[k] = irL[k]; }
+    const withSmp = withState({ wave: 9, duration: 0.3 }, render, { sample: smp });
+    const noSmp = withState({ wave: 9, duration: 0.3 }, render, { sample: null });
+    const wet = withState({ wave: 0, duration: 0.3, convType: 4, convMix: 0.5 }, render, { ir: { L: irL, R: irR } });
+    const dry = withState({ wave: 0, duration: 0.3, convType: 4, convMix: 0.5 }, render, { ir: null });
+    const quiet = { wave: 0, duration: 0.3, gain: 1, cutoff: 200, sustain: 0.05 };
+    const normOff = withState(quiet, render, { norm: false }), normOn = withState(quiet, render, { norm: true });
+    const restored = sampleBuf === keepS && customIR === keepIR && normalizeOut === keepN;
+    // NEGATIVE: with no `audio` it renders exactly as before (the editor's own), the old behavior every caller keeps
+    const plain = sameR(withState(quiet, render), normalizeOut ? normOn : normOff);
+    return ok(peakOfR(withSmp) > 0.01 && peakOfR(noSmp) === 0 && !sameR(wet, dry) && !sameR(normOff, normOn) && restored && plain,
+              [peakOfR(withSmp), peakOfR(noSmp), sameR(wet, dry), sameR(normOff, normOn), restored, plain].join(" "));
+  });
+  t("history/an-entry-replays-with-the-sample-it-was-made-with", function () {
+    const keepS = sampleBuf, keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      const smp = new Float32Array(8000); for (let k = 0; k < smp.length; k++) smp[k] = Math.sin(k * 0.07) * 0.7;
+      sampleBuf = smp;
+      applyPreset({ wave: 9, duration: 0.3 }, "Sampled probe");
+      const item = histItems[0];
+      sampleBuf = null;                                      // the editor moves on: no sample loaded now
+      const r = withState(item.state, render, item.audio);
+      // NEGATIVE: without the entry's audio it would render silent (no sample loaded)
+      return ok(item.audio && item.audio.sample === smp && peakOfR(r) > 0.01 && peakOfR(withState(item.state, render)) === 0 && sampleBuf === null);
+    } finally { sampleBuf = keepS; applyPreset(keep, keepLabel); }
+  });
+
+
   // AMERICAN SPELLING (AJ, 2026-10-18: "no British spelling … wipe it out everywhere in all apps"; the suite rule).
   // CrunchyUI's copy/on-screen-text-uses-american-spelling, ported: every word the page holds (visible or in a closed
   // dialog), every title / placeholder / alt / aria-label, every option, and the words that reach the screen from

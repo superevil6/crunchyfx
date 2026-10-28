@@ -70,7 +70,70 @@
     } finally { normalizeOut = keepN; sampleBuf = keepS; }
     say("AUDIONAN " + nan);
     say("AUDIOHASH " + hex(total) + " over " + n);
+    extended();
   } catch (e) { say("AUDIOFAIL threw: " + e + " " + (e.stack || "")); }
+
+  // SFX 1.3: MORE COVERAGE, under its own total so every line above (the v1.2 proof) stays exactly as it was. What a
+  // preset render never reaches: a loaded custom IR, granular over a sample, a variation pack's .tres and zip BYTES, and
+  // Breed / Variations output. Breed and Variations draw from Math.random (unseeded in the app, on purpose); here
+  // Math.random is swapped for a fixed LCG for the duration, so the same code makes the same children and any change
+  // to what they draw, or how they draw it, moves a line. The app's own behavior is untouched.
+  function extended() {
+    let tot = null, m = 0;
+    const line = function (name, h) { say("AUDIO x:" + name + " " + hex(h)); tot = fnv(new TextEncoder().encode(hex(h)), tot); m++; };
+    const pcm = function (r) { return fnv(f32(r.R), fnv(f32(r.L))); };
+    const keepN = normalizeOut, keepS = sampleBuf, keepIR = customIR, keepRand = Math.random, keepName = varNameEl.value;
+    const keepVar = varGenomes, keepSeq = sequence;
+    try {
+      // a loaded impulse response (the app's own prepareIR: trim + normalize), convolved through render()
+      const irL = new Float32Array(9000), irR = new Float32Array(9000);
+      for (let k = 0; k < irL.length; k++) { const e = Math.exp(-k / 1800); irL[k] = Math.sin(k * 0.31) * e; irR[k] = Math.sin(k * 0.29 + 1) * e; }
+      customIR = prepareIR(irL, irR, 4);   // (set as the app does on Load IR, so the same lines prove the code before 1.3)
+      ["Coin", "Laser", "Explosion"].forEach(function (name) {
+        [1, 0.4].forEach(function (tone) {
+          line("ir:" + name + ":" + tone, pcm(withState(Object.assign({}, PRESETS[name], { convType: 4, convMix: 0.45, convTone: tone }), render)));
+        });
+      });
+      // granular over an imported sample (wave 11 reads sampleBuf as its source)
+      const smp = new Float32Array(30000);
+      for (let k = 0; k < smp.length; k++) smp[k] = Math.sin(k * 0.021 + Math.sin(k * 0.0007) * 3) * (0.5 + 0.5 * Math.cos(k * 0.0003));
+      customIR = keepIR;
+      sampleBuf = smp;
+      [{ wave: 11, duration: 0.8 }, { wave: 11, duration: 0.8, grainSpray: 0.4, grainSpread: 0.3, grainSize: 60, grainDensity: 40 }].forEach(function (pt, j) {
+        line("granular-sample:" + j, pcm(withState(pt, render)));
+      });
+      sampleBuf = keepS;
+      // Breed and Variations under a fixed seed (parents: an oscillator, a speech sound, a drawn wave)
+      let rs = 0x5eedf00d;
+      Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+      const drawn = new Float32Array(256);
+      for (let k = 0; k < 256; k++) drawn[k] = k < 128 ? k / 64 - 1 : Math.sin(k * 0.2);
+      const parents = [
+        Object.assign({}, PRESETS["Laser"]),
+        { wave: 17, speechText: "game over", duration: 0.9 },
+        { wave: 12, customWave: customWaveToB64(drawn), duration: 0.4 },
+      ].map(function (p) { return withState(p, genomeFromState); });
+      parents.forEach(function (p, j) {
+        const child = breedChild([p], BREED_AMT);
+        line("breed:" + j, fnv(new TextEncoder().encode(JSON.stringify(child)), pcm(withState(child, render))));
+      });
+      const crossed = breedChild([parents[0], parents[1], parents[2]], BREED_AMT);
+      line("breed:cross", fnv(new TextEncoder().encode(JSON.stringify(crossed)), pcm(withState(crossed, render))));
+      normalizeOut = true;
+      varGenomes = makeVariations(parents[0], 4, 0.2);
+      sequence = [];
+      varGenomes.forEach(function (g, j) { line("vary:" + j, fnv(new TextEncoder().encode(JSON.stringify(g)), pcm(withState(g, render)))); });
+      // the pack: its .tres text and the whole zip, byte for byte (WAVs, hit.tres, README with each take's link)
+      varNameEl.value = "hit";
+      const files = buildPackFiles(), zf = packZipFiles(files);
+      line("pack:tres", fnv(new TextEncoder().encode(packTres(files))));
+      line("pack:zip", fnv(makeZip(zf)));
+    } finally {
+      Math.random = keepRand; normalizeOut = keepN; sampleBuf = keepS; customIR = keepIR;
+      varNameEl.value = keepName; varGenomes = keepVar; sequence = keepSeq;
+    }
+    say("AUDIOXHASH " + hex(tot) + " over " + m);
+  }
   const d = document.createElement("div");
   d.style.cssText = "position:fixed;left:0;top:0;right:0;z-index:99999;background:#060;color:#fff;font:14px monospace;padding:8px;white-space:pre-wrap";
   d.textContent = out.filter(function (l) { return !/^AUDIO /.test(l); }).join("\n");

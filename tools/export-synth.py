@@ -28,7 +28,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "synth-export" / "crunchysfx-synth.js"
 
 # Names the bundle publishes. Anything else it defines stays private inside the IIFE.
-EXPORTS = ["render", "encodeWav", "decodePatch", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT",
+EXPORTS = ["render", "masterStage", "encodeWav", "decodePatch", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT",
            "SHA256"]
 
 # Things that must NOT appear in the engine sources — the whole point of the extraction is that
@@ -168,11 +168,71 @@ def check_self_contained(dsp, synth):
             "IIFE, where index.html's globals do not exist." % ", ".join(free))
 
 
+def app_globals(html):
+    """Every top-level name index.html declares (`let customIR`, `const state`, `function render` ...)."""
+    return set(re.findall(r"^(?:let|const|var|function|async function|class)\s+([A-Za-z_$][\w$]*)",
+                          html, flags=re.M))
+
+
+def find_app_global_reads(engine, html):
+    """App globals the engine READS without declaring them itself.
+
+    The FORBIDDEN list catches `state.` and the DOM, but not a bare read of an app variable: synth.js read
+    `customIR` (index.html's loaded impulse response) for months, which works in the app's one shared scope and is a
+    ReferenceError in the bundle (SFX 1.3 bug 3: any convType 4 link with convMix > 0 threw in CrunchyVFX). The
+    SCREAMING_CASE scan below misses it because it is camelCase. So: any identifier the engine uses that index.html
+    declares at top level must be declared in the engine too (a local, a parameter, or its own const); otherwise it
+    is a read of the app's. Coarse on purpose (a local of the same name anywhere counts as declared), which can
+    only miss a case, never cry wolf; tests/synth-bundle.test.mjs runs the bundle for real behind it."""
+    code = strip_literals(engine)
+    used = set(re.findall(r"[A-Za-z_$][\w$]*", re.sub(r"\.\s*[A-Za-z_$][\w$]*", "", code)))
+    declared = set(re.findall(r"\b(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)", code))
+    for params in re.findall(r"\bfunction\b[^(]*\(([^)]*)\)", code) + re.findall(r"\(([^()]*)\)\s*=>", code):
+        declared |= set(re.findall(r"[A-Za-z_$][\w$]*", params))
+    declared |= set(re.findall(r"([A-Za-z_$][\w$]*)\s*=>", code))
+    return sorted((app_globals(html) & used) - declared - BUILTINS)
+
+
+def check_no_app_globals(dsp, synth, html):
+    free = find_app_global_reads(dsp + "\n" + synth, html)
+    if free:
+        die("the engine reads %s, which only index.html declares (an app global). It works in the app's one shared "
+            "scope and throws a ReferenceError inside the bundle. Pass it in through renderPatch's `opts` instead "
+            "(as `sample` and `customIR` are)." % ", ".join(free))
+
+
+def self_test():
+    """NEGATIVES for the guards, run on every export so they cannot rot into checking nothing."""
+    html = "<script>\nlet customIR = null;\nlet sampleBuf = null;\nconst state = {};\n</script>"
+    bad = "function renderPatch(st, opts) {\n  if (customIR) return 1;\n  return 0;\n}\n"
+    good = "function renderPatch(st, opts) {\n  const customIR = opts.customIR || null;\n  if (customIR) return 1;\n}\n"
+    prose = "// customIR used to be read here\nfunction f(st) { return \"customIR\" + st.sampleBuf; }\n"
+    if find_app_global_reads(bad, html) != ["customIR"]:
+        die("self-test: a bare read of the app global `customIR` was NOT caught")
+    if find_app_global_reads(good, html):
+        die("self-test: a local `customIR` read from opts was wrongly flagged")
+    if find_app_global_reads(prose, html):
+        die("self-test: a comment, a string or a property access was wrongly flagged")
+    bad_state = "function f(x) { return state.freq; }\n"
+    try:
+        check_pure("negative.js", bad_state)
+    except SystemExit:
+        pass
+    else:
+        die("self-test: a read of the app's `state` was NOT caught")
+    return True
+
+
 def main():
+    self_test()
+    if "--self-test" in sys.argv[1:]:
+        print("export-synth: self-test passed (the app-global and `state` guards catch their negatives)")
+        return
     dsp, synth, html = read("dsp.js"), read("synth.js"), read("index.html")
     check_pure("dsp.js", dsp)
     check_pure("synth.js", synth)
     check_self_contained(dsp, synth)
+    check_no_app_globals(dsp, synth, html)
 
     if "function renderPatch(" not in synth:
         die("synth.js no longer defines renderPatch()")
@@ -202,8 +262,11 @@ root.CrunchySynth = {
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
-  // renderPatch(patch, { sample, normalize }) -> { L, R, rawPeak }
+  // renderPatch(patch, { sample, normalize, customIR, raw, seedSalt }) -> { L, R, rawPeak }
   render: renderPatch,
+  // masterStage(L, R, patch, rawPeak, normalize): normalize, gain, fade, limiter, clip, reverse, in place
+  // (what render does after its effects; with { raw: true } a mix bus calls it once over a sum).
+  masterStage: masterStage,
   // encodeWav(L, R, { rate, depth, channels, loop, title }) -> ArrayBuffer
   encodeWav: encodeWav,
   // decodePatch(shareLinkString) -> { v, s: <diff against DEFAULTS>, n?, t? }

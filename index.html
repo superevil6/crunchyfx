@@ -564,14 +564,24 @@ const CONSOLE_HELP = {
 };
 
 
+// SFX_EXTRAS (SFX 1.3 foundation, SFX-1.3-PLAN.md; modeled on CrunchyVFX's PATCH_EXTRAS): the patch fields that are
+// NOT PARAMS rows (text and drawings a slider can't hold), each with its neutral default. They travel IN the patch, so
+// EVERY state operation loops over this one table (init, restoreEdit, withState, snapshotState, sameState, applyPreset,
+// genomeFromState, mutateGenome/crossGenome, loadSnapshot, encodePatch): a new one can't be half-wired. Before the
+// table each site listed them by hand, and Breed and loadSnapshot had dropped them (a bred speech sound went silent).
+// APPEND-ONLY, and a new entry's default must be neutral (it changes no existing sound). Key order = link key order.
+const SFX_EXTRAS = {
+  // Custom drawn single-cycle waveform (wave "custom"): a compact base64 int8 string (empty = default sine).
+  customWave: "",
+  // Wave Morph: the second drawn wave, blended into A by morph/morphSweep (empty = sine).
+  customWaveB: "",
+  // Text for the "speech" waveform (and the formant engine's Say box).
+  speechText: "",
+};
 const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
-// Custom drawn single-cycle waveform (wave "custom"). Stored IN the patch as a compact base64
-// int8 string so it travels with presets / share-links / history (empty = default sine).
-state.customWave = "";
-state.customWaveB = "";   // Wave Morph: second drawn wave, blended into A by morph/morphSweep (empty = sine)
-// Text for the "speech" waveform — also stored in the patch (travels with presets/share/history).
-state.speechText = "";
+for (const k in SFX_EXTRAS) state[k] = SFX_EXTRAS[k];
+const PARAM_KEYS = new Set(PARAMS.map((p) => p[0]));   // applyPreset writes only these + SFX_EXTRAS
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
@@ -607,7 +617,7 @@ let normalizeOut = true;    // toggled by the Normalize button
 // The engine itself is synth.js. This wrapper is the app's binding to it: the editor's `state`,
 // the loaded sample, and the Normalize toggle.
 function render() {
-  return renderPatch(state, { sample: sampleBuf, normalize: normalizeOut });
+  return renderPatch(state, { sample: sampleBuf, normalize: normalizeOut, customIR: customIR });
 }
 
 // ---------- Audio playback ----------
@@ -729,9 +739,7 @@ function commitHistory() {
 function restoreEdit(entry) {
   restoringHistory = true;
   for (const p of PARAMS) state[p[0]] = entry.s[p[0]];
-  state.customWave = entry.s.customWave || "";
-  state.customWaveB = entry.s.customWaveB || "";
-  state.speechText = entry.s.speechText || "";
+  for (const k in SFX_EXTRAS) state[k] = entry.s[k] || SFX_EXTRAS[k];
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
   plantNameSync(); nowSync();
   customIR = "ir" in entry ? entry.ir : customIR;
@@ -759,15 +767,26 @@ document.addEventListener("keydown", (e) => {
 
 // Run fn() with the global `state` temporarily replaced by a snapshot, then
 // restore it. Lets us render/export any past sound without disturbing the editor.
-function withState(snap, fn) {
+// `audio` (optional, SFX 1.3): the snapshot's OWN audio, { sample, ir, norm }; each key given replaces the editor's
+// sampleBuf / customIR / normalizeOut for the call and is put back after. A key left out keeps the editor's (as every
+// caller did before), so a sound without its own audio renders exactly as it always has.
+function withState(snap, fn, audio) {
   const backup = {};
   for (const p of PARAMS) backup[p[0]] = state[p[0]];
-  backup.customWave = state.customWave; backup.customWaveB = state.customWaveB; backup.speechText = state.speechText;
+  for (const k in SFX_EXTRAS) backup[k] = state[k];
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
-  state.customWave = "customWave" in snap ? snap.customWave : "";
-  state.customWaveB = "customWaveB" in snap ? snap.customWaveB : "";
-  state.speechText = "speechText" in snap ? snap.speechText : "";
-  try { return fn(); } finally { for (const p of PARAMS) state[p[0]] = backup[p[0]]; state.customWave = backup.customWave; state.customWaveB = backup.customWaveB; state.speechText = backup.speechText; }
+  for (const k in SFX_EXTRAS) state[k] = k in snap ? snap[k] : SFX_EXTRAS[k];
+  const a = audio || {}, keepS = sampleBuf, keepIR = customIR, keepN = normalizeOut;
+  if ("sample" in a) sampleBuf = a.sample;
+  if ("ir" in a) customIR = a.ir;
+  if ("norm" in a) normalizeOut = a.norm;
+  try { return fn(); } finally {
+    for (const p of PARAMS) state[p[0]] = backup[p[0]];
+    for (const k in SFX_EXTRAS) state[k] = backup[k];
+    if ("sample" in a) sampleBuf = keepS;
+    if ("ir" in a) customIR = keepIR;
+    if ("norm" in a) normalizeOut = keepN;
+  }
 }
 
 // ---------- WAV export (16-bit stereo PCM) ----------
@@ -955,15 +974,14 @@ let riffSetPatch = () => {};     // (patch.riff | undefined) -> load it into the
 function snapshotState() {
   const s = {};
   for (const p of PARAMS) s[p[0]] = state[p[0]];
-  if (state.customWave) s.customWave = state.customWave;   // carry the drawn wave with the snapshot
-  if (state.customWaveB) s.customWaveB = state.customWaveB; // …and the Wave-Morph second wave
-  if (state.speechText) s.speechText = state.speechText;   // …and the speech text
+  for (const k in SFX_EXTRAS) if (state[k] && state[k] !== SFX_EXTRAS[k]) s[k] = state[k];   // the drawn waves, speech text …
   const rp = riffGetPatch(); if (rp) s.riff = rp;          // …and the riff (for preset / My Presets save)
   return s;
 }
 function sameState(a, b) {
   for (const p of PARAMS) if (a[p[0]] !== b[p[0]]) return false;
-  return (a.customWave || "") === (b.customWave || "") && (a.customWaveB || "") === (b.customWaveB || "") && (a.speechText || "") === (b.speechText || "");
+  for (const k in SFX_EXTRAS) if ((a[k] || SFX_EXTRAS[k]) !== (b[k] || SFX_EXTRAS[k])) return false;
+  return true;
 }
 function thumbPeaks(L) {
   const N = 96, out = new Float32Array(N), step = L.length / N;
@@ -972,12 +990,15 @@ function thumbPeaks(L) {
 }
 function addHistory(label, L, audible = true) {
   const snap = snapshotState();
+  // The sound's own audio (by reference, as the undo history keeps it), so Play / WAV / drag / Load on a History entry
+  // hear the sample, IR and Normalize it was made with. Session only: saveHistory never writes it.
+  const audio = { sample: sampleBuf, ir: customIR, norm: normalizeOut };
   if (histItems.length && sameState(histItems[0].state, snap)) return; // skip exact repeats
   // `name` is the SOUND's name (what it is; the download is named from it), `label` what just happened to it
   // ("Pitch", "Bred", "Play"). Before 2026-10-14 the label was all there was, so a Quick Shape tweak renamed it.
   const name = soundName();
   histItems.unshift({
-    id: ++histSeq, name, label: label === name ? "" : label, state: snap, peaks: thumbPeaks(L), silent: !audible,
+    id: ++histSeq, name, label: label === name ? "" : label, state: snap, audio, peaks: thumbPeaks(L), silent: !audible,
     time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   });
   if (histItems.length > HIST_MAX) histItems.pop();
@@ -998,14 +1019,23 @@ function drawThumb(canvas, peaks) {
   }
   c.stroke();
 }
-function replaySnapshot(snap) {
-  withState(snap, () => { const { L, R } = render(); drawScope(L, R); playBuffer(L, R); });
+// `audio`: the entry's own { sample, ir, norm } when it has one (a History entry made this session); see withState.
+function replaySnapshot(snap, audio) {
+  withState(snap, () => { const { L, R } = render(); drawScope(L, R); playBuffer(L, R); }, audio);
 }
-function loadSnapshot(snap, name) {
+function loadSnapshot(snap, name, audio) {
   const keepWave = state.wave;
   if (name != null) { seqLabel = name || "Sound"; plantNameSync(); nowSync(); }
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
+  for (const k in SFX_EXTRAS) state[k] = k in snap ? snap[k] : SFX_EXTRAS[k];   // its drawing / text came back too (bug 2)
   if (waveLocked) state.wave = keepWave;
+  // Its own sample / IR / Normalize, as it was made. The sample and IR only when the sound USES them, so loading an old
+  // laser never unloads the sample you have in now.
+  if (audio) {
+    if ("sample" in audio && audio.sample !== sampleBuf && usesSample(state.wave)) { sampleBuf = audio.sample; if (!sampleBuf) sampleName = ""; updateSampleUI(); }
+    if ("ir" in audio && audio.ir !== customIR && Math.round(state.convType) === 4 && state.convMix > 0) { customIR = audio.ir; updateIRUI(); }
+    if ("norm" in audio && audio.norm !== normalizeOut) { normalizeOut = audio.norm; updateNormBtn(); }
+  }
   syncUI();
   const { L, R } = render(); drawScope(L, R); playBuffer(L, R);
 }
@@ -1034,17 +1064,17 @@ function renderHistory() {
       (+item.state.duration).toFixed(2) + "s · " + (item.silent ? "silent" : item.time);
     el.title = "Download saves " + fileStem(hname) + ".wav";
     drawThumb(el.querySelector("canvas"), item.peaks);
-    el.querySelector('[data-a="play"]').addEventListener("click", () => replaySnapshot(item.state));
-    el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state, hname));
+    el.querySelector('[data-a="play"]').addEventListener("click", () => replaySnapshot(item.state, item.audio));
+    el.querySelector('[data-a="load"]').addEventListener("click", () => loadSnapshot(item.state, hname, item.audio));
     el.querySelector('[data-a="wav"]').addEventListener("click", () => withState(item.state, () => {
       const { L, R } = render();
       const file = exportFileName(hname, item.state);
       downloadWav(L, R, file, hname || "sound").then((saved) => { if (saved) nowSay("Saved " + saved + (isDesktopShell() ? "" : " (downloads)")); });
-    }));
+    }, item.audio));
     const histDrag = el.querySelector('[data-a="drag"]');
     if (histDrag) histDrag.addEventListener("dragstart", (e) => {
       e.preventDefault();
-      const r = withState(item.state, () => render());
+      const r = withState(item.state, () => render(), item.audio);
       dragOutWav(r.L, r.R, fileStem(hname), hname || "sound");
     });
     histList.appendChild(el);
@@ -1848,8 +1878,10 @@ function applyPreset(obj, label, action) {
   // reset to defaults first, then overlay (ignore any _vary metadata)
   const keepWave = state.wave;
   for (const p of PARAMS) state[p[0]] = p[5];
-  state.customWave = ""; state.customWaveB = ""; state.speechText = "";   // reset drawn waves + speech text (overlaid below if present)
-  for (const [k, v] of Object.entries(obj)) if (k[0] !== "_") state[k] = v;
+  for (const k in SFX_EXTRAS) state[k] = SFX_EXTRAS[k];   // reset drawn waves + speech text (overlaid below if present)
+  // KNOWN KEYS ONLY (bug 2): a PARAMS row or an SFX_EXTRAS field. `riff` goes to riffSetPatch below, `_vary` is
+  // metadata, and a key a newer build or a hand-made link carries never lands in `state`.
+  for (const [k, v] of Object.entries(obj)) if (k[0] !== "_" && (PARAM_KEYS.has(k) || k in SFX_EXTRAS)) state[k] = v;
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   seqLabel = label || "Sound";             // remember what the editor is holding (for Sequence chips)
   plantNameSync();                         // the Library's name box follows it (desktop)
@@ -2191,7 +2223,7 @@ function useSample(mono, name) {
   // raw audio plays clear and unaltered. Otherwise a previous take's drive/filter/console/crush/etc.
   // would color the new one; the user shapes it from here.
   for (const p of PARAMS) state[p[0]] = p[5];
-  state.customWave = ""; state.speechText = "";
+  for (const k in SFX_EXTRAS) state[k] = SFX_EXTRAS[k];
   state.wave = 9;             // "sample"
   waveLocked = false;
   // Fit the length meter to the clip and open the amp envelope, so the WHOLE recording plays back
@@ -2750,9 +2782,7 @@ riffSetPatch = (r) => {
 function encodePatch(nameOverride) {
   const diff = {};
   for (const p of PARAMS) { const k = p[0]; if (state[k] !== p[5]) diff[k] = state[k]; }
-  if (state.customWave) diff.customWave = state.customWave;   // include the drawn wave (non-default)
-  if (state.customWaveB) diff.customWaveB = state.customWaveB;   // …and the Wave-Morph second wave
-  if (state.speechText) diff.speechText = state.speechText;   // …and speech text
+  for (const k in SFX_EXTRAS) if (state[k] && state[k] !== SFX_EXTRAS[k]) diff[k] = state[k];   // the drawn waves, speech text …
   const rp = riffGetPatch(); if (rp) diff.riff = rp;          // …and the riff, so a shared link plays the melody
   const payload = { v: 1, s: diff };
   if (!normalizeOut) payload.n = 0;             // normalize defaults on; only note when off
@@ -2904,16 +2934,26 @@ const BREED_SKIP = new Set(["wave", "duration", "gain"]);
 const BREED_AMT = 0.22;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; if (state.customWave) g.customWave = state.customWave; if (state.customWaveB) g.customWaveB = state.customWaveB; if (state.speechText) g.speechText = state.speechText; return g; }
+function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; for (const k in SFX_EXTRAS) if (state[k] && state[k] !== SFX_EXTRAS[k]) g[k] = state[k]; return g; }
+// A child keeps its parent's SFX_EXTRAS (bug 1: they copied PARAMS only, so a bred speech sound went silent and a drawn
+// wave fell back to a sine). No extra draw from Math.random, so the PARAMS draws are the same sequence as before.
 function mutateGenome(src, amount) {
   const g = {};
   for (const p of PARAMS) {
     const k = p[0];
     g[k] = (!BREED_SKIP.has(k) && Math.random() < 0.6) ? jitter(k, src[k], amount) : src[k];
   }
+  for (const k in SFX_EXTRAS) if (k in src) g[k] = src[k];
   return g;
 }
-function crossGenome(a, b) { const g = {}; for (const p of PARAMS) { const k = p[0]; g[k] = Math.random() < 0.5 ? a[k] : b[k]; } return g; }
+// A crossed child's text and drawings come from the parent that gave it its WAVE (they belong to that engine).
+function crossGenome(a, b) {
+  const g = {};
+  let waveFrom = a;
+  for (const p of PARAMS) { const k = p[0], fromA = Math.random() < 0.5; g[k] = fromA ? a[k] : b[k]; if (k === "wave") waveFrom = fromA ? a : b; }
+  for (const k in SFX_EXTRAS) if (k in waveFrom) g[k] = waveFrom[k];
+  return g;
+}
 // One audible child from the parent pool (retry a few times to dodge silent duds).
 function breedChild(parents, amount) {
   for (let t = 0; t < 10; t++) {
@@ -3484,11 +3524,8 @@ function renderMyPresets() {
     const nameInput = el.querySelector(".up-name");
     nameInput.value = p.name;
     el.querySelector(".up-play").addEventListener("click", () => {
-      const prev = sampleBuf;
-      if (p.sample) sampleBuf = b64ToSample(p.sample);   // this entry's audio, for playback only
-      const r = withState(p.state, () => render());
+      const r = withState(p.state, () => render(), p.sample ? { sample: b64ToSample(p.sample) } : null);   // this entry's audio, for playback only
       playBuffer(r.L, r.R);
-      sampleBuf = prev;
     });
     el.querySelector(".up-use").addEventListener("click", () => {
       if (p.sample) { sampleBuf = b64ToSample(p.sample); sampleName = p.name; updateSampleUI(); }   // restore its audio too
@@ -3498,10 +3535,7 @@ function renderMyPresets() {
     const upDrag = el.querySelector(".up-drag");
     if (upDrag) upDrag.addEventListener("dragstart", (e) => {
       e.preventDefault();
-      const prev = sampleBuf;
-      if (p.sample) sampleBuf = b64ToSample(p.sample);   // render with this preset's own audio
-      const r = withState(p.state, () => render());
-      sampleBuf = prev;
+      const r = withState(p.state, () => render(), p.sample ? { sample: b64ToSample(p.sample) } : null);   // this preset's own audio
       dragOutWav(r.L, r.R, p.name, p.name);
     });
     nameInput.addEventListener("change", () => { p.name = nameInput.value.trim() || p.name; nameInput.value = p.name; saveUserPresets(); filterMyPresets((presetSearch.value || "").trim().toLowerCase()); });
@@ -3822,10 +3856,8 @@ async function batchExportUserPresets() {
   let ok = 0, fail = 0;
   for (let idx = 0; idx < userPresets.length; idx++) {
     const p = userPresets[idx];
-    const prev = sampleBuf;
     try {
-      if (p.sample) sampleBuf = b64ToSample(p.sample);   // this preset's own audio, if any
-      const r = withState(p.state, () => render());
+      const r = withState(p.state, () => render(), p.sample ? { sample: b64ToSample(p.sample) } : null);   // this preset's own audio, if any
       const base = expandNameTemplate(tpl, { name: p.name, index: idx + 1, total, rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels });
       let name = base, n = 2;
       while (used.has(name.toLowerCase())) name = base + "-" + (n++);   // de-dup collisions
@@ -3834,7 +3866,6 @@ async function batchExportUserPresets() {
       await T.fs.writeFile(dir + "/" + name + ".wav", new Uint8Array(buf));
       ok++;
     } catch (e) { console.warn("crunchysfx: batch export failed for", p.name, e); fail++; }
-    finally { sampleBuf = prev; }
   }
   alert("Exported " + ok + " sound" + (ok === 1 ? "" : "s") + " to the chosen folder" + (fail ? " (" + fail + " failed — see console)" : "") + ".");
 }
@@ -4478,11 +4509,8 @@ function soundPatch(f) { const o = decodePatch(f.s); return { snap: o.s || {}, n
 // Render a planted sound as the editor would: its patch over the defaults, its own normalize setting, its own audio
 // (none when it has none: a sound never borrows the editor's loaded sample). The editor is left exactly as it was.
 function soundRender(f) {
-  const d = soundPatch(f), keepN = normalizeOut, keepS = sampleBuf;
-  normalizeOut = d.norm;
-  sampleBuf = soundSampleOf(f);
-  try { return withState(d.snap, () => render()); }
-  finally { normalizeOut = keepN; sampleBuf = keepS; }
+  const d = soundPatch(f);
+  return withState(d.snap, () => render(), { norm: d.norm, sample: soundSampleOf(f) });
 }
 // THE SAME BYTES Export WAV writes: downloadWav's encodeWav call, with the sound's format and title.
 function soundWav(r, fmt, title) {

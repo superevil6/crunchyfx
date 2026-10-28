@@ -1,11 +1,11 @@
 /*! CrunchySFX synthesis engine — GENERATED FILE, DO NOT EDIT.
  *
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
- *  Exposes exactly one global: CrunchySynth { render, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
+ *  Exposes exactly one global: CrunchySynth { render, masterStage, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.1.0 (a0bfe25 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.2.1 (32c21d8 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   7bbd79746253b08b87fbb6e2f2823be4682ddc244d20f7e0ecf744f9664dc910   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   919fe9ab65d22828bc9dc10cc5bf2c36f5bf692d79f489075638071d76abb909   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -448,7 +448,7 @@ function makeImpact(n, tone, decay, punch, grit, seed) {
 }
 
 // ---------- Whoosh / air (sword swings, whips, arrows, thrown things, cloth) ----------
-// The "pass-by" gesture: turbulent noise through a bandpass whose CENTRE FREQUENCY and AMPLITUDE
+// The "pass-by" gesture: turbulent noise through a bandpass whose CENTER FREQUENCY and AMPLITUDE
 // both swell up and fall together (that coupling is what makes a swing read as a swing — hard to
 // fake with a plain envelope + filter sweep). Builds ONE gesture over `n` samples; render() reads
 // it at `lt` so it retriggers per burst shot (combos), with `n` set to one shot's slot. Deterministic
@@ -459,7 +459,7 @@ function makeWhoosh(n, tone, sweep, body, peak, seed) {
   if (n < 2) return out;
   let s = (seed >>> 0) || 0x51ce5ab1;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 * 2 - 1; };
-  const fcBase = 300 * Math.pow(13, tone);          // ~300 Hz (dull) .. ~3.9 kHz (sharp) band centre
+  const fcBase = 300 * Math.pow(13, tone);          // ~300 Hz (dull) .. ~3.9 kHz (sharp) band center
   const sweepOct = 0.5 + sweep * 2.5;               // octaves the band rises at mid-swing
   const Q = 0.7 + body * 6;                          // broad/airy .. narrow/whistly
   const pk = 0.15 + peak * 0.6;                      // where amplitude + pitch peak (early flick .. late swing)
@@ -680,8 +680,8 @@ function buildFormantSpeechPlan(n, text, rate) {
 // ---------- Master finishing stage ----------
 // DC blocker: a one-pole highpass at ~18 Hz, always on. In place, no gate.
 //
-// WHY IT IS NEEDED, when the oscillator is already DC-centred: it is, and `drive` undoes it. A
-// centred 25%-duty pulse sits at +1.5 for a quarter of the cycle and −0.5 for three quarters — no
+// WHY IT IS NEEDED, when the oscillator is already DC-centered: it is, and `drive` undoes it. A
+// centered 25%-duty pulse sits at +1.5 for a quarter of the cycle and −0.5 for three quarters — no
 // DC, but amplitude-ASYMMETRIC — and tanh squashes the tall positive spike far harder than the
 // shallow negative one. The mean goes negative, worse the narrower the duty and the harder the
 // drive. Measured on single notes downstream in CrunchyBGM: 50% duty is clean, 25% reads −0.27,
@@ -692,12 +692,12 @@ function buildFormantSpeechPlan(n, text, rate) {
 //   1. A one-shot with an offset STEPS the signal on and off, so a sound used repeatedly in a game
 //      lays a low-frequency thump under every trigger. In a sequenced context — CrunchyBGM playing
 //      one of these as an instrument — it reads as a constant rumble, which is how it was found.
-//   2. It corrupts loudness normalisation. `rawPeak` in renderPatch is measured across the offset,
-//      so a driven narrow-pulse sound looks louder than it is and gets normalised DOWN. Removing
+//   2. It corrupts loudness normalization. `rawPeak` in renderPatch is measured across the offset,
+//      so a driven narrow-pulse sound looks louder than it is and gets normalized DOWN. Removing
 //      the offset first makes NORM_TARGET mean what it says.
 //
 // Cold-started on purpose, unlike CrunchyBGM's version of this: a sound effect begins at silence,
-// so there is nothing to prime from and the settling IS the correct behaviour. (BGM's buffer is a
+// so there is nothing to prime from and the settling IS the correct behavior. (BGM's buffer is a
 // seamless loop, so it primes on the tail or its own transient lands on the loop point.) The ~9 ms
 // time constant is well below the shortest attack here and a highpass passes transients anyway, so
 // the click at the front of a percussive sound survives intact.
@@ -854,7 +854,7 @@ function decodePatch(str) {
 // ==== synth.js =============================================================================
 // CrunchySFX — the synthesis core: one patch object in, stereo audio out.
 //
-// Extracted from index.html so the engine can be exported and reused (CrunchyVFX synthesises
+// Extracted from index.html so the engine can be exported and reused (CrunchyVFX synthesizes
 // its matched sounds with this exact code). Loaded via <script src="synth.js"> AFTER dsp.js and
 // BEFORE the main <script> — classic scripts share one global scope, like presets.js.
 //
@@ -864,7 +864,18 @@ function decodePatch(str) {
 //
 //   renderPatch(st, opts) -> { L, R, rawPeak }
 //     st   — a patch: the same flat key/value shape as PRESETS entries and `state`.
-//     opts — { sample: Float32Array|null, normalize: boolean }, both optional.
+//     opts — all optional, every default renders exactly as before:
+//       sample    Float32Array|null   imported mono audio at SR (the "sample" wave; granular's source)
+//       normalize boolean (true)      loudness-normalize quiet sounds (the app's Normalize button)
+//       customIR  {L, R}|null         a loaded impulse response for the "Custom IR" space (convType 4).
+//                                     None given = that space stays dry, as in the app with no IR loaded.
+//       raw       boolean (false)     SFX 1.3, for layers: stop BEFORE the master stage (normalize, gain,
+//                                     fade, limiter, clip, reverse) so a mix bus can sum layers and run
+//                                     one master stage over the sum (masterStage below).
+//       seedSalt  integer (0)         SFX 1.3, for layers: shifts every fixed seed (noise, grains, bubbles,
+//                                     particles, impact, whoosh, additive drift, speech breath, synth IRs)
+//                                     so two layers of one engine don't produce identical noise. 0 = the
+//                                     seeds as they always were (an exact no-op).
 //
 // rawPeak is the pre-normalization peak, so callers can tell "quiet" from "silent".
 
@@ -881,6 +892,12 @@ function renderPatch(st, opts) {
   // app: no loaded sample, normalization on.
   const sampleBuf = opts.sample || null;
   const normalizeOut = opts.normalize !== false;
+  // The loaded impulse response used to be read here as the app global `customIR`, which the exported bundle never
+  // declares: a convType 4 link threw a ReferenceError in CrunchyVFX and BGM (SFX 1.3 bug 3). It comes in like the sample.
+  const customIR = opts.customIR || null;
+  // Salt for every fixed seed below. 0 returns the seed untouched, so every existing sound is byte-identical.
+  const salt = (opts.seedSalt | 0) >>> 0;
+  const sd = (s) => salt ? ((s ^ Math.imul(salt, 0x9e3779b1)) >>> 0) || 1 : s;
 
   const dur = st.duration;
   const n = Math.max(1, Math.floor(dur * SR));
@@ -922,7 +939,7 @@ function renderPatch(st, opts) {
   const wahOn = wahRate > 0 && wahDepth > 0;
 
   // deterministic LCG so exports are reproducible
-  let seed = 22222;
+  let seed = sd(22222);
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return (seed / 4294967296) * 2 - 1; };
 
   // unison: V detuned voices, each with its own phase + equal-power stereo pan.
@@ -986,7 +1003,7 @@ function renderPatch(st, opts) {
   let granL = null, granR = null;
   if (isGranular) {
     const src = (sampleBuf && sampleBuf.length > 1) ? sampleBuf : granSynthSource();
-    const gr = makeGranular(src, n, baseFreq, st.grainSize, st.grainDensity, st.grainSpray, st.grainScan, st.grainSpread, 0x00c0ffee);
+    const gr = makeGranular(src, n, baseFreq, st.grainSize, st.grainDensity, st.grainSpray, st.grainScan, st.grainSpread, sd(0x00c0ffee));
     granL = gr.L; granR = gr.R;
   }
   // Custom drawn wave (wave 12): band-limit the drawing to this note's highest frequency (up-sweep
@@ -1047,26 +1064,26 @@ function renderPatch(st, opts) {
   const isBubble = waveType === 14;
   let bubL = null, bubR = null;
   if (isBubble) {
-    const b = makeBubbles(n, baseFreq, st.bubbleRate, st.bubbleRise, st.bubbleSpread, st.bubbleDecay, 0x00b0bb1e);
+    const b = makeBubbles(n, baseFreq, st.bubbleRate, st.bubbleRise, st.bubbleSpread, st.bubbleDecay, sd(0x00b0bb1e));
     bubL = b.L; bubR = b.R;
   }
   // Particle / crackle (wave "particle"): built up front into a stereo buffer, then read per-sample.
   const isParticle = waveType === 15;
   let parL = null, parR = null;
   if (isParticle) {
-    const pr = makeParticles(n, st.particleTone, st.particleRate, st.particleDecay, st.particleSpread, 0x00facade);
+    const pr = makeParticles(n, st.particleTone, st.particleRate, st.particleDecay, st.particleSpread, sd(0x00facade));
     parL = pr.L; parR = pr.R;
   }
   // Impact / blast (wave "impact"): one percussive transient, front-loaded at index 0; read at
   // `lt` in the loop so it retriggers per burst shot (full-auto). Mono; body via boom layer.
   const isImpact = waveType === 19;
   let impactBuf = null;
-  if (isImpact) impactBuf = makeImpact(n, st.impactTone, st.impactDecay, st.impactPunch, st.impactGrit, 0x1a2b3c4d);
+  if (isImpact) impactBuf = makeImpact(n, st.impactTone, st.impactDecay, st.impactPunch, st.impactGrit, sd(0x1a2b3c4d));
   // Whoosh / air (wave "whoosh"): one swing gesture sized to a shot's slot, read at `lt` so combos
   // (repeat) retrigger a fresh swish. Mono.
   const isWhoosh = waveType === 20;
   let whooshBuf = null;
-  if (isWhoosh) { const wlen = Math.max(2, Math.min(n, Math.round(slot * SR))); whooshBuf = makeWhoosh(wlen, st.whooshTone, st.whooshSweep, st.whooshBody, st.whooshPeak, 0x51ce5ab1); }
+  if (isWhoosh) { const wlen = Math.max(2, Math.min(n, Math.round(slot * SR))); whooshBuf = makeWhoosh(wlen, st.whooshTone, st.whooshSweep, st.whooshBody, st.whooshPeak, sd(0x51ce5ab1)); }
   // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
   // slow amplitude-drift LFO (random rate/phase) → evolving pad. Per-partial data is constant
   // across the render, so precompute it once; only the partial phases advance per sample.
@@ -1080,7 +1097,7 @@ function renderPatch(st, opts) {
   if (isAdditive) {
     nAdd = Math.max(1, Math.min(ADD_MAX, Math.round(st.addPartials)));
     const exp = 2 - 1.8 * st.addTilt, det = st.addDetune;
-    let s = 0x5eed1234 >>> 0;
+    let s = sd(0x5eed1234 >>> 0);
     const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };   // deterministic
     let norm = 0;
     for (let k = 0; k < nAdd; k++) {
@@ -1097,7 +1114,7 @@ function renderPatch(st, opts) {
   // Speech (wave "speech"): render the text to a mono buffer up front, then read it per-sample.
   const isSpeech = waveType === 17;
   let speechBuf = null;
-  if (isSpeech) speechBuf = makeSpeech(n, st.speechText, baseFreq, st.speechSize, st.speechRate, 0x5eec0de);
+  if (isSpeech) speechBuf = makeSpeech(n, st.speechText, baseFreq, st.speechSize, st.speechRate, sd(0x5eec0de));
   // 4-operator FM (wave "FM 4op"): per-sample; ops evaluated 3→2→1→0 so mods resolve in one pass.
   const isFM4 = waveType === 18;
   const fmRatio = [1, st.fmRatio2, st.fmRatio3, st.fmRatio4];
@@ -1223,7 +1240,7 @@ function renderPatch(st, opts) {
         //   1. The loop reads the NEXT sample as well as the current one, so it is `ksN - 0.5`
         //      samples long and sounds SR/(ksN - 0.5), not SR/ksN. That half-sample is
         //      unconditional, so NO pitch was in tune — not one.
-        //   2. `round()` quantises, so neighbouring semitones are out by DIFFERENT amounts. That
+        //   2. `round()` quantizes, so neighboring semitones are out by DIFFERENT amounts. That
         //      is worse than a uniform offset: a uniform one is a key change nobody can hear,
         //      this one detunes intervals against each other. Measured downstream in CrunchyBGM
         //      across the 25 records that use this wave: 26.1% of generated notes over 10 cents
@@ -1414,7 +1431,7 @@ function renderPatch(st, opts) {
     // self-oscillated at Nyquist once cutoff neared SR/4, which turned bright sounds
     // into 22 kHz buzz that plays back as clicks/silence.
     // WAH_OCTAVES 1.5: a Cry Baby sweeps roughly 400 Hz to 2 kHz, which is a little over two
-    // octaves peak to peak — so ±1.5 from centre at full depth, and the record picks its own centre
+    // octaves peak to peak — so ±1.5 from center at full depth, and the record picks its own center
     // with `cutoff`.
     const wah = wahOn ? wahDepth * 1.5 * -Math.cos(2 * Math.PI * wahRate * lt) : 0;
     let cut = baseCut * Math.pow(2, filtEnv * 3 * prog + wah);
@@ -1536,8 +1553,8 @@ function renderPatch(st, opts) {
         else { const t = toneIR(customIR.L, customIR.R, st.convTone); irL = t.L; irR = t.R; }   // Conv tone darkens it
       }
     } else {                                                // built-in synthesized spaces (Room/Hall/Plate/Spring)
-      irL = makeIR(ct, st.convSize, st.convTone, 0x1234abcd);
-      irR = makeIR(ct, st.convSize, st.convTone, 0x9e3779b9);
+      irL = makeIR(ct, st.convSize, st.convTone, sd(0x1234abcd));
+      irR = makeIR(ct, st.convSize, st.convTone, sd(0x9e3779b9));
     }
     if (irL) {                                              // (Custom IR selected but none loaded → skip, stays dry)
       const wetL = convolveFFT(L, irL), wetR = convolveFFT(R, irR);
@@ -1560,6 +1577,16 @@ function renderPatch(st, opts) {
     const a = Math.abs(L[i]); if (a > rawPeak) rawPeak = a;
     const b = Math.abs(R[i]); if (b > rawPeak) rawPeak = b;
   }
+  if (opts.raw) return { L, R, rawPeak };   // layers: the mix bus runs one masterStage over the sum
+  masterStage(L, R, st, rawPeak, normalizeOut);
+  return { L, R, rawPeak };
+}
+
+// THE MASTER STAGE: loudness normalize, gain + fade-out, limiter, safety clip, reverse. In place. Moved out of
+// renderPatch verbatim (SFX 1.3) so a layered sound can run it ONCE over its mix; `rawPeak` is the peak measured just
+// before it. Same arithmetic in the same order, so a single sound's bytes are unchanged.
+function masterStage(L, R, st, rawPeak, normalizeOut) {
+  const n = L.length;
   // normalize quiet-but-present sounds up to a consistent level (capped so we never
   // amplify near-silence into hiss); the user gain then trims from there.
   let norm = 1;
@@ -1590,7 +1617,6 @@ function renderPatch(st, opts) {
     const dc = Math.min(fade, last >> 1) || 1;
     for (let i = 0; i < dc; i++) { const k = i / dc; L[i] *= k; R[i] *= k; L[last - i] *= k; R[last - i] *= k; }
   }
-  return { L, R, rawPeak };
 }
 
 // ---------- WAV encoding ----------
@@ -1873,14 +1899,17 @@ const DEFAULTS = {};
 for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
-  VERSION: "1.1.0",
-  BUILT: "a0bfe25-dirty",
-  SHA256: "7bbd79746253b08b87fbb6e2f2823be4682ddc244d20f7e0ecf744f9664dc910",
+  VERSION: "1.2.1",
+  BUILT: "32c21d8-dirty",
+  SHA256: "919fe9ab65d22828bc9dc10cc5bf2c36f5bf692d79f489075638071d76abb909",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
-  // renderPatch(patch, { sample, normalize }) -> { L, R, rawPeak }
+  // renderPatch(patch, { sample, normalize, customIR, raw, seedSalt }) -> { L, R, rawPeak }
   render: renderPatch,
+  // masterStage(L, R, patch, rawPeak, normalize): normalize, gain, fade, limiter, clip, reverse, in place
+  // (what render does after its effects; with { raw: true } a mix bus calls it once over a sum).
+  masterStage: masterStage,
   // encodeWav(L, R, { rate, depth, channels, loop, title }) -> ArrayBuffer
   encodeWav: encodeWav,
   // decodePatch(shareLinkString) -> { v, s: <diff against DEFAULTS>, n?, t? }
