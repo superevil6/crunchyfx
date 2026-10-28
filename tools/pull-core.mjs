@@ -225,7 +225,7 @@ const changes = [], migrations = [];
     if (now === null || was === null || now <= was) continue;
     for (const e of entries) if (e.file === f && e.n > was && e.n <= now) {
       changes.push(e.text);
-      if (/MIGRATION:/.test(e.text)) migrations.push(e.text);
+      if (/MIGRATION:(?!\s*none\b)/i.test(e.text)) migrations.push(e.text);   // "MIGRATION: none" says there is nothing to do (2026-10-28)
     }
   }
 }
