@@ -139,6 +139,13 @@
       line("layers:no-normalize", pcm(withState(lay(three), render)));
       normalizeOut = true;
       line("layers:same-engine", pcm(withState(Object.assign({}, PRESETS["Explosion"], { layers: JSON.stringify([{ s: PRESETS["Explosion"], d: 0, g: 1, p: 0 }]) }), render)));
+      // SFX 1.3 THE WIZARD (appended): three answers' nine, seeded; each line hashes the nine sounds' settings and audio
+      [[{ kind: "gunshot", mats: ["metal"], era: "Generic", power: 5 }, "gunshot-metal"], [{ kind: "explosion", mats: ["fire", "stone"], era: "8-Bit", power: 9 }, "explosion-fire-stone-8bit-9"],
+       [{ kind: "pickup", mats: [], era: "Generic", power: 1 }, "pickup-1"]].forEach(function (q) {
+        let h = null;
+        wizNine(q[0], 1).forEach(function (c) { const snd = wizSound(c); h = fnv(new TextEncoder().encode(JSON.stringify(snd)), h); h = fnv(f32(withState(snd, render).L), h); });
+        line("wizard:" + q[1], h);
+      });
     } finally {
       Math.random = keepRand; normalizeOut = keepN; sampleBuf = keepS; customIR = keepIR;
       varNameEl.value = keepName; varGenomes = keepVar; sequence = keepSeq;

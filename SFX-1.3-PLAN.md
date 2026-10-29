@@ -128,6 +128,44 @@ Full findings are in the review (lead's session, 2026-10-27); file:line pointers
     and modal (a pitch offset changes the decay).
   - Model choice: VFX's "layers" are fixed flat PARAMS slots (Layer B `emit2*`), which keeps links flat. Weigh that against a
     nested array.
+> **2026-10-28: THE WIZARD IS IN** (not committed), after AJ's layered presets ("Everything sounds great!"):
+>
+> **The flow.** A header button (wand); three questions; nine LAYERED results.
+> - What is it: 11 kinds, Gunshot … Monster.
+> - What's it made of: any of 10 materials.
+> - Which era: the Foundry's STYLES.
+>
+> **Building a result.**
+> - A kind is a recipe of ROLES, `WIZ_KINDS`: a gunshot is a crack + a body + a thump, plus maybe a casing. `keep` is
+>   the roles a material never replaces; an `extra` role fills a free place.
+> - Each role is filled from `WIZ_PARTS`, hand-written recipes in the Foundry's way (a patch + `_vary`; several reuse
+>   its ARCHETYPES). Each material brings its own layer. Materials take turns across the nine when they outnumber the
+>   places (at most 4 layers).
+> - Every layer is varied and re-rolled until audible (`audiblePatch`), then shaped by the era (`styleShaper`).
+> - **Seeded:** `wizSeeded` swaps in an LCG for `Math.random` during composing, so the same answers and seed give the
+>   same nine. "More like these" is the next seed.
+>
+> **The POWER dial (1-9 on the results, AJ's from VFX).** 5 is as designed.
+> - Up: longer, roomier, hotter, 5 semitones lower at 9, louder low layers, and a sub layer at 8+.
+> - Down: shorter, drier, higher. 1-2 are two layers: the first and, when chosen, a material.
+>
+> **The cards.** Each card's ingredients are listed ("crack · grit · thump · metal ring"). Play renders that one only
+> (VFX's lesson). A click loads the whole sound, every layer, as one undo step, and the layer bar shows how it is
+> built. Names: power word + a material's or part's word + one of the kind's nouns, never echoing ("Blasting Blast").
+>
+> **Measured:** 100-220 ms to compose nine; 8-31 ms to render one when played.
+>
+> **Tests:**
+> - web 54/54, 6 `wizard/` rows: the flow and nothing rendered until Play; 891 results (every kind x 3 material mixes
+>   x power 1/5/9) at most 4 layers, every layer audible, materials carried, nine names; seeded; power longer / lower /
+>   fewer when tame; a load is whole and one undo; 8-Bit shapes every layer.
+> - audio hash: every line unchanged + 3 `x:wizard` lines (stable over two runs).
+> - desktop 52/52; wiring.
+>
+> **Listen:** `~/.cache/crunchy-wip/sfxlayers/wizard-wav/`.
+>
+> **Next:** AJ's ears on the parts; a few more kinds (footstep, door, alarm); the Foundry's kinds pointing here.
+
 - **The Wizard:** build it on the Foundry's `ARCHETYPES` and `STYLES` (~3923–3978), with a seeded random (VFX's
   `withSeededRandom`), plus an audibility and loudness check per result (VFX's `wizardMeasure`). The questions: what is it,
   how big, what material, what feel. The answer is NINE layered sounds, each opening with its layers visible.

@@ -338,6 +338,9 @@ function renderPatch(st, opts) {
   const noiseColor = st.noiseColor, eexp = 1 + st.envCurve * 3;
   let brownN = 0;
 
+  // flicker's state and its own generator (seeded like the rest, so a salted layer flickers differently)
+  let flSeed = sd(0x2f6b91c3), flLevel = 1, flTarget = 1, flLeft = 0;
+  const flR = () => { flSeed = (Math.imul(flSeed, 1664525) + 1013904223) >>> 0; return flSeed / 4294967296; };
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     const shotIdx = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
@@ -574,6 +577,23 @@ function renderPatch(st, opts) {
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
     sL *= env; sR *= env;
+
+    // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
+    // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).
+    // Flicker: the level drops out and surges at random, held for about 1/flickerRate s each (a dying neon tube, a
+    // shorting wire, a guttering torch), smoothed over ~1 ms so it never clicks; its own seed, never the noise's.
+    if (st.tremDepth > 0) {
+      const tr = 1 - st.tremDepth * (0.5 - 0.5 * Math.cos(2 * Math.PI * st.tremRate * t));
+      sL *= tr; sR *= tr;
+    }
+    if (st.flicker > 0) {
+      if (flLeft-- <= 0) {
+        flLeft = Math.max(8, Math.round((SR / Math.max(0.5, st.flickerRate)) * (0.4 + 1.2 * flR())));
+        flTarget = flR() < st.flicker * 0.6 ? flR() * 0.25 : flR() < st.flicker * 0.3 ? 1.35 : 1;   // a drop, an arc, or steady
+      }
+      flLevel += (flTarget - flLevel) * 0.02;
+      sL *= flLevel; sR *= flLevel;
+    }
 
     // resonant low-pass — TPT / zero-delay-feedback state-variable filter
     // (Zavalishin). Unconditionally stable at ALL cutoffs; the old Chamberlin SVF

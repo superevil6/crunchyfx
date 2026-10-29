@@ -932,6 +932,33 @@ AUDIO Gold Bar Clunk b96cdc43b99e26ac
 AUDIO Distant Cluck a52ce4b39b9808fe
 AUDIO Feather Rustle c8d63e8e70cb773f
 AUDIO Chord Swell 34adae8622b18479
+# SFX 1.3 layered presets (2026-10-28): the seven Layered lines below were ADDED; the AUDIOHASH total moved with them. Every other line is unchanged.
+AUDIO Layered Gunshot 73b3829ceaf65505
+AUDIO Layered Shotgun e45c66b1b92beb74
+AUDIO Layered Machine Gun 243b7988a8bec2d5
+AUDIO Layered Laser Rifle 1ca869e93222ffa8
+AUDIO Layered Sword Clash b0141c0a2c81c25d
+AUDIO Layered Explosion dbee4157dfae853a
+AUDIO Layered Punch 9b61ba384f474b0b
+# SFX care pass (2026-10-29): Transformer Buzz ADDED (AJ's pick, round electric-buzz); the AUDIOHASH total moved with it.
+AUDIO Transformer Buzz 4d5570ff48ab96be
+# SFX care pass round 2 (2026-10-29): Double Jump, Checkpoint and Dash ADDED (AJ's picks); the AUDIOHASH total moved with them.
+AUDIO Double Jump 87814ad2c95222bf
+AUDIO Checkpoint a92f8f5ebb5a621b
+AUDIO Dash 78681232d4f958c5
+# SFX care pass round 3 (2026-10-29): ten presets ADDED (AJ's picks); the AUDIOHASH total moved with them.
+AUDIO Quick Reload 104c2a618cc6d924
+AUDIO Shell Casing 559e8b9c5106b1a7
+AUDIO Enemy Death a620f8a1bf89f298
+AUDIO Retro Enemy Death 8c387b6833d0a0b9
+AUDIO Knockout 05a9c891f3302724
+AUDIO Crawl 487b42d94a2ac678
+AUDIO Swim Stroke 147535ea67f53943
+AUDIO Line Clear f6d658c2db8347af
+AUDIO Rotate 5c09e21b229d06de
+AUDIO Slider Tick 4fe27fdfb908d060
+# SFX care pass round 4 (2026-10-29): Wood Break ADDED (AJ's pick); the AUDIOHASH total moved with it.
+AUDIO Wood Break 880894900529ee35
 AUDIO nonorm:Coin 9b44f2f52967386e
 AUDIO nonorm:Laser bfdaabc91508b1fe
 AUDIO nonorm:Jump 29a16949ca59543e
@@ -975,7 +1002,7 @@ AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH d67d595d3847fa70 over 975
+AUDIOHASH ecf418c212d8701f over 997
 # SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
 AUDIO x:ir:Coin:1 5cfd7548039d3a9d
 AUDIO x:ir:Coin:0.4 ffce912929480e8c
@@ -985,19 +1012,24 @@ AUDIO x:ir:Explosion:1 988d81986d05aa2b
 AUDIO x:ir:Explosion:0.4 72cd2880738fc767
 AUDIO x:granular-sample:0 bd22e8753db266c6
 AUDIO x:granular-sample:1 45c852229e3e1273
-AUDIO x:breed:0 0fb8f5343002ad5b
-AUDIO x:breed:1 abd5c80fa2fdba3c
-AUDIO x:breed:2 2af9440b802e8120
-AUDIO x:breed:cross 1f90822731bf0e00
-AUDIO x:vary:0 7d417460f4983f6f
-AUDIO x:vary:1 d9aeac04788741fb
-AUDIO x:vary:2 89ef2fa083260a2d
-AUDIO x:vary:3 b4e27d3e5293301d
+AUDIO x:breed:0 81fd5d2b24048bfc
+AUDIO x:breed:1 2281868d3a6a2a82
+AUDIO x:breed:2 7dfcd133672e11f0
+AUDIO x:breed:cross 357c361d2b53da3c
+AUDIO x:vary:0 3c11f5dc4c9e5c15
+AUDIO x:vary:1 4895230cc90b81b9
+AUDIO x:vary:2 6646c4a77a5dd678
+AUDIO x:vary:3 ee2d4a1f7efacdf8
 AUDIO x:pack:tres 0ee5611ee441bcfb
-AUDIO x:pack:zip bffcf6003cb0fb71
+AUDIO x:pack:zip f8d79bb8f0a928cb
 # SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
 AUDIO x:layers:three e65820c579bbef36
 AUDIO x:layers:muted a9015f513759839e
 AUDIO x:layers:no-normalize 1c4c1e0d0d344206
 AUDIO x:layers:same-engine 8bc0db05e41c0dc6
-AUDIOXHASH b486abaa861a72f5 over 22
+# SFX 1.3 the Wizard (2026-10-28): the three x:wizard lines below were ADDED (three answers' nine, seeded); the AUDIOXHASH total moved with them. Every line above is unchanged.
+AUDIO x:wizard:gunshot-metal e946649821cab2b1
+AUDIO x:wizard:explosion-fire-stone-8bit-9 7737fc76ce624cd7
+AUDIO x:wizard:pickup-1 b711fbb26c7598d1
+# SFX 1.3 Tremolo + Flicker (2026-10-28): four PARAMS rows added (neutral). Every preset line is unchanged. The random tools' fixtures MOVED (x:breed, x:vary, x:pack:zip, x:wizard): their lines hash each result's whole genome, which now carries the new keys, and Breed/Variations draw a random number per parameter, so the same seed rolls differently. No saved sound changes.
+AUDIOXHASH 7ca248e0f6a9dd99 over 25

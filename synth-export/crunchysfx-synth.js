@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, renderLayers, masterStage, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.2.1 (c0cb3ea — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.2.1 (b868a6e — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   ea4bc0cf5dff5d9f454c3a73ae8c62905f5d6960f56adfb4ac8af248d6e9aa7c   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   98955b068edb8c61d44c4451bdd5f3c9b6689af02e16d69d69985bed66c6eb9d   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -1192,6 +1192,9 @@ function renderPatch(st, opts) {
   const noiseColor = st.noiseColor, eexp = 1 + st.envCurve * 3;
   let brownN = 0;
 
+  // flicker's state and its own generator (seeded like the rest, so a salted layer flickers differently)
+  let flSeed = sd(0x2f6b91c3), flLevel = 1, flTarget = 1, flLeft = 0;
+  const flR = () => { flSeed = (Math.imul(flSeed, 1664525) + 1013904223) >>> 0; return flSeed / 4294967296; };
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     const shotIdx = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
@@ -1428,6 +1431,23 @@ function renderPatch(st, opts) {
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
     sL *= env; sR *= env;
+
+    // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
+    // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).
+    // Flicker: the level drops out and surges at random, held for about 1/flickerRate s each (a dying neon tube, a
+    // shorting wire, a guttering torch), smoothed over ~1 ms so it never clicks; its own seed, never the noise's.
+    if (st.tremDepth > 0) {
+      const tr = 1 - st.tremDepth * (0.5 - 0.5 * Math.cos(2 * Math.PI * st.tremRate * t));
+      sL *= tr; sR *= tr;
+    }
+    if (st.flicker > 0) {
+      if (flLeft-- <= 0) {
+        flLeft = Math.max(8, Math.round((SR / Math.max(0.5, st.flickerRate)) * (0.4 + 1.2 * flR())));
+        flTarget = flR() < st.flicker * 0.6 ? flR() * 0.25 : flR() < st.flicker * 0.3 ? 1.35 : 1;   // a drop, an arc, or steady
+      }
+      flLevel += (flTarget - flLevel) * 0.02;
+      sL *= flLevel; sR *= flLevel;
+    }
 
     // resonant low-pass — TPT / zero-delay-feedback state-variable filter
     // (Zavalishin). Unconditionally stable at ALL cutoffs; the old Chamberlin SVF
@@ -1953,6 +1973,11 @@ const PARAMS = [
   ["chorusMix",  "Chorus",     0, 1, 0.01, 0, "",     "Modulation"],
   ["chorusRate", "Chorus rate",0.05, 6, 0.01, 1.5, "Hz","Modulation"],
   ["chorusDepth","Chorus depth",0, 1, 0.01, 0.4, "",  "Modulation"],
+  // SFX 1.3 (AJ 2026-10-28, electrical buzzing): the level wobbling, and dropping out at random. 0 = off (neutral).
+  ["tremDepth",  "Tremolo",    0, 1, 0.01, 0, "",     "Modulation"],
+  ["tremRate",   "Tremolo rate",0.1, 120, 0.1, 6, "Hz","Modulation"],
+  ["flicker",    "Flicker",    0, 1, 0.01, 0, "",     "Modulation"],
+  ["flickerRate","Flicker rate",1, 60, 0.5, 14, "Hz", "Modulation"],
   // Burst / full-auto: retrigger the whole shot N times at a fixed rate
   ["repeat",     "Shots",      1, 12, 1, 1, "x",    "Burst"],
   ["rate",       "Fire rate",  1, 30, 0.5, 10, "Hz","Burst"],
@@ -1973,8 +1998,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.2.1",
-  BUILT: "c0cb3ea-dirty",
-  SHA256: "ea4bc0cf5dff5d9f454c3a73ae8c62905f5d6960f56adfb4ac8af248d6e9aa7c",
+  BUILT: "b868a6e-dirty",
+  SHA256: "98955b068edb8c61d44c4451bdd5f3c9b6689af02e16d69d69985bed66c6eb9d",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

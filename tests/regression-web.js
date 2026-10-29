@@ -638,6 +638,104 @@
       return ok(sameR(r, here) && typeof soundPatch(f).snap.layers === "string", "planted render matches the editor's");
     } finally { applyPreset(keep, keepLabel); }
   });
+  // SFX 1.3 THE WIZARD: three questions, nine layered sounds, a power dial; nothing renders until Play; a load is whole.
+  t("wizard/three-questions-then-nine-layered-sounds-none-rendered-until-play", function () {
+    const keepA = JSON.stringify(wiz.answers), keepStep = wiz.step;
+    try {
+      wiz.answers = { kind: "", mats: [], era: "Generic", power: 5 }; wiz.step = 0; wiz.seed = 1;
+      document.getElementById("wizardBtn").click();
+      const q1 = !wizModal.hidden && wizBody.querySelectorAll(".wiz-card").length === WIZ_KINDS.length;
+      wizBody.querySelector('.wiz-card[data-key="gunshot"]').click();
+      const q2 = wiz.step === 1 && wizBody.querySelectorAll(".wiz-card").length === WIZ_MATERIALS.length + 1;
+      wizBody.querySelector('.wiz-card[data-key="metal"]').click();
+      const picked = wiz.answers.mats.join() === "metal" && /1 material/.test(wizFoot.querySelector(".wiz-next").textContent);
+      wizFoot.querySelector(".wiz-next").click();
+      const q3 = wiz.step === 2 && wizBody.querySelectorAll(".wiz-card").length === STYLES.length;
+      wizBody.querySelector('.wiz-card[data-key="Generic"]').click();
+      const picks = wizBody.querySelectorAll(".wiz-pick"), dial = wizBody.querySelectorAll(".wiz-power button");
+      const nine = wiz.step === WIZ_STEPS && picks.length === 9 && wizBody.querySelectorAll(".wiz-play").length === 9 && dial.length === 9 &&
+        wizBody.querySelector(".wiz-power button.on").dataset.power === "5";
+      const unrendered = Object.keys(wiz.cache).length === 0;
+      wizBody.querySelectorAll(".wiz-play")[3].click();
+      const one = Object.keys(wiz.cache).length === 1 && wizBody.querySelectorAll(".wiz-play")[3].classList.contains("on");
+      wizClose();
+      return ok(q1 && q2 && picked && q3 && nine && unrendered && one, [q1, q2, picked, q3, nine, unrendered, one].join(" "));
+    } finally { wiz.answers = JSON.parse(keepA); wiz.step = keepStep; wizClose(); }
+  });
+  t("wizard/every-result-is-audible-at-most-four-layers-carries-its-materials-and-has-its-own-name", function () {
+    const bad = [];
+    let n = 0;
+    for (const kd of WIZ_KINDS) for (const mats of [[], ["metal"], ["fire", "ice"]]) for (const power of [1, 5, 9]) {
+      const l = wizNine({ kind: kd.key, mats: mats, era: "Generic", power: power }, 1), tag = kd.key + "+" + (mats.join("+") || "any") + "@" + power;
+      if (new Set(l.map(function (c) { return c.name; })).size !== 9) bad.push(tag + " names");
+      for (const c of l) {
+        n++;
+        if (c.layers.length > WIZ_LAYER_MAX || !c.layers.length) bad.push(tag + " " + c.layers.length + " layers");
+        if (mats.length && !c.layers.some(function (L) { return L.mat; })) bad.push(tag + " " + c.name + " has no material");
+        c.layers.forEach(function (L, i) { if (!(renderPatch(L.s, { normalize: true }).rawPeak > AUDIBLE_FLOOR)) bad.push(tag + " " + c.name + " layer " + (i + 1) + " silent"); });
+      }
+      if (mats.some(function (m) { return !l.some(function (c) { return c.layers.some(function (L) { return L.mat === m; }); }); })) bad.push(tag + " a material never shows");
+    }
+    return ok(!bad.length, n + " results; " + (bad.slice(0, 5).join(", ") || "clean"));
+  });
+  t("wizard/the-same-answers-give-the-same-nine-and-more-like-these-nine-others", function () {
+    const a = { kind: "explosion", mats: ["fire"], era: "Generic", power: 6 };
+    const j = function (seed) { return JSON.stringify(wizNine(a, seed).map(wizSound)); };
+    const r1 = Math.random();   // the app's own random is left as it was
+    return ok(j(1) === j(1) && j(1) !== j(2) && typeof r1 === "number" && Math.random !== undefined, "seeded");
+  });
+  t("wizard/up-the-power-dial-longer-lower-and-fewer-layers-when-tame", function () {
+    const at = function (power) {
+      const l = wizNine({ kind: "gunshot", mats: [], era: "Generic", power: power }, 1);
+      let dur = 0, lay = 0, pitch = 0;
+      for (const c of l) { const snd = wizSound(c), r = renderSound(Object.assign({}, PARAM_DEFAULTS, snd), PARAM_DEFAULTS, { normalize: true }); dur += r.L.length / SR; lay += c.layers.length; pitch += soundLayers(snd.layers).reduce(function (t, e) { return t + (e.p || 0); }, 0); }
+      return { dur: dur / 9, lay: lay / 9, pitch: pitch / 9 };
+    };
+    const lo = at(1), mid = at(5), hi = at(9);
+    return ok(lo.dur < mid.dur && mid.dur < hi.dur && lo.lay <= 2 && hi.lay >= mid.lay && lo.pitch > mid.pitch && hi.pitch < mid.pitch,
+      [lo, mid, hi].map(function (x) { return x.dur.toFixed(2) + "s/" + x.lay.toFixed(1) + "L/" + x.pitch.toFixed(1) + "st"; }).join(" "));
+  });
+  t("wizard/a-result-loads-whole-with-its-layers-as-one-undo-step", function () {
+    const keep = snapshotState(), keepLabel = seqLabel, keepA = JSON.stringify(wiz.answers), keepStep = wiz.step;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Coin"]), "Coin");
+      const before = snapshotState();
+      wiz.answers = { kind: "sword", mats: ["ice"], era: "Generic", power: 7 }; wiz.step = WIZ_STEPS; wiz.seed = 3;
+      wizOpen();
+      const c = wiz.list[4], heard = wizRender(4);
+      wizBody.querySelectorAll(".wiz-pick")[4].click();
+      const loaded = wizModal.hidden && seqLabel === c.name && soundLayers(state.layers).length === c.layers.length - 1 && layerSel === 0 &&
+        document.querySelectorAll("#layerBar .layer-tab").length === c.layers.length;
+      const same = sameR(render(), heard);
+      undoEdit();
+      const undone = sameState(snapshotState(), before);
+      return ok(loaded && same && undone, [loaded, same, undone].join(" "));
+    } finally { wiz.answers = JSON.parse(keepA); wiz.step = keepStep; applyPreset(keep, keepLabel); }
+  });
+  // SFX care pass round 5: a spell is its material's own FUSED recipe (AJ's blind picks), not swell + sparkle + a layer
+  t("wizard/a-spell-is-its-materials-own-recipe-two-alternate-none-goes-round-every-element", function () {
+    const bad = [];
+    const mats = Array.from(new Set(WIZ_SPELLS.map(function (r) { return r.mat; })));
+    for (const m of mats) {
+      const l = wizNine({ kind: "spell", mats: [m], era: "Generic", power: 5 }, 1), own = WIZ_SPELLS.filter(function (r) { return r.mat === m; });
+      const keys = l.map(function (c) { return (c.layers[0].part || "").split(":")[1]; });
+      if (keys.some(function (k) { return !own.some(function (r) { return r.key === k; }); })) bad.push(m + ": not its own spell");
+      if (own.length > 1 && new Set(keys).size < 2) bad.push(m + ": its two recipes do not alternate");
+      if (l.some(function (c) { return c.parts.indexOf("swell") >= 0 || c.parts.indexOf("sparkle") >= 0 && m !== "magic"; })) bad.push(m + ": still the generic cast");
+    }
+    const any = wizNine({ kind: "spell", mats: [], era: "Generic", power: 5 }, 1);
+    const elems = new Set(any.map(function (c) { return c.layers[0].mat; }));
+    if (elems.size < 5) bad.push("no material: only " + elems.size + " elements in the nine");
+    const metal = wizNine({ kind: "spell", mats: ["metal"], era: "Generic", power: 5 }, 1);
+    if (!metal.every(function (c) { return c.layers.some(function (L) { return L.mat === "metal"; }); })) bad.push("metal (no spell of its own) lost its layer");
+    return ok(!bad.length, bad.join(", ") || mats.length + " materials, each its own spell");
+  });
+  t("wizard/an-era-shapes-every-layer", function () {
+    const l = wizNine({ kind: "laser", mats: ["electric"], era: "8-Bit", power: 5 }, 1);
+    const dry = l.every(function (c) { return c.layers.every(function (L) { return L.s.reverb === 0 && L.s.delay === 0; }); });
+    const wet = wizNine({ kind: "laser", mats: ["electric"], era: "Generic", power: 5 }, 1).some(function (c) { return c.layers.some(function (L) { return L.s.reverb > 0; }); });
+    return ok(dry && wet, "8-Bit strips every layer's reverb and delay (a negative: Generic keeps some)");
+  });
   // Foundation 3: withState swaps the snapshot's OWN sample / IR / Normalize when given, and puts the editor's back.
   t("withstate/a-snapshot-renders-with-its-own-sample-ir-and-normalize-then-the-editor-is-untouched", function () {
     const keepS = sampleBuf, keepIR = customIR, keepN = normalizeOut;

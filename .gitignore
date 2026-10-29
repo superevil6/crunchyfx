@@ -39,3 +39,6 @@ todo.md
 # Generated test pages and their screenshots (python3 tests/build.py <suite>). tests/fixtures/ IS tracked.
 tests/run-*.html
 tests/*.png
+
+# A/B listening rounds (tools/make-ab.mjs): generated WAVs, not source.
+soundtests/

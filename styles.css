@@ -745,3 +745,32 @@ body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 680px; }
 .layer-mix span { min-width: 52px; color: var(--muted, #8f8898); }
 .layer-rm { padding: 3px 9px; font-size: 12px; }
 
+/* SFX 1.3 THE WIZARD: question cards, then nine layered sounds (Play each; click to load) under a Power dial */
+.wiz-box { width: min(1080px, calc(100vw - 32px)); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+.wiz-body { padding: 14px 18px; overflow-y: auto; }
+.wiz-q { margin: 0 0 12px; font-size: 14px; }
+.wiz-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.wiz-card { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; text-align: left; }
+.wiz-card b { font-size: 13px; }
+.wiz-card i { font-style: normal; font-size: 11.5px; color: var(--muted, #8f8898); }
+.wiz-card.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.wiz-power { display: flex; align-items: center; gap: 4px; margin: 0 0 12px; flex-wrap: wrap; }
+.wiz-power-lab { font-size: 12px; color: var(--muted, #8f8898); margin-right: 4px; }
+.wiz-power button { min-width: 28px; padding: 3px 0; font-size: 12px; }
+.wiz-power button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #121116); }
+.wiz-power-word { font-size: 12px; margin-left: 8px; }
+.wiz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.wiz-res { position: relative; display: flex; min-width: 0; }
+.wiz-pick { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px 42px; text-align: left; min-width: 0; }
+.wiz-pick:hover { border-color: var(--accent); }
+.wiz-name { font-size: 13px; font-weight: 600; }
+.wiz-ing { font-size: 11.5px; opacity: .85; }
+.wiz-sub { font-size: 11px; color: var(--muted, #8f8898); }
+.wiz-wave { width: 100%; height: 34px; image-rendering: pixelated; }
+.wiz-play { position: absolute; left: 12px; bottom: 10px; padding: 3px 9px; font-size: 12px; }
+.wiz-play.on { border-color: var(--accent); }
+.wiz-foot { display: flex; align-items: center; gap: 8px; }
+.wiz-foot .hint { margin-left: auto; }
+.wiz-foot:empty { display: none; }
+@media (max-width: 720px) { .wiz-grid { grid-template-columns: 1fr; } }
+

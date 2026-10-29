@@ -93,6 +93,7 @@
   <button class="primary" id="play" data-icon="play">Play <kbd>space</kbd></button>
   <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" disabled></button>
   <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" disabled></button>
+  <button id="wizardBtn" class="accent2 tool" data-icon="wand" title="Wizard: answer three questions (what it is, what it's made of, which era) and get nine finished LAYERED sounds, with a power dial">Wizard<small>nine sounds, made for you</small></button>
   <button id="rand" class="accent2 tool" data-icon="dice" title="Randomize: a brand-new random sound (replaces the one in the editor)">Randomize<small>a new sound</small></button>
   <button id="breed" class="accent2 tool" data-icon="breed" title="Breed: nine offspring of this sound; keep the ones you like and breed again to evolve it somewhere new">Breed<small>mix &amp; evolve</small></button>
   <button id="foundry" class="accent2 tool" title="Foundry: build original sounds by kind (jump, coin, hit…) and console style, keep the ones you like" data-icon="hammer">Foundry<small>build by kind</small></button>
@@ -394,6 +395,11 @@ const PARAMS = [
   ["chorusMix",  "Chorus",     0, 1, 0.01, 0, "",     "Modulation"],
   ["chorusRate", "Chorus rate",0.05, 6, 0.01, 1.5, "Hz","Modulation"],
   ["chorusDepth","Chorus depth",0, 1, 0.01, 0.4, "",  "Modulation"],
+  // SFX 1.3 (AJ 2026-10-28, electrical buzzing): the level wobbling, and dropping out at random. 0 = off (neutral).
+  ["tremDepth",  "Tremolo",    0, 1, 0.01, 0, "",     "Modulation"],
+  ["tremRate",   "Tremolo rate",0.1, 120, 0.1, 6, "Hz","Modulation"],
+  ["flicker",    "Flicker",    0, 1, 0.01, 0, "",     "Modulation"],
+  ["flickerRate","Flicker rate",1, 60, 0.5, 14, "Hz", "Modulation"],
   // Burst / full-auto: retrigger the whole shot N times at a fixed rate
   ["repeat",     "Shots",      1, 12, 1, 1, "x",    "Burst"],
   ["rate",       "Fire rate",  1, 30, 0.5, 10, "Hz","Burst"],
@@ -516,6 +522,10 @@ const PARAM_HELP = {
   chorusMix: "Chorus: thickens the sound with slightly wobbling copies, like several players at once.",
   chorusRate: "How fast the chorus wobbles.",
   chorusDepth: "How strong the chorus wobble is.",
+  tremDepth: "Tremolo: how much the volume wobbles up and down. Fast (60-120 Hz) gives an electric hum's flutter; slow, a pulsing throb.",
+  tremRate: "How fast the tremolo wobbles. 6 Hz is a pulse; 100-120 Hz is the flutter of mains electricity.",
+  flicker: "Flicker: the sound drops out and surges at random, like a dying neon tube, a shorting wire or a guttering flame.",
+  flickerRate: "How often the flicker changes: low is slow sputters, high is a fast stutter.",
   repeat: "Plays the sound several times in a row: bursts, machine guns, rapid beeps.",
   rate: "How fast the repeats come (per second).",
   arpStep: "Changes the pitch of each repeat, in semitones: rising or falling runs of notes.",
@@ -4346,6 +4356,379 @@ function openFoundry() {
 }
 
 document.getElementById("foundry").addEventListener("click", openFoundry);
+
+// ---------- The Wizard (SFX 1.3, SFX-1.3-PLAN.md; AJ 2026-10-28: "let's try hit up the wizard now!") ----------
+// Four questions a game developer can answer without knowing synthesis: WHAT IS IT (a kind: gunshot, sword, pickup …),
+// WHAT'S IT MADE OF (any materials: metal, fire, ice …), WHICH ERA (the Foundry's console styles), then NINE LAYERED
+// SOUNDS with a POWER dial (1 tame … 9 colossal). A kind is a sound designer's recipe of ROLES (a gunshot is a crack +
+// a body + a thump, then maybe a casing); each role is filled from WIZ_PARTS (hand-written recipes, the Foundry's way:
+// a patch + how much to vary it), and each material brings a layer of its own. Every layer is varied (jitter) and
+// re-rolled until audible (audiblePatch), the era shapes every layer (styleShaper), so a result opens in the editor
+// with its layers in the layer bar: people see how a good sound is built. SEEDED: the same answers and seed give the
+// same nine ("More like these" is the next seed). Procedural + chosen by a person; no AI anywhere.
+const WIZ_PARTS = {
+  // role words (`say`) list what a result is made of; `word` can name it
+  crack:   { say: "crack", word: "Sharp", patch: { wave: 19, impactTone: 0.78, impactDecay: 0.16, impactPunch: 0.95, impactGrit: 0.35, attack: 0.001, sustain: 0, decay: 0.07, release: 0.1, duration: 0.5, drive: 0.3, reverb: 0.2, reverbSize: 0.5, width: 0.6,
+             _vary: { impactTone: 0.15, impactDecay: 0.3, impactGrit: 0.4, reverb: 0.4 } } },
+  snap:    { say: "snap", word: "Snappy", patch: { wave: 0, freq: 2000, noise: 0.95, attack: 0, hold: 0.001, decay: 0.03, sustain: 0, release: 0.04, filterMode: 1, cutoff: 1500, duration: 0.2,
+             _vary: { cutoff: 0.3, decay: 0.3 } } },
+  whip:    { say: "whip", word: "Whipping", patch: { wave: 20, whooshTone: 0.92, whooshSweep: 1, whooshBody: 0.78, whooshPeak: 0.28, sustain: 1, attack: 0.001, release: 0.05, duration: 0.2, width: 0.5, drive: 0.22,
+             _vary: { whooshTone: 0.1, whooshPeak: 0.3 } } },
+  noise:   { say: "body", word: "Punchy", patch: { wave: 0, freq: 180, noise: 0.9, sweep: -0.3, attack: 0, hold: 0.002, decay: 0.09, sustain: 0, release: 0.12, cutoff: 3200, reso: 0.2, drive: 0.4, duration: 0.4,
+             _vary: { freq: 0.2, decay: 0.3, cutoff: 0.3, drive: 0.3 } } },
+  grit:    { say: "grit", word: "Gritty", patch: { wave: 2, freq: 140, noise: 0.4, sweep: -0.4, attack: 0, decay: 0.12, sustain: 0, release: 0.1, cutoff: 2500, drive: 0.6, bitcrush: 8, duration: 0.35,
+             _vary: { freq: 0.25, decay: 0.3, cutoff: 0.3, bitcrush: 0.3 } } },
+  blast:   { say: "blast", word: "Blasting", patch: { wave: 0, freq: 120, noise: 0.85, sweep: -0.3, attack: 0.001, decay: 0.5, sustain: 0, release: 0.4, cutoff: 4000, reso: 0.2, drive: 0.5, duration: 0.9,
+             _vary: { freq: 0.2, decay: 0.3, release: 0.3, cutoff: 0.25 } } },
+  thump:   { say: "thump", word: "Heavy", low: 1, patch: { wave: 0, freq: 60, sweep: -0.4, boom: 0.9, boomFreq: 58, boomDrop: 0.8, boomDecay: 0.2, attack: 0, decay: 0.18, sustain: 0, release: 0.1, cutoff: 400, duration: 0.4,
+             _vary: { boomFreq: 0.2, boomDecay: 0.3, decay: 0.3 } } },
+  kick:    { say: "kick", word: "Thumping", low: 1, patch: { wave: 19, impactTone: 0.3, impactDecay: 0.2, impactPunch: 0.85, impactGrit: 0.3, boom: 0.6, boomFreq: 65, boomDrop: 0.6, boomDecay: 0.18, attack: 0.001, sustain: 0, decay: 0.09, release: 0.1, duration: 0.35,
+             _vary: { impactTone: 0.3, boomFreq: 0.2, boomDecay: 0.3 } } },
+  boom:    { say: "boom", word: "Booming", low: 1, patch: { wave: 0, freq: 65, noise: 0.8, subOsc: 0.9, sweep: -0.35, boom: 0.9, boomFreq: 46, boomDrop: 1, boomDecay: 0.7, attack: 0.001, hold: 0.008, decay: 0.75, sustain: 0, release: 0.6, cutoff: 2800, reso: 0.15, filtEnv: -0.6, drive: 0.6, width: 0.65, reverb: 0.5, reverbSize: 0.9, reverbTone: 0.2, duration: 1.6,
+             _vary: { boomFreq: 0.2, decay: 0.25, reverb: 0.3 } } },
+  debris:  { say: "debris", word: "Rumbling", patch: { wave: 15, particleRate: 30, particleTone: 0.3, particleDecay: 0.45, particleSpread: 0.85, sustain: 1, attack: 0.02, release: 0.6, duration: 1.4, drive: 0.15, cutoff: 4500, reverb: 0.2, width: 0.6,
+             _vary: { particleRate: 0.4, particleTone: 0.4, duration: 0.25 } } },
+  tail:    { say: "tail", word: "Echoing", patch: { wave: 0, freq: 120, noise: 0.9, sweep: -0.2, attack: 0, hold: 0.004, decay: 0.3, sustain: 0, release: 0.3, cutoff: 1800, reso: 0.15, drive: 0.3, reverb: 0.5, reverbSize: 0.8, reverbTone: 0.35, width: 0.8, duration: 1,
+             _vary: { cutoff: 0.3, reverb: 0.3, decay: 0.3 } } },
+  casing:  { say: "casing", word: "Brassy", patch: { wave: 10, freq: 2600, modalPartials: 4, modalDecay: 0.18, modalInharm: 0.6, modalBright: 0.85, sustain: 1, attack: 0.001, release: 0.08, duration: 0.3,
+             _vary: { freq: 0.2, modalDecay: 0.3 } } },
+  mech:    { say: "mechanism", word: "Clicking", patch: { wave: 19, impactTone: 0.85, impactDecay: 0.05, impactPunch: 0.95, impactGrit: 0.2, attack: 0.001, decay: 0.03, sustain: 0, release: 0.04, cutoff: 9000, reverb: 0.1, repeat: 2, rate: 7, duration: 0.35,
+             _vary: { impactTone: 0.1, rate: 0.2 } } },
+  whoosh:  { say: "whoosh", word: "Swift", patch: { wave: 20, whooshTone: 0.6, whooshSweep: 0.6, whooshBody: 0.4, whooshPeak: 0.45, sustain: 1, attack: 0.001, release: 0.05, duration: 0.38, width: 0.5, reverb: 0.12,
+             _vary: { whooshTone: 0.3, whooshSweep: 0.3, whooshBody: 0.3, duration: 0.2 } } },
+  ring:    { say: "ring", word: "Ringing", patch: { wave: 10, freq: 1200, modalPartials: 6, modalDecay: 0.4, modalInharm: 0.7, modalBright: 0.75, sustain: 1, attack: 0.001, release: 0.3, width: 0.5, duration: 0.6, drive: 0.15, reverb: 0.25, reverbSize: 0.6,
+             _vary: { freq: 0.25, modalInharm: 0.2, modalDecay: 0.3 } } },
+  zap:     { say: "zap", word: "Zapping", patch: { wave: 2, freq: 1300, sweep: -0.55, attack: 0, decay: 0.18, sustain: 0, release: 0.12, cutoff: 7000, reso: 0.45, drive: 0.3, width: 0.5, reverb: 0.2, duration: 0.4,
+             _vary: { freq: 0.25, sweep: 0.3, decay: 0.3, reso: 0.3 } } },
+  crackle: { say: "crackle", word: "Crackling", patch: { wave: 1, freq: 620, sweep: 0.05, noise: 0.5, attack: 0, hold: 0.001, decay: 0.05, sustain: 0.12, release: 0.08, cutoff: 6500, reso: 0.5, filtEnv: 0.2, drive: 0.72, bitcrush: 4, downsample: 6, width: 0.45, reverb: 0.2, repeat: 5, rate: 24, duration: 0.45,
+             _vary: { freq: 0.3, rate: 0.3, repeat: 0.3 } } },
+  sparkle: { say: "sparkle", word: "Sparkling", patch: Object.assign({}, archByName("Magic / sparkle").patch) },
+  fanfare: { say: "fanfare", word: "Rising", patch: Object.assign({}, archByName("Powerup / fanfare").patch) },
+  riser:   { say: "swell", word: "Swelling", patch: Object.assign({}, archByName("Sweep / riser").patch) },
+  blip:    { say: "blip", word: "Bright", patch: Object.assign({}, archByName("Coin / pickup").patch) },
+  hop:     { say: "hop", word: "Bouncy", patch: Object.assign({}, archByName("Jump / hop").patch) },
+  click:   { say: "click", word: "Crisp", patch: Object.assign({}, archByName("UI blip / beep").patch) },
+  growl:   { say: "growl", word: "Growling", patch: Object.assign({}, archByName("Monster / growl").patch) },
+  // the materials' own layers
+  metal:   { say: "metal ring", word: "Steel", patch: { wave: 10, freq: 900, modalPartials: 8, modalDecay: 0.4, modalInharm: 0.75, modalBright: 0.65, sustain: 1, attack: 0.001, release: 0.3, width: 0.5, duration: 0.55, drive: 0.18, reverb: 0.25,
+             _vary: { freq: 0.3, modalInharm: 0.15, modalDecay: 0.3 } } },
+  wood:    { say: "wood knock", word: "Wooden", patch: { wave: 10, freq: 320, modalPartials: 4, modalDecay: 0.12, modalInharm: 0.25, modalBright: 0.35, sustain: 1, attack: 0.001, release: 0.08, duration: 0.3,
+             _vary: { freq: 0.25, modalDecay: 0.3, modalBright: 0.3 } } },
+  stone:   { say: "rubble", word: "Stony", patch: { wave: 15, particleRate: 40, particleTone: 0.15, particleDecay: 0.35, particleSpread: 0.8, sustain: 1, attack: 0.01, release: 0.4, duration: 0.9, cutoff: 2200, drive: 0.25, width: 0.6,
+             _vary: { particleRate: 0.4, particleTone: 0.4, duration: 0.25 } } },
+  fire:    { say: "flames", word: "Blazing", patch: Object.assign({}, archByName("Fire / flames").patch) },
+  ice:     { say: "crystal", word: "Frozen", patch: Object.assign({}, archByName("Ice / crystal").patch) },
+  electric:{ say: "crackle", word: "Electric", patch: { wave: 1, freq: 620, sweep: 0.05, noise: 0.5, attack: 0, hold: 0.001, decay: 0.05, sustain: 0.12, release: 0.08, cutoff: 6500, reso: 0.5, filtEnv: 0.2, drive: 0.72, bitcrush: 4, downsample: 6, width: 0.45, reverb: 0.2, repeat: 5, rate: 24, duration: 0.45,
+             _vary: { freq: 0.3, rate: 0.3, repeat: 0.3 } } },
+  water:   { say: "splash", word: "Splashing", patch: Object.assign({}, archByName("Water / bubble").patch) },
+  magic:   { say: "sparkle", word: "Arcane", patch: Object.assign({}, archByName("Magic / sparkle").patch) },
+  scifi:   { say: "ring-mod zap", word: "Plasma", patch: Object.assign({}, archByName("Electric / zap").patch) },
+  slime:   { say: "squelch", word: "Slimy", patch: { wave: 14, freq: 110, bubbleRate: 20, bubbleRise: 0.2, bubbleSpread: 0.6, bubbleDecay: 0.4, sustain: 1, attack: 0.01, release: 0.15, cutoff: 2500, drive: 0.2, duration: 0.5,
+             _vary: { freq: 0.3, bubbleRate: 0.4, bubbleRise: 0.4 } } },
+  sub:     { say: "sub", word: "Colossal", low: 1, patch: { wave: 0, freq: 45, sweep: -0.3, boom: 1, boomFreq: 42, boomDrop: 1, boomDecay: 0.6, attack: 0.001, decay: 0.5, sustain: 0, release: 0.4, cutoff: 250, duration: 1.2,
+             _vary: { boomFreq: 0.15, boomDecay: 0.25 } } },
+};
+// The kinds. `roles`: [parts to choose from, delay (s), volume]; `keep`: the roles a material never replaces (the
+// rest give way to the materials chosen, and an `extra` role fills the last place when nothing else does).
+const WIZ_KINDS = [
+  { key: "gunshot", name: "Gunshot", note: "pistols, rifles, shotguns", nouns: ["Gunshot", "Shot", "Report", "Blast", "Bang"],
+    roles: [[["crack"], 0, 1], [["noise", "grit"], 0.002, 0.55], [["thump", "kick"], 0, 0.7]], keep: 2, extra: [["casing", "mech", "tail"], [0.3, 0.45, 0.005], 0.3] },
+  { key: "explosion", name: "Explosion", note: "bombs, grenades, blasts", nouns: ["Explosion", "Blast", "Detonation", "Boom", "Eruption"],
+    roles: [[["crack", "kick"], 0, 1], [["blast"], 0.01, 0.8], [["boom"], 0.02, 0.7]], keep: 3, extra: [["debris"], 0.25, 0.55] },
+  { key: "hit", name: "Hit", note: "punches, impacts, slams", nouns: ["Hit", "Impact", "Smack", "Strike", "Slam"],
+    roles: [[["kick", "crack"], 0, 1], [["thump"], 0, 0.6], [["snap", "noise"], 0, 0.4]], keep: 1, extra: [["whoosh"], 0, 0.4] },
+  { key: "sword", name: "Sword", note: "swings, clashes, blades", nouns: ["Clash", "Slash", "Parry", "Strike", "Cut"],
+    roles: [[["whoosh"], 0, 1], [["ring"], 0.18, 1], [["crack", "snap"], 0.18, 0.6]], keep: 2, extra: [["thump"], 0.18, 0.4] },
+  { key: "spell", name: "Spell", note: "casts, charges, magic attacks", nouns: ["Spell", "Cast", "Hex", "Charm", "Invocation"], spells: true,
+    roles: [[["riser", "fanfare"], 0, 1], [["sparkle"], 0.05, 0.6]], keep: 1, extra: [["thump", "boom"], 0.25, 0.5] },
+  { key: "laser", name: "Laser", note: "blasters, beams, sci-fi shots", nouns: ["Laser", "Blaster", "Beam", "Bolt", "Shot"],
+    roles: [[["zap"], 0, 1], [["crack", "snap"], 0, 0.5], [["thump"], 0, 0.55]], keep: 1, extra: [["crackle"], 0.06, 0.3] },
+  { key: "pickup", name: "Pickup", note: "coins, gems, items", nouns: ["Pickup", "Coin", "Gem", "Collect", "Grab"],
+    roles: [[["blip"], 0, 1], [["sparkle"], 0.04, 0.5]], keep: 1, extra: [["casing"], 0, 0.25] },
+  { key: "powerup", name: "Power-up", note: "level ups, boosts, buffs", nouns: ["Power-up", "Level Up", "Boost", "Buff", "Upgrade"],
+    roles: [[["fanfare"], 0, 1], [["sparkle"], 0.1, 0.5]], keep: 1, extra: [["blip"], 0, 0.4] },
+  { key: "jump", name: "Jump", note: "hops, leaps, bounces", nouns: ["Jump", "Hop", "Leap", "Bounce", "Spring"],
+    roles: [[["hop"], 0, 1]], keep: 1, extra: [["whoosh"], 0, 0.35] },
+  { key: "ui", name: "UI", note: "clicks, confirms, menu sounds", nouns: ["Click", "Confirm", "Select", "Tap", "Ping"],
+    roles: [[["click"], 0, 1]], keep: 1, extra: [["mech", "blip"], 0, 0.35] },
+  { key: "monster", name: "Monster", note: "growls, roars, creatures", nouns: ["Growl", "Roar", "Snarl", "Howl", "Grunt"],
+    roles: [[["growl"], 0, 1], [["thump"], 0, 0.5]], keep: 1, extra: [["grit"], 0, 0.4] },
+];
+// The materials: each brings its own layer (WIZ_PARTS of the same key), at `d` seconds, at volume `g`.
+const WIZ_MATERIALS = [
+  { key: "metal", name: "Metal", note: "a ringing, clanging edge", d: 0.01, g: 0.45 },
+  { key: "wood", name: "Wood", note: "a hollow knock", d: 0, g: 0.5 },
+  { key: "stone", name: "Stone", note: "rubble and grit", d: 0.04, g: 0.5 },
+  { key: "fire", name: "Fire", note: "flames and embers", d: 0.03, g: 0.45 },
+  { key: "ice", name: "Ice", note: "crystal and shimmer", d: 0.02, g: 0.45 },
+  { key: "electric", name: "Electric", note: "sparks and buzz", d: 0.02, g: 0.35 },
+  { key: "water", name: "Water", note: "splashes and bubbles", d: 0.02, g: 0.5 },
+  { key: "magic", name: "Magic", note: "sparkles and chimes", d: 0.05, g: 0.45 },
+  { key: "scifi", name: "Sci-fi", note: "ring-modulated zaps", d: 0, g: 0.35 },
+  { key: "slime", name: "Slime", note: "squelches and goo", d: 0.03, g: 0.5 },
+];
+const WIZ_POWER = { neutral: 5, words: ["", "Tiny", "Small", "Light", "Modest", "", "Strong", "Big", "Massive", "Colossal"] };
+const WIZ_LAYER_MAX = 4;
+const wizKind = (k) => WIZ_KINDS.find((x) => x.key === k) || null;
+const wizMaterial = (k) => WIZ_MATERIALS.find((x) => x.key === k) || null;
+// Math.random seeded for the call (an LCG), then put back: the Foundry's helpers (varyPreset, jitter, pick, a style's
+// pick) draw from it, so the same answers and seed compose the same nine.
+function wizSeeded(seed, fn) {
+  const keep = Math.random;
+  let s = (seed >>> 0) || 1;
+  Math.random = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  try { return fn(); } finally { Math.random = keep; }
+}
+// POWER on one layer's patch: k from -1 (1, tame) to 1 (9, colossal). Longer or shorter, roomier or drier, hotter or
+// cleaner; the pitch moves through the layer's `p` (and layer 1's own frequencies), the low layers' volume follows.
+function wizPowerLayer(L, k, part) {
+  if (!k) return L;
+  const s = L.s, x = (e) => Math.pow(2, e * k), clamp = (key, v) => { const p = PARAM_BY_KEY[key]; return p ? Math.max(p[2], Math.min(p[3], v)) : v; };
+  for (const key of ["duration", "decay", "release", "boomDecay", "modalDecay"]) if (key in s || key === "duration") s[key] = +clamp(key, (key in s ? s[key] : PARAM_BY_KEY[key][5]) * x(0.45)).toFixed(3);
+  const rv = s.reverb || 0;
+  s.reverb = +clamp("reverb", k > 0 ? rv + 0.18 * k : rv * (1 + 0.7 * k)).toFixed(2);
+  s.drive = +clamp("drive", (s.drive || 0) + 0.12 * k).toFixed(2);
+  L.p = Math.round((L.p || 0) - 5 * k);
+  if (part.low) L.g = +(L.g * x(0.5)).toFixed(2);
+  return L;
+}
+// ONE result: the kind's roles, the materials' layers (rotated by slot when they outnumber the places), the power, the
+// era. Returns { name, layers: [{ s, d, g, p, part }], parts } with layer 1 first.
+// SPELLS BY MATERIAL (SFX care pass round 5, 2026-10-29; AJ: "the casting layer sounds the same on all magic"). A spell
+// is no longer a generic swell + sparkle with the material's sound beside it: each material's spell is FUSED, an
+// ignition / attack, the element's body and its tail as one event, and each is AJ's blind pick (soundtests/ab-spell-*,
+// SOUND-REVIEW.md), copied exactly from the take heard. Where AJ picked two (water, slime, stone: "a sounds quakish, and
+// c sounds petrifying. Perhaps both?") the nine alternate between them; with no material chosen the nine go round every
+// element. Each layer is registered as a WIZ_PARTS entry, so variation, the audible check, the era and the power treat it
+// like any other part. Materials without a spell (metal, wood, sci-fi) keep the roles + their layer.
+const WIZ_SPELLS = [{"key":"fire-fireball","mat":"fire","word":"Blazing","say":["fireball roar","launch","flames"],"from":"spell-fire fireball","layers":[{"s":{"wave":2,"freq":180,"noise":0.88,"sweep":0.4,"attack":0.03,"decay":0.3,"sustain":0.35,"release":0.4,"cutoff":1200,"reso":0.4,"filtEnv":0.6,"drive":0.4,"width":0.6,"reverb":0.3,"duration":0.8},"d":0,"g":1},{"s":{"wave":0,"freq":70,"sweep":-0.4,"boom":0.8,"boomFreq":60,"boomDrop":0.7,"boomDecay":0.2,"attack":0,"decay":0.1,"sustain":0,"release":0.06,"cutoff":400,"duration":0.35},"d":0.32,"g":0.6},{"s":{"wave":15,"particleRate":60,"particleTone":0.5,"particleDecay":0.3,"particleSpread":0.6,"sustain":1,"attack":0.05,"release":0.3,"cutoff":7000,"drive":0.25,"duration":0.6},"d":0.35,"g":0.5}]},{"key":"ice-forming-bells","mat":"ice","word":"Frozen","say":["ice cracking","cold wind","crystals","frost bells"],"from":"spell-ice-3 all-of-a-then-bells","layers":[{"s":{"wave":19,"impactTone":1,"impactDecay":0.015,"impactPunch":1,"impactGrit":0.4,"attack":0.001,"decay":0.02,"sustain":0,"release":0.03,"duration":0.65,"repeat":12,"rate":22},"d":0,"g":1},{"s":{"wave":0,"freq":2500,"noise":0.95,"attack":0.1,"decay":0.2,"sustain":0.2,"release":0.4,"cutoff":3000,"reso":0.3,"filtEnv":0.7,"width":0.7,"duration":0.9,"filterMode":1},"d":0,"g":0.45},{"s":{"wave":10,"freq":1760,"modalPartials":6,"modalInharm":0.6,"modalBright":0.85,"modalDecay":0.6,"sustain":1,"attack":0.001,"release":0.3,"reverb":0.4,"duration":0.9,"repeat":2,"rate":6,"arpStep":5},"d":0.35,"g":0.5},{"s":{"wave":10,"freq":2637,"modalPartials":7,"modalInharm":0.4,"modalBright":0.95,"modalDecay":0.8,"sustain":1,"attack":0.001,"release":0.3,"reverb":0.45,"duration":1.1,"unison":3,"detune":14,"reverbSize":0.75},"d":0.58,"g":0.6}]},{"key":"electric-bolt","mat":"electric","word":"Shocking","say":["bolt","buzz","crackle"],"from":"spell-electric bolt","layers":[{"s":{"wave":19,"impactTone":0.9,"impactDecay":0.12,"impactPunch":1,"impactGrit":0.85,"attack":0.001,"decay":0.02,"sustain":0,"release":0.03,"duration":0.6,"boom":0.4,"boomFreq":90,"boomDecay":0.12,"reverb":0.3},"d":0,"g":1},{"s":{"wave":2,"freq":120,"attack":0.02,"decay":0.1,"sustain":1,"release":0.3,"cutoff":2600,"reso":0.55,"drive":0.65,"bitcrush":7,"tremDepth":0.5,"tremRate":120,"duration":0.6},"d":0,"g":0.5},{"s":{"wave":1,"freq":620,"noise":0.5,"attack":0,"hold":0.001,"decay":0.05,"sustain":0.3,"release":0.08,"cutoff":6500,"reso":0.5,"drive":0.72,"bitcrush":4,"downsample":6,"flicker":0.6,"flickerRate":16,"duration":0.8,"width":0.45},"d":0.05,"g":0.5}]},{"key":"water-wave-surge","mat":"water","word":"Surging","say":["wave","bubbles","splash"],"from":"spell-water wave-surge","layers":[{"s":{"wave":0,"freq":250,"noise":0.95,"attack":0.3,"decay":0.2,"sustain":0.2,"release":0.25,"cutoff":1100,"reso":0.4,"filtEnv":0.7,"width":0.7,"duration":0.9},"d":0,"g":1},{"s":{"wave":14,"freq":350,"bubbleRate":18,"bubbleRise":0.5,"bubbleSpread":0.5,"bubbleDecay":0.35,"sustain":1,"attack":0.01,"release":0.2,"duration":0.8},"d":0.1,"g":0.5},{"s":{"wave":0,"freq":600,"noise":0.9,"attack":0,"hold":0.002,"decay":0.15,"sustain":0,"release":0.2,"filterMode":0,"cutoff":3000,"reso":0.3,"duration":0.4,"reverb":0.25},"d":0.4,"g":0.6}]},{"key":"water-bubble-blast","mat":"water","word":"Bubbling","say":["bubbles","riser","spray"],"from":"spell-water bubble-blast","layers":[{"s":{"wave":14,"freq":300,"bubbleRate":30,"bubbleRise":0.8,"bubbleSpread":0.5,"bubbleDecay":0.35,"sustain":1,"attack":0.15,"release":0.2,"duration":0.6},"d":0,"g":1},{"s":{"wave":0,"freq":300,"sweep":0.6,"attack":0.2,"decay":0.2,"sustain":0,"release":0.1,"cutoff":2000,"reso":0.5,"duration":0.5},"d":0,"g":0.4},{"s":{"wave":0,"freq":3000,"noise":0.9,"attack":0,"hold":0.002,"decay":0.2,"sustain":0,"release":0.2,"filterMode":1,"cutoff":2500,"reso":0.3,"duration":0.4},"d":0.38,"g":0.4}]},{"key":"magic-warp","mat":"magic","word":"Arcane","say":["warp","sparkles"],"from":"spell-magic warp","layers":[{"s":{"wave":2,"freq":220,"sweep":0.7,"ringMod":0.5,"ringFreq":330,"vibDepth":0.08,"vibRate":7,"attack":0.1,"decay":0.3,"sustain":0.3,"release":0.3,"cutoff":5000,"reso":0.4,"reverb":0.4,"width":0.7,"duration":0.8},"d":0,"g":1},{"s":{"wave":10,"freq":2093,"modalPartials":6,"modalInharm":0.3,"modalBright":0.85,"modalDecay":0.2,"sustain":1,"attack":0.001,"release":0.3,"reverb":0.25,"duration":0.8,"repeat":6,"rate":16,"flicker":0.4,"flickerRate":12},"d":0.1,"g":0.4}]},{"key":"slime-goo-blob","mat":"slime","word":"Slimy","say":["goo blob","bubbles","splat"],"from":"spell-slime goo-blob","layers":[{"s":{"wave":13,"freq":90,"sweep":0.2,"formantVowel":0.5,"formantSize":1.6,"formantQ":0.4,"vibDepth":0.15,"vibRate":9,"sustain":1,"attack":0.02,"release":0.1,"duration":0.4},"d":0,"g":1},{"s":{"wave":14,"freq":120,"bubbleRate":8,"bubbleRise":0.3,"bubbleSpread":0.5,"bubbleDecay":0.5,"sustain":1,"attack":0.01,"release":0.2,"duration":0.5},"d":0.3,"g":0.6},{"s":{"wave":0,"freq":400,"noise":0.9,"attack":0,"hold":0.002,"decay":0.1,"sustain":0,"release":0.05,"filterMode":0,"cutoff":1500,"reso":0.3,"duration":0.25},"d":0.35,"g":0.6}]},{"key":"slime-toxic-cloud","mat":"slime","word":"Toxic","say":["toxic hiss","bubbles"],"from":"spell-slime toxic-cloud","layers":[{"s":{"wave":0,"freq":1500,"noise":0.95,"attack":0.2,"decay":0.2,"sustain":0.2,"release":0.25,"cutoff":1800,"reso":0.5,"filtEnv":0.7,"width":0.7,"duration":1,"filterMode":2},"d":0,"g":1},{"s":{"wave":14,"freq":150,"bubbleRate":14,"bubbleRise":0.15,"bubbleSpread":0.5,"bubbleDecay":0.5,"sustain":1,"attack":0.01,"release":0.2,"duration":0.9},"d":0.1,"g":0.6}]},{"key":"stone-quake","mat":"stone","word":"Quaking","say":["rumble","cracking ground"],"from":"spell-stone quake","layers":[{"s":{"wave":0,"freq":60,"noise":0.75,"subOsc":0.6,"sweep":-0.2,"attack":0.05,"decay":0.4,"sustain":0.5,"release":0.3,"cutoff":700,"drive":0.35,"duration":1.1},"d":0,"g":1},{"s":{"wave":19,"impactTone":0.4,"impactDecay":0.08,"impactPunch":1,"impactGrit":0.9,"attack":0.001,"decay":0.02,"sustain":0,"release":0.03,"duration":0.8,"repeat":4,"rate":6},"d":0.1,"g":0.6}]},{"key":"stone-earth-slam","mat":"stone","word":"Petrifying","say":["rumble","slam","rubble"],"from":"spell-stone earth-slam","layers":[{"s":{"wave":0,"freq":60,"noise":0.75,"subOsc":0.6,"sweep":-0.2,"attack":0.15,"decay":0.4,"sustain":0.2,"release":0.3,"cutoff":700,"drive":0.35,"duration":0.6},"d":0,"g":1},{"s":{"wave":19,"impactTone":0.3,"impactDecay":0.35,"impactPunch":1,"impactGrit":0.7,"boom":0.9,"boomFreq":50,"boomDecay":0.3,"attack":0.001,"sustain":0,"decay":0.12,"release":0.2,"drive":0.4,"duration":0.6},"d":0.35,"g":0.9},{"s":{"wave":15,"particleRate":40,"particleTone":0.15,"particleDecay":0.35,"particleSpread":0.8,"sustain":1,"attack":0.01,"release":0.4,"cutoff":2200,"duration":0.8},"d":0.42,"g":0.5}]}];
+for (const r of WIZ_SPELLS) r.layers.forEach((L, i) => {
+  WIZ_PARTS["spell:" + r.key + ":" + i] = { say: r.say[i], word: r.word, low: L.s.boom > 0.5 || (L.s.freq || 440) < 100 ? 1 : 0, patch: L.s };
+});
+// The spells a result may be: the chosen materials' (in turn), or every one when no material was chosen.
+function wizSpellsFor(mats) {
+  const own = mats.length ? WIZ_SPELLS.filter((r) => mats.indexOf(r.mat) >= 0) : WIZ_SPELLS;
+  if (!mats.length) return own;
+  // interleave the materials, so a pick of two shows both early: fire, ice, fire …
+  const by = mats.map((m) => own.filter((r) => r.mat === m)).filter((l) => l.length), out = [];
+  for (let i = 0; out.length < own.length; i++) for (const l of by) if (l[i]) out.push(l[i]);
+  return out;
+}
+function wizCompose(answers, seed, slot, used) {
+  const kind = wizKind(answers.kind) || WIZ_KINDS[0], mats = (answers.mats || []).filter(wizMaterial);
+  const power = Math.max(1, Math.min(9, Math.round(answers.power || WIZ_POWER.neutral))), k = (power - WIZ_POWER.neutral) / 4;
+  const shape = styleShaper(answers.era || "Generic");
+  return wizSeeded(Math.imul(seed, 7919) + slot * 104729 + kind.key.length * 31 + mats.join("").length * 17 + power * 3, () => {
+    const roles = kind.roles.slice();
+    // the places materials may take: the roles past `keep` give way, then the free places (at most 4 layers)
+    const room = WIZ_LAYER_MAX - kind.keep, chosen = [];
+    for (let i = 0; i < Math.min(room, mats.length); i++) chosen.push(mats[(i + slot) % mats.length]);
+    const out = [];
+    const spells = kind.spells ? wizSpellsFor(mats) : [], spell = spells.length && (!mats.length || mats.some((m) => spells.some((r) => r.mat === m))) ? spells[slot % spells.length] : null;
+    if (spell) {
+      // THE MATERIAL'S OWN SPELL (fused), then any other chosen material's layer where there is room
+      spell.layers.forEach((L, i) => out.push({ part: "spell:" + spell.key + ":" + i, d: L.d, g: L.g, mat: spell.mat }));
+      for (const m of chosen) if (m !== spell.mat && !WIZ_SPELLS.some((r) => r.mat === m) && out.length < WIZ_LAYER_MAX) out.push({ part: m, d: wizMaterial(m).d, g: wizMaterial(m).g, mat: m });
+    } else {
+    roles.forEach((r, i) => out.push({ part: r[0][(slot + i) % r[0].length], d: r[1], g: r[2] }));
+    while (out.length + chosen.length > WIZ_LAYER_MAX && out.length > kind.keep) out.pop();   // the last roles give way
+    for (const m of chosen) out.push({ part: m, d: wizMaterial(m).d, g: wizMaterial(m).g, mat: m });
+    }
+    // the kind's extra role fills a place nothing took (not on a tame one: tame is fewer layers; never on a fused spell)
+    if (!spell && out.length < WIZ_LAYER_MAX && kind.extra && power >= 3) {
+      const ex = kind.extra, j = slot % ex[0].length;
+      out.push({ part: ex[0][j], d: Array.isArray(ex[1]) ? ex[1][j] : ex[1], g: ex[2] });
+    }
+    // powerful ones get a sub under everything; a tiny one keeps its first two layers
+    if (power >= 8 && out.length < WIZ_LAYER_MAX && !out.some((L) => WIZ_PARTS[L.part].low)) out.push({ part: "sub", d: 0, g: 0.6 });
+    // a tiny one is two layers: its first, and (when materials were chosen) a material, never the materials dropped
+    if (power <= 2 && spell) out.splice(2);   // a tiny spell: its first two layers (both its own material)
+    else if (power <= 2) { const m = out.find((L) => L.mat); out.splice(1); out.push(m || null); if (!out[1]) out.splice(1); if (!m && kind.roles[1]) out.push({ part: kind.roles[1][0][slot % kind.roles[1][0].length], d: kind.roles[1][1], g: kind.roles[1][2] }); }
+    const layers = out.map((L) => {
+      const part = WIZ_PARTS[L.part];
+      const s = audiblePatch(() => shape(fullGenome(varyPreset(part.patch))));
+      const lay = wizPowerLayer({ s: s, d: L.d, g: L.g, p: 0 }, k, part);
+      lay.part = L.part; lay.mat = L.mat;
+      return lay;
+    });
+    // layer 1 carries its pitch in its own frequencies (it has no `p`)
+    const top = layers[0];
+    if (top.p) { const r = Math.pow(2, top.p / 12); top.s.freq = Math.max(20, Math.min(4000, top.s.freq * r)); if (top.s.boomFreq) top.s.boomFreq = Math.max(25, Math.min(200, top.s.boomFreq * r)); top.p = 0; }
+    // the name: a power word (when not 5), then a material's or a part's word, then one of the kind's nouns
+    const pw = WIZ_POWER.words[power];
+    const words = layers.filter((L) => L.mat).map((L) => WIZ_PARTS[L.part].word).concat(layers.slice(1).map((L) => WIZ_PARTS[L.part].word));
+    let name = "";
+    for (let t = 0; t < kind.nouns.length * Math.max(1, words.length) && (!name || used.has(name)); t++) {
+      const w = words[(slot + Math.floor(t / kind.nouns.length)) % Math.max(1, words.length)] || "", n = kind.nouns[(slot + t) % kind.nouns.length];
+      if (w && n.toLowerCase().indexOf(w.slice(0, 4).toLowerCase()) >= 0) { name = ""; continue; }   // no "Blasting Blast"
+      name = [pw, w, n].filter(Boolean).join(" ");
+    }
+    if (!name) name = [pw, kind.nouns[slot % kind.nouns.length]].filter(Boolean).join(" ");
+    if (used.has(name)) name += " " + (slot + 1);
+    used.add(name);
+    return { name: name, layers: layers, parts: layers.map((L) => WIZ_PARTS[L.part].say) };
+  });
+}
+function wizNine(answers, seed) {
+  const used = new Set(), out = [];
+  for (let slot = 0; slot < 9; slot++) out.push(wizCompose(answers, seed, slot, used));
+  return out;
+}
+// A result as a whole sound: layer 1's settings, its other layers in `layers` (as the link and the layer bar keep them).
+function wizSound(c) {
+  const top = Object.assign({}, c.layers[0].s);
+  const rest = c.layers.slice(1).map((L) => {
+    const d = {};
+    for (const p of PARAMS) if (L.s[p[0]] !== p[5]) d[p[0]] = L.s[p[0]];
+    const e = { s: d, d: +L.d.toFixed(3), g: +L.g.toFixed(2), p: L.p || 0 };
+    return e;
+  });
+  top.layers = rest.length ? JSON.stringify(rest) : "";
+  return top;
+}
+
+const wiz = { answers: { kind: "", mats: [], era: "Generic", power: WIZ_POWER.neutral }, step: 0, seed: 1, list: [], cache: {} };
+const wizModal = document.createElement("div");
+wizModal.className = "modal wiz-modal";
+wizModal.hidden = true;
+wizModal.setAttribute("role", "dialog"); wizModal.setAttribute("aria-modal", "true"); wizModal.setAttribute("aria-label", "Wizard");
+wizModal.innerHTML =
+  '<div class="modal-box wiz-box">' +
+    '<div class="modal-head"><h2 data-icon="wand">Wizard</h2><span class="hint" id="wizStep"></span>' +
+      '<button id="wizClose" data-icon="close">Close</button></div>' +
+    '<div class="wiz-body" id="wizBody"></div>' +
+    '<div class="modal-foot wiz-foot" id="wizFoot"></div>' +
+  '</div>';
+document.body.appendChild(wizModal);
+const wizBody = wizModal.querySelector("#wizBody"), wizFoot = wizModal.querySelector("#wizFoot");
+const wizEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const WIZ_STEPS = 3;
+function wizOpen() { wizModal.hidden = false; wizDraw(); }
+function wizClose() { wizModal.hidden = true; }
+wizModal.querySelector("#wizClose").addEventListener("click", wizClose);
+wizModal.addEventListener("click", (e) => { if (e.target === wizModal) wizClose(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !wizModal.hidden) wizClose(); });
+function wizDraw() {
+  wizBody.textContent = ""; wizFoot.textContent = "";
+  const a = wiz.answers, step = wiz.step;
+  wizModal.querySelector("#wizStep").textContent = step < WIZ_STEPS ? "Question " + (step + 1) + " of " + WIZ_STEPS : "Nine sounds: Play to hear one, click one to load it";
+  if (step >= WIZ_STEPS) { wizResults(); return; }
+  wizBody.appendChild(wizEl("h3", "wiz-q", ["What is it?", "What's it made of? Pick any that fit, then Next", "Which era should it sound like?"][step]));
+  const cards = wizEl("div", "wiz-cards");
+  const card = (key, name, note, on, click) => {
+    const b = wizEl("button", "wiz-card" + (on ? " on" : ""));
+    b.type = "button"; b.dataset.key = key; b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.appendChild(wizEl("b", "", name));
+    if (note) b.appendChild(wizEl("i", "", note));
+    b.addEventListener("click", click);
+    cards.appendChild(b);
+  };
+  if (step === 0) {
+    for (const kd of WIZ_KINDS) card(kd.key, kd.name, kd.note, a.kind === kd.key, () => { if (a.kind !== kd.key) { a.kind = kd.key; wiz.seed = 1; } wiz.step = 1; wizDraw(); });
+  } else if (step === 1) {
+    card("", "Anything", "the kind's own sound", !a.mats.length, () => { a.mats = []; wiz.seed = 1; wiz.step = 2; wizDraw(); });
+    for (const m of WIZ_MATERIALS) card(m.key, m.name, m.note, a.mats.indexOf(m.key) >= 0, () => {
+      const i = a.mats.indexOf(m.key);
+      if (i >= 0) a.mats.splice(i, 1); else a.mats.push(m.key);
+      wiz.seed = 1; wizDraw();
+    });
+  } else {
+    for (const st of STYLES) card(st.name, st.name, styleHelp(st.name), a.era === st.name, () => { a.era = st.name; wiz.seed = 1; wiz.step = 3; wizDraw(); });
+  }
+  wizBody.appendChild(cards);
+  if (step > 0) { const back = wizEl("button", "", "Back"); back.addEventListener("click", () => { wiz.step--; wizDraw(); }); wizFoot.appendChild(back); }
+  if (step === 1) {
+    const n = a.mats.length, next = wizEl("button", "primary wiz-next", n ? "Next (" + n + (n === 1 ? " material)" : " materials)") : "Next (anything)");
+    next.addEventListener("click", () => { wiz.step = 2; wizDraw(); });
+    wizFoot.appendChild(next);
+  }
+  const first = cards.querySelector(".on") || cards.querySelector("button");
+  if (first) first.focus();
+}
+// The nine, rendered only when played (a layered sound is a few renders; nine at once was the chug in VFX's Wizard).
+function wizRender(i) {
+  const key = wiz.seed + "|" + i;
+  if (!wiz.cache[key]) wiz.cache[key] = withState(wizSound(wiz.list[i]), () => render(), { norm: true, sample: null, ir: null });
+  return wiz.cache[key];
+}
+function wizResults() {
+  const a = wiz.answers, kind = wizKind(a.kind) || WIZ_KINDS[0];
+  const mats = a.mats.map((k) => wizMaterial(k).name).join(" + ");
+  wizBody.appendChild(wizEl("h3", "wiz-q", kind.name + (mats ? " · " + mats : "") + " · " + a.era));
+  // the POWER dial: 1 tame .. 9 colossal; a press composes the nine again at that power
+  const dial = wizEl("div", "wiz-power");
+  dial.setAttribute("role", "group"); dial.setAttribute("aria-label", "Power");
+  dial.appendChild(wizEl("span", "wiz-power-lab", "Power"));
+  for (let v = 1; v <= 9; v++) {
+    const pb = wizEl("button", v === a.power ? "on" : "", String(v));
+    pb.type = "button"; pb.dataset.power = v; pb.setAttribute("aria-pressed", v === a.power ? "true" : "false");
+    pb.title = "Power " + v + (v === 5 ? " (as designed)" : ": " + WIZ_POWER.words[v].toLowerCase());
+    pb.addEventListener("click", () => { if (a.power !== v) { a.power = v; wizDraw(); } });
+    dial.appendChild(pb);
+  }
+  dial.appendChild(wizEl("span", "wiz-power-word", WIZ_POWER.words[a.power] || "As designed"));
+  wizBody.appendChild(dial);
+  const t0 = performance.now();
+  wiz.list = wizNine(a, wiz.seed); wiz.cache = {};
+  wiz.ms = Math.round(performance.now() - t0);
+  const grid = wizEl("div", "wiz-grid");
+  wiz.list.forEach((c, i) => {
+    const cell = wizEl("div", "wiz-res");
+    const b = wizEl("button", "wiz-pick");
+    b.type = "button"; b.dataset.i = i;
+    b.title = "Load " + c.name + " with its " + c.layers.length + " layers (Ctrl+Z undoes it)";
+    b.appendChild(wizEl("span", "wiz-name", c.name));
+    b.appendChild(wizEl("span", "wiz-ing", c.parts.join(" · ")));
+    b.appendChild(wizEl("span", "wiz-sub", c.layers.length + (c.layers.length === 1 ? " layer" : " layers")));
+    const cv = wizEl("canvas", "wiz-wave"); cv.width = 240; cv.height = 40;
+    b.appendChild(cv);
+    b.addEventListener("click", () => wizLoad(i));
+    cell.appendChild(b);
+    const play = wizEl("button", "wiz-play");
+    play.type = "button";
+    setIconLabel(play, "play", "Play");
+    play.title = "Hear " + c.name + " (it does not load it)";
+    play.addEventListener("click", () => {
+      const r = wizRender(i);
+      wizWave(cv, r.L);
+      playBuffer(r.L, r.R);
+      grid.querySelectorAll(".wiz-play.on").forEach((x) => x.classList.remove("on"));
+      play.classList.add("on");
+    });
+    cell.appendChild(play);
+    grid.appendChild(cell);
+  });
+  wizBody.appendChild(grid);
+  const back = wizEl("button", "", "Back");
+  back.addEventListener("click", () => { wiz.step = WIZ_STEPS - 1; wizDraw(); });
+  const more = wizEl("button", "primary", "More like these");
+  more.setAttribute("data-icon", "refresh"); more.title = "Nine more for the same answers";
+  more.addEventListener("click", () => { wiz.seed++; wizDraw(); });
+  const again = wizEl("button", "", "Start over");
+  again.addEventListener("click", () => { wiz.answers = { kind: "", mats: [], era: "Generic", power: WIZ_POWER.neutral }; wiz.step = 0; wiz.seed = 1; wizDraw(); });
+  wizFoot.append(back, more, again, wizEl("span", "hint", "Play to hear one; click one to load it with its layers. Ctrl+Z undoes it."));
+  iconsIn(wizFoot);
+}
+function wizWave(cv, L) {
+  const g = cv.getContext("2d"), w = cv.width, h = cv.height, step = Math.max(1, Math.floor(L.length / w));
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--wave") || "#ff7a45";
+  for (let x = 0; x < w; x++) {
+    let m = 0;
+    for (let i = x * step; i < Math.min(L.length, (x + 1) * step); i++) m = Math.max(m, Math.abs(L[i]));
+    const y = Math.max(1, m * (h / 2 - 1));
+    g.fillRect(x, h / 2 - y, 1, 2 * y);
+  }
+}
+// Load a result: the whole sound, every layer (the layer bar shows how it is built), as one undo step.
+function wizLoad(i) {
+  const c = wiz.list[i];
+  applyPreset(wizSound(c), c.name, "Wizard");
+  wizClose();
+  nowSay(c.name + ": " + c.layers.length + " layers (" + c.parts.join(" + ") + "). Click a layer to see how it is made");
+}
+document.getElementById("wizardBtn").addEventListener("click", wizOpen);
+
 const fndType = foundryModal.querySelector("#fndType");
 const fndStyles = foundryModal.querySelector("#fndStyles");
 const fndStyleVal = () => (fndStyles.querySelector('input[name="fndstyle"]:checked') || {}).value || "Generic";
