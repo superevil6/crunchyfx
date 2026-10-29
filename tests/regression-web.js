@@ -552,6 +552,92 @@
       return ok(all && differs && sameState(snap, JSON.parse(JSON.stringify(snap))), JSON.stringify(link));
     } finally { applyPreset(keep, keepLabel); }
   });
+  // SFX 1.3 LAYERS (SFX-1.3-PLAN.md): the editor edits one layer; the sound is all of them, in renders, links, undo.
+  t("layers/add-a-layer-edit-it-and-the-sound-is-both", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Laser"]), "Laser");
+      const alone = render(), laserWave = state.wave;
+      document.querySelector("#layerBar .layer-add").click();
+      const tabs = document.querySelectorAll("#layerBar .layer-tab"), list1 = soundLayers(soundSnap().layers);
+      const added = tabs.length === 2 && layerSel === 1 && list1.length === 1 && list1[0].p === -12 && tabs[1].classList.contains("on") &&
+        !!document.querySelector('#layerBar input[data-mix="d"]');
+      state.wave = 0; state.freq = 110;                      // make layer 2 a low sine
+      const list2 = soundLayers(soundSnap().layers), both = render();
+      const kept = soundSnap().wave === laserWave && list2[0].s.wave === 0 && list2[0].s.freq === 110 && layerBase.wave === laserWave;
+      return ok(added && kept && !sameR(both, alone) && both.L.length === alone.L.length, [added, kept, sameR(both, alone)].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/a-preset-replaces-only-the-selected-layer-and-switching-changes-nothing", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Laser"]), "Laser");
+      layerAdd();
+      const before = snapshotState();
+      applyPreset(PRESETS["Coin"], "Coin");                  // a preset on layer 2
+      const after = snapshotState(), l = soundLayers(after.layers);
+      const local = layerSel === 1 && after.wave === before.wave && after.freq === before.freq && l.length === 1 && l[0].s.wave === (PRESETS["Coin"].wave != null ? PRESETS["Coin"].wave : PARAM_DEFAULTS.wave);
+      const s0 = snapshotState(); layerSelect(0); const s1 = snapshotState(); layerSelect(1); const s2 = snapshotState();
+      const still = sameState(s0, s1) && sameState(s1, s2) && layerSel === 1;
+      return ok(local && still, [local, still].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/a-link-history-and-undo-carry-every-layer", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Laser"]), "Laser");
+      layerAdd(); layerMix("d", 0.12); layerMix("g", 0.5); play("Layer delay");
+      const snd = snapshotState(), link = decodePatch(encodePatch()).s, rWhole = render();
+      const linked = typeof link.layers === "string" && soundLayers(link.layers)[0].d === 0.12;
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Coin"]), "Coin");   // a whole other sound
+      const cleared = !state.layers && layerSel === 0 && document.querySelectorAll("#layerBar .layer-tab").length === 1;
+      applyPreset(Object.assign({ layers: "" }, link), "Shared");            // the link opens it, every layer
+      const reopened = sameState(snapshotState(), snd) && layerSel === 0 && sameR(render(), rWhole);
+      undoEdit();                                                         // back to the Coin
+      const undone = !state.layers;
+      redoEdit();
+      const redone = sameState(snapshotState(), snd);
+      return ok(linked && cleared && reopened && undone && redone, [linked, cleared, reopened, undone, redone].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/mute-and-remove-and-at-most-four", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Explosion"]), "Explosion");
+      const one = render();
+      layerAdd();
+      const two = render();
+      layerMix("m", 1);
+      const muted = render(), mutedTab = document.querySelector("#layerBar .layer-tab.muted");
+      layerAdd(); layerAdd();
+      const full = soundLayers(soundSnap().layers).length === 3 && document.querySelector("#layerBar .layer-add").disabled;
+      layerAdd();                                                         // a fifth: refused
+      const capped = soundLayers(soundSnap().layers).length === 3;
+      layerSelect(3); layerRemove(); layerSelect(2); layerRemove(); layerSelect(1); layerRemove();
+      const back = !state.layers && layerSel === 0 && sameR(render(), one);
+      return ok(!sameR(two, one) && !sameR(muted, two) && !!mutedTab && full && capped && back, [!sameR(two, one), !sameR(muted, two), !!mutedTab, full, capped, back].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/a-one-layer-sound-is-exactly-as-before-and-a-bred-child-carries-no-layers", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Coin"]), "Coin");
+      const single = sameR(render(), renderPatch(state, { sample: sampleBuf, normalize: normalizeOut, customIR: customIR })) && snapshotState().layers === "" &&
+        !("layers" in decodePatch(encodePatch()).s);
+      layerAdd();
+      const g = genomeFromState();
+      return ok(single && !("layers" in g), [single, "layers" in g].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/a-planted-sound-keeps-its-layers", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Laser"]), "Laser");
+      layerAdd();
+      const f = editorFields("Layered"), r = soundRender(f), here = render();
+      return ok(sameR(r, here) && typeof soundPatch(f).snap.layers === "string", "planted render matches the editor's");
+    } finally { applyPreset(keep, keepLabel); }
+  });
   // Foundation 3: withState swaps the snapshot's OWN sample / IR / Normalize when given, and puts the editor's back.
   t("withstate/a-snapshot-renders-with-its-own-sample-ir-and-normalize-then-the-editor-is-untouched", function () {
     const keepS = sampleBuf, keepIR = customIR, keepN = normalizeOut;

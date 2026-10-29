@@ -24,6 +24,9 @@
 //                                     seeds as they always were (an exact no-op).
 //
 // rawPeak is the pre-normalization peak, so callers can tell "quiet" from "silent".
+//
+//   renderLayers(base, layers, opts) -> { L, R, rawPeak }   SFX 1.3: a sound of 2-4 layers mixed (see THE MIX BUS).
+//   renderSound(snap, defaults, opts) -> { L, R, rawPeak }   a whole sound as a share link stores it (its `layers`).
 
 // ---------- Audibility ----------
 // A sound whose intrinsic peak is below this floor (~ -66 dB) is treated as
@@ -726,6 +729,76 @@ function renderPatch(st, opts) {
   if (opts.raw) return { L, R, rawPeak };   // layers: the mix bus runs one masterStage over the sum
   masterStage(L, R, st, rawPeak, normalizeOut);
   return { L, R, rawPeak };
+}
+
+// THE MIX BUS (SFX 1.3 LAYERS, SFX-1.3-PLAN.md; AJ 2026-10-28). Real sound design stacks engines: a gunshot is a crack
+// (impact) + a body (noise) + a thump (a low sine) + a mechanism click (modal). One sound, 2-4 layers:
+//   renderLayers(base, layers, opts) -> { L, R, rawPeak }
+//     base    layer 1's FULL patch. Its master settings (Gain, Normalize, Limiter, Reverse) run ONCE over the mix.
+//     layers  layers 2+: [{ st (a FULL patch), delay (s, >= 0), gain (x, default 1), pitch (semitones), mute }].
+//     opts    as renderPatch's (sample, customIR, normalize, raw, seedSalt).
+// Each layer renders RAW (no master stage), layer i with seedSalt + i so two layers of one engine never share their
+// noise. With Normalize on (the default), each layer is first brought to the same peak, so a quiet engine is not lost
+// under a loud one; then a layer 2+ is scaled by its own Gain (relative to the default, LAYER_GAIN_REF: an untouched
+// layer adds at its mix `gain`) and that `gain`. Pitch scales the tuned frequencies (freq, the body's boomFreq). The
+// layers sum at their delays (length = the latest end), and the master stage runs once. A sound without layers never
+// comes here: renderPatch alone, byte for byte.
+const LAYER_GAIN_REF = 0.7;   // the Gain param's default
+const LAYER_MAX_DELAY = 2;    // seconds
+function renderLayers(base, layers, opts) {
+  opts = opts || {};
+  const salt0 = opts.seedSalt | 0, normalizeOut = opts.normalize !== false;
+  const parts = [{ st: base, off: 0, w: 1, salt: salt0 }];
+  (layers || []).forEach((ly, i) => {
+    if (!ly || !ly.st || ly.mute) return;
+    const st = Object.assign({}, ly.st), pitch = +ly.pitch || 0;
+    if (pitch) {
+      const r = Math.pow(2, pitch / 12);
+      st.freq = Math.max(1, st.freq * r);
+      if (st.boomFreq) st.boomFreq = Math.max(1, st.boomFreq * r);
+    }
+    const g = ly.gain == null ? 1 : Math.max(0, +ly.gain || 0);
+    const off = Math.round(Math.max(0, Math.min(LAYER_MAX_DELAY, +ly.delay || 0)) * SR);
+    parts.push({ st, off, w: g * ((st.gain == null ? LAYER_GAIN_REF : st.gain) / LAYER_GAIN_REF), salt: salt0 + i + 1 });
+  });
+  const outs = parts.map((p) => {
+    const r = renderPatch(p.st, Object.assign({}, opts, { raw: true, seedSalt: p.salt }));
+    const norm = normalizeOut && r.rawPeak > AUDIBLE_FLOOR ? Math.min(NORM_TARGET / r.rawPeak, NORM_MAX_BOOST) : 1;
+    return { r, off: p.off, k: p.w * norm };
+  });
+  let n = 1;
+  for (const o of outs) n = Math.max(n, o.off + o.r.L.length);
+  const L = new Float32Array(n), R = new Float32Array(n);
+  for (const o of outs) {
+    const a = o.r.L, b = o.r.R, k = o.k, off = o.off;
+    if (!k) continue;
+    for (let i = 0; i < a.length; i++) { L[off + i] += a[i] * k; R[off + i] += b[i] * k; }
+  }
+  let rawPeak = 0;
+  for (let i = 0; i < n; i++) {
+    const x = Math.abs(L[i]); if (x > rawPeak) rawPeak = x;
+    const y = Math.abs(R[i]); if (y > rawPeak) rawPeak = y;
+  }
+  if (opts.raw) return { L, R, rawPeak };
+  masterStage(L, R, base, rawPeak, normalizeOut);
+  return { L, R, rawPeak };
+}
+
+// A whole SOUND as its share link stores it: layer 1's patch, with `layers` (a JSON string) carrying layers 2+ as
+// [{ s: <diff against the defaults>, d: delay s, g: gain, p: semitones, m: 1 when muted }]. `defaults` is the PARAMS
+// defaults (the app's, or the exported bundle's DEFAULTS), since a layer is stored as a diff. No layers (the field
+// absent, "" or unreadable): exactly renderPatch.
+const LAYER_MAX = 4;          // layers in a sound, layer 1 included
+function soundLayers(str) {
+  if (!str || typeof str !== "string") return [];
+  let a;
+  try { a = JSON.parse(str); } catch (e) { return []; }
+  return Array.isArray(a) ? a.filter((e) => e && typeof e.s === "object" && e.s).slice(0, LAYER_MAX - 1) : [];
+}
+function renderSound(snap, defaults, opts) {
+  const list = soundLayers(snap.layers);
+  if (!list.length) return renderPatch(snap, opts);
+  return renderLayers(snap, list.map((e) => ({ st: Object.assign({}, defaults, e.s), delay: e.d, gain: e.g, pitch: e.p, mute: e.m })), opts);
 }
 
 // THE MASTER STAGE: loudness normalize, gain + fade-out, limiter, safety clip, reverse. In place. Moved out of

@@ -128,6 +128,17 @@
       const files = buildPackFiles(), zf = packZipFiles(files);
       line("pack:tres", fnv(new TextEncoder().encode(packTres(files))));
       line("pack:zip", fnv(makeZip(zf)));
+      // SFX 1.3 LAYERS (appended): a three-layer sound (Laser over an Explosion 20 ms in, 5 semitones down, and a Coin at
+      // 100 ms), the same with the Coin muted, with Normalize off, and two layers of one noisy engine (their noise differs)
+      normalizeOut = true;
+      const lay = function (list) { return Object.assign({}, PRESETS["Laser"], { layers: JSON.stringify(list) }); };
+      const three = [{ s: PRESETS["Explosion"], d: 0.02, g: 0.6, p: -5 }, { s: PRESETS["Coin"], d: 0.1, g: 0.5, p: 0 }];
+      line("layers:three", pcm(withState(lay(three), render)));
+      line("layers:muted", pcm(withState(lay([three[0], Object.assign({}, three[1], { m: 1 })]), render)));
+      normalizeOut = false;
+      line("layers:no-normalize", pcm(withState(lay(three), render)));
+      normalizeOut = true;
+      line("layers:same-engine", pcm(withState(Object.assign({}, PRESETS["Explosion"], { layers: JSON.stringify([{ s: PRESETS["Explosion"], d: 0, g: 1, p: 0 }]) }), render)));
     } finally {
       Math.random = keepRand; normalizeOut = keepN; sampleBuf = keepS; customIR = keepIR;
       varNameEl.value = keepName; varGenomes = keepVar; sequence = keepSeq;

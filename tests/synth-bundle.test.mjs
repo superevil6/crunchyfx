@@ -94,6 +94,26 @@ ok(same(S.render(sine), S.render(sine, { seedSalt: 7 })), "negative: a plain sin
 ok(!same(S.render(patch({ wave: 0, noise: 0.4, duration: 0.25 })), S.render(patch({ wave: 0, noise: 0.4, duration: 0.25 }), { seedSalt: 1 })),
    "seedSalt 1 changes the noise layer (the main LCG)");
 
+// 6b. SFX 1.3 LAYERS through the bare bundle (what CrunchyVFX and BGM call): a link's patch with `layers` renders every
+// layer mixed; no layers (absent, "" or unreadable) is exactly the single sound; delays lengthen it; a muted layer is gone.
+{
+  const base = patch({ wave: 19, duration: 0.3 }), ext = { wave: 0, freq: 220, duration: 0.3 };
+  const lay = (list) => Object.assign({}, base, { layers: JSON.stringify(list) });
+  ok(same(S.render(Object.assign({}, base, { layers: "" })), S.render(base)) && same(S.render(Object.assign({}, base, { layers: "nonsense{" })), S.render(base)),
+     "layers absent, empty or unreadable: exactly the single sound");
+  const two = S.render(lay([{ s: ext, d: 0, g: 1, p: 0 }]));
+  ok(!same(two, S.render(base)) && two.L.length === S.render(base).L.length, "a second layer is mixed in (same length at no delay)");
+  ok(S.render(lay([{ s: ext, d: 0.25, g: 1, p: 0 }])).L.length === Math.floor(0.55 * S.SR) || S.render(lay([{ s: ext, d: 0.25, g: 1, p: 0 }])).L.length === Math.round(0.25 * S.SR) + Math.floor(0.3 * S.SR),
+     "a delay lengthens the sound to the latest layer's end");
+  const muted = S.render(lay([{ s: ext, d: 0, g: 1, p: 0, m: 1 }]));
+  ok(muted.L.length === S.render(base).L.length && !same(muted, two), "a muted layer is not heard");
+  ok(!same(S.render(lay([{ s: ext, d: 0, g: 1, p: 12 }])), two), "pitch moves a layer");
+  ok(same(S.render(lay([{ s: ext, d: 0.05, g: 0.5, p: -7 }])), S.render(lay([{ s: ext, d: 0.05, g: 0.5, p: -7 }]))), "deterministic");
+  const peak = (r) => r.L.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+  ok(peak(two) <= 1, "the mix stays within full scale (one master stage over the sum)");
+  ok(typeof S.renderLayers === "function", "the bundle publishes renderLayers");
+}
+
 // 6. The exporter's guards still catch their negatives (an app-global read, a `state.` read).
 import { execFileSync } from "node:child_process";
 let selfTest = "";

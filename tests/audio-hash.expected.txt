@@ -995,4 +995,9 @@ AUDIO x:vary:2 89ef2fa083260a2d
 AUDIO x:vary:3 b4e27d3e5293301d
 AUDIO x:pack:tres 0ee5611ee441bcfb
 AUDIO x:pack:zip bffcf6003cb0fb71
-AUDIOXHASH 6cbf7afb8b60a818 over 18
+# SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
+AUDIO x:layers:three e65820c579bbef36
+AUDIO x:layers:muted a9015f513759839e
+AUDIO x:layers:no-normalize 1c4c1e0d0d344206
+AUDIO x:layers:same-engine 8bc0db05e41c0dc6
+AUDIOXHASH b486abaa861a72f5 over 22

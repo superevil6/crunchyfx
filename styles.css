@@ -730,3 +730,18 @@ body:has(#libDock > .lib-dock:not([hidden])) { padding-right: 680px; }
   .kit-row button { padding: 3px 10px; font-size: 12px; }
   .kit-box .var-ctl select { padding: 6px 24px 6px 8px; font-size: 13px; }
   @media (max-width: 560px) { .kit-row { grid-template-columns: 80px 1fr auto auto; } .kit-row .kit-len, .kit-row .kit-use { display: none; } }
+
+/* SFX 1.3 LAYERS: the layer bar over the editor (tabs, + Layer, Solo; a layer 2+'s mix) */
+.layerbar { margin: 16px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.layer-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.layer-lab { font-size: 12px; color: var(--muted, #8f8898); margin-right: 4px; }
+.layer-tab { padding: 3px 9px; font-size: 12px; }
+.layer-tab.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #121116); }
+.layer-tab.muted { opacity: .55; text-decoration: line-through; }
+.layer-add, .layer-solo { padding: 3px 9px; font-size: 12px; }
+.layer-mix { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 12px; }
+.layer-mix label { display: inline-flex; align-items: center; gap: 6px; }
+.layer-mix input[type=range] { width: 120px; }
+.layer-mix span { min-width: 52px; color: var(--muted, #8f8898); }
+.layer-rm { padding: 3px 9px; font-size: 12px; }
+

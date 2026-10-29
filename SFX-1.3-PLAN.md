@@ -68,7 +68,10 @@ Full findings are in the review (lead's session, 2026-10-27); file:line pointers
    differs on every engine; a plain sine is unmoved by a salt (negative).
    **`opts.raw` (no master stage: normalize, fade, limiter, clip, reverse) and `seedSalt`,** both neutral by default.
    Layers need them: each layer must be raw audio for the mix bus, and two layers of one engine need different noise.
-5. **Decide link versioning.** Proposed: layer 0 stays the top-level `s`, plus `l: [diffs]`, so older SFX, VFX and BGM play
+5. **DECIDED 2026-10-28 (with layers):** layer 1 stays the top-level `s`; layers 2+ ride in `s.layers`, so `v` stays 1
+   and every older reader (SFX before 1.3, VFX, BGM) plays layer 1 and ignores the rest. The re-exported bundle's
+   `render` plays every layer. (The `v: 2` alternative was not needed.)
+   **Decide link versioning.** Proposed: layer 0 stays the top-level `s`, plus `l: [diffs]`, so older SFX, VFX and BGM play
    the primary layer. Alternatively `v: 2`, which old decoders reject. They don't check `v` today, so `decodePatch` becomes
    `v`-aware and is re-exported to VFX and BGM BEFORE layers ship.
 6. **DONE except the layered set** (layers don't exist yet): `extended()` in tests/audio-hash.js adds 18 `x:` lines + an
@@ -79,6 +82,41 @@ Full findings are in the review (lead's session, 2026-10-27); file:line pointers
    zip bytes, a custom IR, granular with a sample, and Breed and Variations output under a seed.
 
 ## 1.3 features
+
+> **2026-10-28: LAYERS ARE IN** (not committed). What was built:
+>
+> **The engine** (synth.js, all pure):
+> - `renderLayers(base, layers, opts)` is the mix bus. Each layer renders raw with `seedSalt + i`. With Normalize on,
+>   each is brought to the same peak, then weighted by its own Gain (relative to the 0.7 default) and its mix volume.
+>   Pitch scales `freq` and `boomFreq`. Layers sum at their delays (0-2 s) and one master stage runs, layer 1's.
+> - `renderSound(snap, defaults, opts)` renders a whole sound from its link shape (`layers` a JSON string of
+>   `{ s: diff, d, g, p, m }`; absent, "" or unreadable is exactly `renderPatch`). At most 4 layers.
+> - The bundle's `render` is `renderSound` with its DEFAULTS, and it publishes `renderLayers`.
+>
+> **The app** (index.html):
+> - `state` is the SELECTED layer, so every control works unchanged. `layerSel` / `layerBase` / `soundSnap()` put the
+>   whole sound back together for render, snapshots, History, Undo (which returns to the layer the edit was on), links,
+>   My Presets, project files and planted sounds.
+> - `layers` is deliberately NOT an SFX_EXTRA: genomes never carry it.
+> - A preset, Randomize, Breed, Variations, Foundry or a Kit sound replaces the selected layer. A whole sound (it says
+>   `layers`: a link, History, My Presets, a project, a planted sound) replaces all. A preset on one layer of a layered
+>   sound keeps the sound's name.
+> - The layer bar over Quick shape: tabs named by engine, + Layer (a copy an octave down), Solo, and a layer 2+'s
+>   Delay / Volume / Pitch / Mute / Remove.
+>
+> **Proved:**
+> - The audio hash: all 996 earlier lines identical, plus 4 `x:layers` lines (three layers, muted, Normalize off, two
+>   layers of one engine).
+> - synth-bundle 50/50 (layers through the bare bundle).
+> - Web 48/48 (6 `layers/` rows); desktop 52/52 (the v1.1 store and files open as before); wiring.
+> - godot-check 10 and godot-pack 7 in real Godot.
+>
+> **Not yet:**
+> - Variations (and so the Godot pack) of a layered sound vary and render the SELECTED layer alone.
+> - The riff transposes layer 1 only.
+> - One imported sample and one IR serve every layer.
+> - VFX and BGM play layer 1 until they re-pull the bundle (VFX: re-pulling moves one frame-hash line, AJ's call, below).
+> - The Wizard, built on layers, is next.
 
 - **Layers:** `renderLayers(patch, opts)` in synth.js calls `renderPatch` per layer (raw, salted), applies each layer's
   delay, pitch (scaling `freq` and `boomFreq`) and volume, sums them on a mix bus, then runs one master stage.

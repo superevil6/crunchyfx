@@ -28,7 +28,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "synth-export" / "crunchysfx-synth.js"
 
 # Names the bundle publishes. Anything else it defines stays private inside the IIFE.
-EXPORTS = ["render", "masterStage", "encodeWav", "decodePatch", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT",
+EXPORTS = ["render", "renderLayers", "masterStage", "encodeWav", "decodePatch", "DEFAULTS", "PARAMS", "SR", "VERSION", "BUILT",
            "SHA256"]
 
 # Things that must NOT appear in the engine sources — the whole point of the extraction is that
@@ -262,8 +262,11 @@ root.CrunchySynth = {
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,
-  // renderPatch(patch, { sample, normalize, customIR, raw, seedSalt }) -> { L, R, rawPeak }
-  render: renderPatch,
+  // render(patch, { sample, normalize, customIR, raw, seedSalt }) -> { L, R, rawPeak }. SFX 1.3: a patch carrying
+  // `layers` (a layered sound's share link) renders all its layers mixed; any other patch is exactly renderPatch.
+  render: function (patch, opts) { return renderSound(patch, DEFAULTS, opts); },
+  // renderLayers(base, [{ st, delay, gain, pitch, mute }], opts): the mix bus itself, for full patches
+  renderLayers: renderLayers,
   // masterStage(L, R, patch, rawPeak, normalize): normalize, gain, fade, limiter, clip, reverse, in place
   // (what render does after its effects; with { raw: true } a mix bus calls it once over a sum).
   masterStage: masterStage,
