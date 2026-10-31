@@ -185,6 +185,30 @@
     });
     return ok(!bad.length, bad.join(" · "));
   });
+  // AJ 2026-10-31: a Quick Shape slider moved away and back gave "a totally different noise" (it read one param back but
+  // wrote several). Every macro on several presets: the start spot is the sound, two drags away and back restore every
+  // param exactly, and the ends still reach the macro's own extremes (enums aside).
+  t("quick-shape/back-to-the-start-is-the-same-sound-and-the-ends-still-reach-the-extremes", function () {
+    const bad = [];
+    capture(function () {
+      const move = (el, v) => { el.value = String(v); el.dispatchEvent(new Event("input")); el.dispatchEvent(new Event("change")); };
+      ["Jump", "Laser", "Explosion", "Coin"].filter((n) => PRESETS[n]).forEach(function (n) {
+        MACROS.forEach(function (m) {
+          applyPreset(PRESETS[n], n);
+          const el = document.getElementById(m.id), start = +el.value, keys = Object.keys(m.to(0));
+          const before = JSON.stringify(keys.map((k) => state[k]));
+          move(el, Math.min(1, start + 0.37)); move(el, Math.max(0, start - 0.29)); move(el, start);
+          if (JSON.stringify(keys.map((k) => state[k])) !== before) bad.push(n + " " + m.name + ": " + before + " → " + JSON.stringify(keys.map((k) => state[k])));
+          [0, 1].filter((v) => v !== start).forEach(function (v) {   // an end that IS the start gives the sound itself
+            move(el, v);
+            const want = m.to(v);
+            keys.forEach(function (k) { if (PARAM_BY_KEY[k][8] !== "enum" && Math.abs(state[k] - want[k]) > 1e-6 * Math.max(1, Math.abs(want[k]))) bad.push(n + " " + m.name + " at " + v + ": " + k + " " + state[k] + " ≠ " + want[k]); });
+          });
+        });
+      });
+    });
+    return ok(!bad.length, bad.slice(0, 4).join(" · "));
+  });
   t("tools/click-hears-double-click-or-use-loads-in-breed-variations-and-foundry", function () {
     const bad = [];
     capture(function () {

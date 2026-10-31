@@ -2704,22 +2704,53 @@ const MACROS = [
     from: () => clamp01(state.chorusMix / 0.7) },
 ];
 
+// ANCHORED (AJ 2026-10-31: "you click a spot and it alters it as expected, however when you go to return to that spot,
+// it's a totally different noise"). A macro writes several params but `from()` reads only one back, so its starting spot
+// only approximated the sound, and the first nudge snapped every other param to `to(v)`. Now the spot a macro starts at
+// IS the current sound: moving right blends each param from where it is toward `to(1)`, moving left toward `to(0)`
+// (in log steps for a param the macro sweeps exponentially, such as cutoff or pitch), so returning to the start gives
+// the sound back exactly and the ends still reach the macro's extremes. An enum (the filter type) is left as it is.
+// The anchor lasts across drags while only this macro changes the sound; anything else (a preset, a raw slider, another
+// macro, undo) re-anchors it at its next touch.
+const macroAnchor = {};   // id -> { v0, base, v, after }
+const macroSnap = () => JSON.stringify(state);
+function macroBlend(k, base, end, f) {
+  const p = PARAM_BY_KEY[k];
+  if (p && p[8] === "enum") return base;
+  if (f <= 0 || typeof base !== "number" || typeof end !== "number") return f <= 0 ? base : end;
+  let x = base > 0 && end > 0 && Math.max(base, end) / Math.min(base, end) >= 10
+    ? base * Math.pow(end / base, f) : base + (end - base) * f;
+  if (p) { x = Math.max(p[2], Math.min(p[3], x)); x = p[4] >= 1 ? Math.round(x) : +x.toFixed(4); }
+  return x;
+}
 function applyMacro(m, v) {
-  const t = m.to(v);
-  for (const k in t) {
-    state[k] = t[k];
+  let a = macroAnchor[m.id];
+  if (!a || a.after !== macroSnap()) {
+    const t0 = m.to(0), base = {};
+    for (const k in t0) base[k] = state[k];
+    a = macroAnchor[m.id] = { v0: +m.from().toFixed(2), base };   // the spot the slider showed (0.01 steps)
+  }
+  const end = v >= a.v0 ? m.to(1) : m.to(0), span = v >= a.v0 ? 1 - a.v0 : a.v0;
+  const f = v === a.v0 ? 0 : span > 0 ? Math.abs(v - a.v0) / span : 1;   // at the start: the sound itself (even at an end)
+  for (const k in a.base) {
+    state[k] = macroBlend(k, a.base[k], end[k], f);
     const el = document.querySelector(`[data-key="${k}"]`);
     if (el) el.value = state[k];
     const p = PARAM_BY_KEY[k];
     if (p && outputs[k]) outputs[k].textContent = fmt(p, state[k]);
   }
+  a.v = v;
+  a.after = macroSnap();
+  updateMacros();   // the others that share a param (Punch and Length share decay) follow; this one keeps its spot
 }
 // Refresh every macro slider from the current params (called after any raw-slider
-// edit, preset, or randomize so the macros never drift out of sync).
+// edit, preset, or randomize so the macros never drift out of sync). A macro whose
+// anchor is still current keeps the spot it was moved to.
 function updateMacros() {
+  const now = macroSnap();
   for (const m of MACROS) {
-    const el = document.getElementById(m.id);
-    if (el) el.value = m.from().toFixed(2);
+    const el = document.getElementById(m.id), a = macroAnchor[m.id];
+    if (el) el.value = (a && a.after === now && a.v !== undefined ? a.v : m.from()).toFixed(2);
   }
 }
 
