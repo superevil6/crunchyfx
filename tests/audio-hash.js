@@ -146,6 +146,19 @@
         wizNine(q[0], 1).forEach(function (c) { const snd = wizSound(c); h = fnv(new TextEncoder().encode(JSON.stringify(snd)), h); h = fnv(f32(withState(snd, render).L), h); });
         line("wizard:" + q[1], h);
       });
+      // FOOTSTEPS BY SURFACE (2026-11-01, appended): the Godot footstep set is SEEDED (its own random source per surface,
+      // not Math.random), so its bytes are fixed: one line per surface (its .tres + its takes' WAVs), one for the rest
+      // (crunchy_footsteps.gd, footsteps.tscn, the README)
+      normalizeOut = true;
+      const fset = footstepSetFiles();
+      FOOTSTEP_SURFACES.forEach(function (sf) {
+        let h = null;
+        fset.filter(function (f) { return f.name === "footsteps/" + sf[0] + ".tres" || f.name.indexOf("footsteps/" + sf[0] + "/") === 0; }).forEach(function (f) { h = fnv(f.data, h); });
+        line("footsteps:" + sf[0], h);
+      });
+      let fh = null;
+      fset.filter(function (f) { return /\.(gd|tscn|txt)$/.test(f.name); }).forEach(function (f) { fh = fnv(f.data, fh); });
+      line("footsteps:helper", fh);
     } finally {
       Math.random = keepRand; normalizeOut = keepN; sampleBuf = keepS; customIR = keepIR;
       varNameEl.value = keepName; varGenomes = keepVar; sequence = keepSeq;

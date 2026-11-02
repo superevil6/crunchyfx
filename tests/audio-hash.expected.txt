@@ -1,4 +1,5 @@
 # The audio of CrunchySFX 1.2 (2026-10-16): Cow Moo, Dog Bark, Dog Bark 2 removed; the fire look-alikes Dragon Fire Breath 2, Fireball Cast 2, Fire Whoosh 2, Flamethrower 2 and Kindled Torch removed; Torch Ignite, Molten Flame and Kindled Flame reworked to stand apart. Every other sound's samples proved unchanged (932 of 932). The WAV format follows each preset's index, so later presets' lines moved. As tests/audio-hash.js prints it; a run must match EXACTLY.
+# FM env (2026-11-01, CrunchyBGM §724): rows fmEnv + fmEnvTime ADDED. Every sound's audio proved unchanged (all 1048 lines identical with the two new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the two keys, so those 11 lines and the AUDIOXHASH total moved with them.
 AUDIO Coin 47f12edd7c9e75e4
 AUDIO Laser f6c22d2b195a2a1a
 AUDIO Jump b3f0d9e61a01ac31
@@ -959,6 +960,18 @@ AUDIO Rotate 5c09e21b229d06de
 AUDIO Slider Tick 4fe27fdfb908d060
 # SFX care pass round 4 (2026-10-29): Wood Break ADDED (AJ's pick); the AUDIOHASH total moved with it.
 AUDIO Wood Break 880894900529ee35
+# Footsteps by surface (2026-11-01): the eleven surface footsteps ADDED (Grass … Carpet Footstep, the suite's surface names); the AUDIOHASH total moved with them. Every other line is unchanged.
+AUDIO Grass Footstep 3f15b593497733fa
+AUDIO Dirt Footstep bccbd676853cc0ed
+AUDIO Sand Footstep 314d8470dc6fff6f
+AUDIO Gravel Footstep 24f06de7f5fc7768
+AUDIO Stone Footstep 61a4d152342a12ab
+AUDIO Wood Footstep c59b200c40a8a6c3
+AUDIO Metal Footstep cb4908e552bd1456
+AUDIO Snow Footstep 3ed8103c173971b9
+AUDIO Ice Footstep fc8eefebc0354af4
+AUDIO Water Footstep dd6bb1b64cb4c4df
+AUDIO Carpet Footstep 9a14080ea27ddd0d
 AUDIO nonorm:Coin 9b44f2f52967386e
 AUDIO nonorm:Laser bfdaabc91508b1fe
 AUDIO nonorm:Jump 29a16949ca59543e
@@ -1002,7 +1015,7 @@ AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH ecf418c212d8701f over 997
+AUDIOHASH 9cc672e4b11a9aa5 over 1008
 # SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
 AUDIO x:ir:Coin:1 5cfd7548039d3a9d
 AUDIO x:ir:Coin:0.4 ffce912929480e8c
@@ -1012,14 +1025,14 @@ AUDIO x:ir:Explosion:1 988d81986d05aa2b
 AUDIO x:ir:Explosion:0.4 72cd2880738fc767
 AUDIO x:granular-sample:0 bd22e8753db266c6
 AUDIO x:granular-sample:1 45c852229e3e1273
-AUDIO x:breed:0 81fd5d2b24048bfc
-AUDIO x:breed:1 2281868d3a6a2a82
-AUDIO x:breed:2 7dfcd133672e11f0
-AUDIO x:breed:cross 357c361d2b53da3c
-AUDIO x:vary:0 3c11f5dc4c9e5c15
-AUDIO x:vary:1 4895230cc90b81b9
-AUDIO x:vary:2 6646c4a77a5dd678
-AUDIO x:vary:3 ee2d4a1f7efacdf8
+AUDIO x:breed:0 e2267e7867cb6a17
+AUDIO x:breed:1 3d736cce8abb6679
+AUDIO x:breed:2 84db1d2e4f37a31f
+AUDIO x:breed:cross a915cb28d9b19333
+AUDIO x:vary:0 184161b571a72ac2
+AUDIO x:vary:1 8e3f78cf513359aa
+AUDIO x:vary:2 00b14408466baba3
+AUDIO x:vary:3 b6c269a29d1aa47f
 AUDIO x:pack:tres 0ee5611ee441bcfb
 AUDIO x:pack:zip f8d79bb8f0a928cb
 # SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
@@ -1028,8 +1041,21 @@ AUDIO x:layers:muted a9015f513759839e
 AUDIO x:layers:no-normalize 1c4c1e0d0d344206
 AUDIO x:layers:same-engine 8bc0db05e41c0dc6
 # SFX 1.3 the Wizard (2026-10-28): the three x:wizard lines below were ADDED (three answers' nine, seeded); the AUDIOXHASH total moved with them. Every line above is unchanged.
-AUDIO x:wizard:gunshot-metal e946649821cab2b1
-AUDIO x:wizard:explosion-fire-stone-8bit-9 7737fc76ce624cd7
-AUDIO x:wizard:pickup-1 b711fbb26c7598d1
+AUDIO x:wizard:gunshot-metal 25e7038d4e77b0ce
+AUDIO x:wizard:explosion-fire-stone-8bit-9 a6dda58d84c6f094
+AUDIO x:wizard:pickup-1 41448603e54cd796
 # SFX 1.3 Tremolo + Flicker (2026-10-28): four PARAMS rows added (neutral). Every preset line is unchanged. The random tools' fixtures MOVED (x:breed, x:vary, x:pack:zip, x:wizard): their lines hash each result's whole genome, which now carries the new keys, and Breed/Variations draw a random number per parameter, so the same seed rolls differently. No saved sound changes.
-AUDIOXHASH 7ca248e0f6a9dd99 over 25
+# Footsteps by surface (2026-11-01): the twelve x:footsteps lines below were ADDED (the seeded Godot footstep set: one line per surface, its .tres and takes; one for crunchy_footsteps.gd, footsteps.tscn and the README); the AUDIOXHASH total moved with them. Every line above is unchanged.
+AUDIO x:footsteps:grass 620a03050d7a103e
+AUDIO x:footsteps:dirt 60e4248d12df2110
+AUDIO x:footsteps:sand 222f3e2a92cab9bf
+AUDIO x:footsteps:gravel 0fb2128ccdcd6931
+AUDIO x:footsteps:stone 6e5e762f062786d4
+AUDIO x:footsteps:wood 8e86afd1b4bc31b8
+AUDIO x:footsteps:metal 3c9d3257ef4590f4
+AUDIO x:footsteps:snow f2284eec3efde609
+AUDIO x:footsteps:ice c62a524fa8979ae4
+AUDIO x:footsteps:water ad1a4602f35b7b71
+AUDIO x:footsteps:carpet e88b77a5b41eecb8
+AUDIO x:footsteps:helper 3a7108e7e586554e
+AUDIOXHASH 47094ad01fb52551 over 37

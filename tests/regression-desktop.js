@@ -682,6 +682,15 @@
     const bad = text.match(/\b(pro|premium|unlock(ed|s)?)\b/gi);
     return ok(!bad, bad ? bad.join(",") : "");
   });
+  // FOOTSTEPS BY SURFACE (2026-11-01): the desktop writes the set as a footsteps folder inside the chosen one
+  await t("footsteps/the-set-is-a-footsteps-folder-in-the-chosen-one", async function () {
+    const files = footstepSetFiles();
+    await writeFootstepSet(window.__TAURI__, PLAIN, files);
+    const got = M.list(PLAIN + "/footsteps/");
+    const rel = got.map(function (p) { return p.slice(PLAIN.length + 1); });
+    return ok(got.length === FOOTSTEP_SURFACES.length * 7 + 3 && files.every(function (f) { return rel.indexOf(f.name) >= 0 && M.bytes(PLAIN + "/" + f.name).length === f.data.length; }) &&
+      rel.indexOf("footsteps/gravel.tres") >= 0 && rel.indexOf("footsteps/gravel/gravel_06.wav") >= 0 && rel.indexOf("footsteps/crunchy_footsteps.gd") >= 0, rel.slice(0, 6).join(" "));
+  });
   await t("safety/no-page-errors", function () { return ok(!M.errors.length, M.errors.slice(0, 3).join(" | ")); });
 
   // ?show: end with the docked Library open over the planted Godot folder, to LOOK at it

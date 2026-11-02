@@ -340,6 +340,8 @@ const PARAMS = [
   ["fmRatio4",    "Op4 ratio",  0.5, 16, 0.5, 3, "", "FM synth"],
   ["fmIndex",     "FM index",   0, 1, 0.01, 0.5, "", "FM synth"],
   ["fmFeedback",  "FM feedback",0, 1, 0.01, 0, "", "FM synth"],
+  ["fmEnv",       "FM env",     -1, 1, 0.01, 0, "", "FM synth"],      // + strike, - swell (0 = off)
+  ["fmEnvTime",   "FM env time", 0.01, 2, 0.01, 0.15, "s", "FM synth"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
@@ -479,6 +481,8 @@ const PARAM_HELP = {
   fmRatio4: "Pitch of FM tone 4 compared with the main tone: whole numbers sound musical, others metallic.",
   fmIndex: "How strongly the FM tones bend each other: soft and pure to bright, harsh and clangy.",
   fmFeedback: "Feeds the FM sound back into itself: adds grit and noise.",
+  fmEnv: "Moves the FM brightness over each note: right = a bright strike that mellows (electric piano, bells), left = starts soft and opens up (brass). Center = steady.",
+  fmEnvTime: "How quickly the FM env strike fades, or the swell opens up.",
   noise: "Mixes in hiss (noise): for explosions, wind, static, hits.",
   subOsc: "Adds a tone an octave lower underneath: more weight and bass.",
   ringMod: "Ring mod: multiplies the sound by a second tone: metallic, bell-like, robotic.",
@@ -605,6 +609,12 @@ state.layers = "";
 let layerSel = 0, layerBase = null;
 const PARAM_DEFAULTS = {};
 for (const p of PARAMS) PARAM_DEFAULTS[p[0]] = p[5];
+// ROWS ADDED AFTER THE v1.3 FIXTURES DRAW ONLY ON A SOUND THAT USES THEM. Breed, Variations, the Wizard and the
+// footstep packs walk PARAMS drawing one Math.random per row, so a new row anywhere in the table moves every seeded
+// result after it (tests/audio-hash.js's x: fixtures). Keyed row -> the field that says the sound uses it: a sound
+// with `fmEnv` at 0 draws nothing for either row and inherits them, so its stream is the one it always was.
+const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv" };
+const undrawn = (k, ...srcs) => k in DRAWN_IF_USED && srcs.every((x) => !x[DRAWN_IF_USED[k]]);
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
@@ -3160,7 +3170,7 @@ function mutateGenome(src, amount) {
   const g = {};
   for (const p of PARAMS) {
     const k = p[0];
-    g[k] = (!BREED_SKIP.has(k) && Math.random() < 0.6) ? jitter(k, src[k], amount) : src[k];
+    g[k] = (!BREED_SKIP.has(k) && !undrawn(k, src) && Math.random() < 0.6) ? jitter(k, src[k], amount) : src[k];
   }
   for (const k in SFX_EXTRAS) if (k in src) g[k] = src[k];
   return g;
@@ -3169,7 +3179,8 @@ function mutateGenome(src, amount) {
 function crossGenome(a, b) {
   const g = {};
   let waveFrom = a;
-  for (const p of PARAMS) { const k = p[0], fromA = Math.random() < 0.5; g[k] = fromA ? a[k] : b[k]; if (k === "wave") waveFrom = fromA ? a : b; }
+  for (const p of PARAMS) { const k = p[0]; if (undrawn(k, a, b)) { g[k] = a[k]; continue; }
+    const fromA = Math.random() < 0.5; g[k] = fromA ? a[k] : b[k]; if (k === "wave") waveFrom = fromA ? a : b; }
   for (const k in SFX_EXTRAS) if (k in waveFrom) g[k] = waveFrom[k];
   return g;
 }
@@ -3399,12 +3410,15 @@ const VARY_FIXED = new Set(["wave", "duration", "gain", "reverse", "repeat", "li
 const VARY_TAILS = /decay|release|Decay|reverbSize|delayFb|convSize|Damp/;
 const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10]);   // engines whose sound is not laid out over the buffer's length
 function varyStretchable(g) { return VARY_STRETCH.has(Math.round(g.wave)) || (Math.round(g.wave) === 12 && !g.morphSweep); }
-function varyGenome(src, amount) {
+// `rand` (optional, 2026-11-01): the random source; Math.random when left out (every caller before the footstep set), so a
+// seeded caller (the Godot footstep set) makes the same takes every time.
+function varyGenome(src, amount, rand) {
+  rand = rand || Math.random;
   const g = Object.assign({}, src), stretch = varyStretchable(src);
   for (const p of PARAMS) {
     const [k, , min, max, step, , , , kind] = p, base = src[k];
-    if (VARY_FIXED.has(k) || kind || step >= 1 || !base || Math.random() >= 0.7) continue;   // only what the sound USES
-    let r = (Math.random() * 2 - 1) * amount;
+    if (VARY_FIXED.has(k) || kind || step >= 1 || !base || undrawn(k, src) || rand() >= 0.7) continue;   // only what the sound USES
+    let r = (rand() * 2 - 1) * amount;
     if (!stretch && VARY_TAILS.test(k)) r = -Math.abs(r);   // a tail that cannot be given room never grows (no new cut)
     let v = k === "freq" ? base * Math.pow(2, r * 10 / 12)  // pitch: ±2 semitones at the default 0.2 (was ±4.8)
                          : base * (1 + r * 0.75);           // everything else: ±15% of itself at 0.2
@@ -3464,12 +3478,12 @@ function matchLoudness(items) {
   items.forEach((g, i) => { const m = meas[i]; if (m.rms > 0) target = Math.min(target, VARY_CEILING * m.rms / m.pk, m.rms / g.gain); });
   return items.map((g, i) => { const m = meas[i]; return m.rms > 0 ? Object.assign({}, g, { gain: +(g.gain * target / m.rms).toFixed(4) }) : g; });
 }
-function makeVariations(seed, n, amt) {
+function makeVariations(seed, n, amt, rand) {
   const r0 = withState(seed, () => render()), origTail = tailLevel(r0.L);
   const out = [seed];
   for (let i = 1; i < n; i++) {
     let g = null;
-    for (let t = 0; t < 10 && !g; t++) { const c = varyGenome(seed, amt); if (patchPeak(c) > AUDIBLE_FLOOR) g = c; }
+    for (let t = 0; t < 10 && !g; t++) { const c = varyGenome(seed, amt, rand); if (patchPeak(c) > AUDIBLE_FLOOR) g = c; }
     out.push(fitTail(g || seed, origTail));
   }
   return normalizeOut ? matchLoudness(out) : out;   // Normalize loudness off: the takes keep their own levels
@@ -3559,10 +3573,11 @@ function packReadme(files, seq) {
 // wherever it lands under res:// (tests/godot-pack.mjs proves it in real Godot, from a subfolder). Pitch and volume
 // spread stay at Godot's neutral (1, 0 dB): the takes already differ, and the README says how to add more.
 function packTresName() { return fileStem(varBaseName()) + ".tres"; }
-function packTres(files) {
+// `pitch` (optional, 2026-11-01): random_pitch, 1.0 (neutral) when left out; the footstep set uses FOOTSTEP_PITCH.
+function packTres(files, pitch) {
   const L = ["[gd_resource type=\"AudioStreamRandomizer\" load_steps=" + (files.length + 1) + " format=3]", ""];
   files.forEach((f, i) => L.push("[ext_resource type=\"AudioStream\" path=\"" + f.name + "\" id=\"" + (i + 1) + "_take\"]"));
-  L.push("", "[resource]", "playback_mode = 0", "random_pitch = 1.0", "random_volume_offset_db = 0.0", "streams_count = " + files.length);
+  L.push("", "[resource]", "playback_mode = 0", "random_pitch = " + (pitch ? pitch.toFixed(2) : "1.0"), "random_volume_offset_db = 0.0", "streams_count = " + files.length);
   files.forEach((f, i) => L.push("stream_" + i + "/stream = ExtResource(\"" + (i + 1) + "_take\")", "stream_" + i + "/weight = 1.0"));
   return L.join("\n") + "\n";
 }
@@ -3602,6 +3617,225 @@ varModal.querySelector("#varExport").addEventListener("click", exportPack);
 varModal.querySelector("#varClose").addEventListener("click", () => { varModal.hidden = true; });
 varModal.addEventListener("click", (e) => { if (e.target === varModal) varModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !varModal.hidden) varModal.hidden = true; });
+
+// ---------- Footsteps by surface: the Godot footstep set (2026-11-01) ----------
+// A game plays the step for the ground under a character: CrunchyTile writes a "surface" custom data layer (a String)
+// on every tile it exports, and any TileSet can carry one. The SURFACE NAMES are the suite's, fixed and lowercase; each
+// is one preset ("Footsteps by surface" in presets.js) and, in the set, one variation pack named for it. The set is
+//   footsteps/grass.tres … carpet.tres   AudioStreamRandomizers (the pack's .tres, paths relative: grass/grass_01.wav)
+//   footsteps/grass/grass_01.wav …       FOOTSTEP_TAKES takes per surface (Variations' own makeVariations)
+//   footsteps/crunchy_footsteps.gd       the helper: play_at(layer, global_position) reads "surface", plays its pack
+//   footsteps/footsteps.tscn             a Node with the helper on it, to drop onto a character
+//   footsteps/README.txt
+// SEEDED: every surface's takes come from its own fixed random source (FOOTSTEP_SEED + the surface's name), so the set
+// is the same bytes every time (for one export format and the Normalize setting, as any pack). tests/godot-pack.mjs
+// proves it in real Godot; tests/audio-hash.js pins it (x:footsteps).
+const FOOTSTEP_SURFACES = [   // [surface name, its preset]: APPEND ONLY (the names are shared with CrunchyTile)
+  ["grass", "Grass Footstep"], ["dirt", "Dirt Footstep"], ["sand", "Sand Footstep"], ["gravel", "Gravel Footstep"],
+  ["stone", "Stone Footstep"], ["wood", "Wood Footstep"], ["metal", "Metal Footstep"], ["snow", "Snow Footstep"],
+  ["ice", "Ice Footstep"], ["water", "Water Footstep"], ["carpet", "Carpet Footstep"],
+];
+// FOOTSTEP_PITCH: each .tres plays its takes up to about half a semitone up or down (Godot's random_pitch), the usual
+// footstep practice: the struck-ground engines (impact, modal) vary in tone between takes but not in their noise.
+const FOOTSTEP_TAKES = 6, FOOTSTEP_AMT = 0.2, FOOTSTEP_SEED = 0x5f007e95, FOOTSTEP_PITCH = 1.03;
+function footstepRand(surface) {   // a fixed LCG per surface (seeded by FNV-1a of its name)
+  let s = FOOTSTEP_SEED >>> 0;
+  for (let i = 0; i < surface.length; i++) s = Math.imul(s ^ surface.charCodeAt(i), 0x01000193) >>> 0;
+  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+}
+// One surface's takes as pack files (named with their subfolder: grass/grass_01.wav, so packTres writes those paths)
+function footstepPackFiles(surface, preset) {
+  const seed = withState(PRESETS[preset], genomeFromState);           // the whole genome (fitTail reads every key)
+  const takes = makeVariations(seed, FOOTSTEP_TAKES, FOOTSTEP_AMT, footstepRand(surface));
+  return takes.map((g, i) => {
+    const { L, R } = withState(g, () => render()), title = preset + " " + (i + 1);
+    const name = surface + "/" + surface + "_" + String(i + 1).padStart(2, "0") + ".wav";
+    return { name: name, data: new Uint8Array(encodeWav(L, R, { rate: exportFmt.rate, depth: exportFmt.depth, channels: exportFmt.channels, loop: exportFmt.loop, title: title })) };
+  });
+}
+// The helper (CC0, like everything the app makes). Tabs: GDScript's indentation.
+const FOOTSTEP_GD = [
+  "# crunchy_footsteps.gd: footsteps by surface, from CrunchySFX. CC0: use it anywhere, no credit needed.",
+  "#",
+  "# Put footsteps.tscn on your character (or this script on any Node), then on every step:",
+  "#     $Footsteps.play_at($TileMapLayer, global_position)",
+  "# It reads the \"surface\" custom data (a String) of the tile under that point and plays the pack of",
+  "# that name from this folder: grass.tres, stone.tres ... (" + FOOTSTEP_SURFACES.map((s) => s[0]).join(", ") + ").",
+  "# Pass an Array of layers (bottom first) to let the topmost tile with a surface win.",
+  "extends Node",
+  "",
+  "## The custom data layer it reads (a String). CrunchyTile's tilesets carry it already.",
+  "const SURFACE_LAYER := \"surface\"",
+  "const SURFACES := [" + FOOTSTEP_SURFACES.map((s) => "\"" + s[0] + "\"").join(", ") + "]",
+  "",
+  "## Played when the tile has no surface, or there is no tile. Empty: stay quiet.",
+  "@export var default_surface: String = \"\"",
+  "## Plays the steps: an AudioStreamPlayer, AudioStreamPlayer2D or AudioStreamPlayer3D. Empty: one is made.",
+  "@export var player: Node",
+  "## Where the packs are. Empty: this script's own folder.",
+  "@export_dir var folder: String = \"\"",
+  "",
+  "var _packs := {}",
+  "",
+  "func _ready() -> void:",
+  "\tif player == null:",
+  "\t\tvar p := AudioStreamPlayer.new()",
+  "\t\tp.name = \"FootstepPlayer\"",
+  "\t\tp.max_polyphony = 2",
+  "\t\tadd_child(p)",
+  "\t\tplayer = p",
+  "",
+  "## The surface of the tile under a global position, lowercase; \"\" when there is no tile there,",
+  "## the tile has none, or the TileSet has no \"surface\" layer.",
+  "static func surface_at(layer: TileMapLayer, global_pos: Vector2) -> String:",
+  "\tif layer == null or layer.tile_set == null:",
+  "\t\treturn \"\"",
+  "\tif layer.tile_set.get_custom_data_layer_by_name(SURFACE_LAYER) < 0:",
+  "\t\treturn \"\"",
+  "\tvar data := layer.get_cell_tile_data(layer.local_to_map(layer.to_local(global_pos)))",
+  "\tif data == null:",
+  "\t\treturn \"\"",
+  "\tvar v = data.get_custom_data(SURFACE_LAYER)",
+  "\tif v is String or v is StringName:",
+  "\t\treturn String(v).strip_edges().to_lower()",
+  "\treturn \"\"",
+  "",
+  "## Several layers (bottom first, as drawn): the topmost tile with a surface wins.",
+  "static func surface_at_layers(layers: Array, global_pos: Vector2) -> String:",
+  "\tfor i in range(layers.size() - 1, -1, -1):",
+  "\t\tvar s := surface_at(layers[i] as TileMapLayer, global_pos)",
+  "\t\tif s != \"\":",
+  "\t\t\treturn s",
+  "\treturn \"\"",
+  "",
+  "## Play the step for the tile under global_pos. layer: a TileMapLayer, or an Array of them.",
+  "## Returns the surface it played (\"\" when it stayed quiet).",
+  "func play_at(layer, global_pos: Vector2) -> String:",
+  "\tvar surface := surface_at_layers(layer, global_pos) if layer is Array else surface_at(layer as TileMapLayer, global_pos)",
+  "\treturn play_surface(surface)",
+  "",
+  "## Play a surface's pack by name (falls back to default_surface). Returns what it played, or \"\".",
+  "func play_surface(surface: String) -> String:",
+  "\tvar s := pack_for(surface)",
+  "\tif s == null and default_surface != \"\":",
+  "\t\tsurface = default_surface",
+  "\t\ts = pack_for(surface)",
+  "\tif s == null or player == null:",
+  "\t\treturn \"\"",
+  "\tif player.get(\"stream\") != s:",
+  "\t\tplayer.set(\"stream\", s)",
+  "\tplayer.call(\"play\")",
+  "\treturn surface",
+  "",
+  "## A surface's pack (loaded once), or null when this folder has none.",
+  "func pack_for(surface: String) -> AudioStream:",
+  "\tif surface == \"\":",
+  "\t\treturn null",
+  "\tif not _packs.has(surface):",
+  "\t\tvar dir := folder if folder != \"\" else (get_script() as Script).resource_path.get_base_dir()",
+  "\t\tvar path := dir.path_join(surface + \".tres\")",
+  "\t\t_packs[surface] = load(path) as AudioStream if ResourceLoader.exists(path) else null",
+  "\treturn _packs[surface]",
+].join("\n") + "\n";
+const FOOTSTEP_TSCN = [
+  "[gd_scene load_steps=2 format=3]",
+  "",
+  "[ext_resource type=\"Script\" path=\"crunchy_footsteps.gd\" id=\"1_steps\"]",
+  "",
+  "[node name=\"Footsteps\" type=\"Node\"]",
+  "script = ExtResource(\"1_steps\")",
+].join("\n") + "\n";
+function footstepReadme() {
+  const names = FOOTSTEP_SURFACES.map((s) => s[0]);
+  return [
+    "Footsteps by surface, from CrunchySFX (" + names.length + " surfaces, " + FOOTSTEP_TAKES + " takes each, " + nowFmtText() + ")",
+    "",
+    "  " + names.join(", "),
+    "",
+    "Every sound here is made in code (no samples, no AI) and is yours under CC0: use it anywhere, commercial included,",
+    "no credit needed. That goes for crunchy_footsteps.gd too.",
+    "",
+    "What is here",
+    "  <surface>.tres         a ready AudioStreamRandomizer of that surface's takes (a different one every play,",
+    "                         its pitch up to about half a semitone either way: Random Pitch " + FOOTSTEP_PITCH.toFixed(2) + ")",
+    "  <surface>/             the takes as WAVs (grass/grass_01.wav ...)",
+    "  crunchy_footsteps.gd   reads the tile under a point and plays the pack for its surface",
+    "  footsteps.tscn         a Node with that script on it",
+    "",
+    "Godot 4: put this footsteps folder anywhere in your project (res://).",
+    "  1. Drag footsteps.tscn onto your character (it becomes a child node named Footsteps).",
+    "  2. On every step (an animation call, or a timer while walking):",
+    "       $Footsteps.play_at($TileMapLayer, global_position)",
+    "     For a map in several layers (CrunchyTile's Ground + Terrain), pass them bottom first; the topmost tile",
+    "     with a surface wins:",
+    "       $Footsteps.play_at([$Ground, $Terrain], global_position)",
+    "     Use a point under the feet: for a side-view character standing on a tile, a few pixels below them",
+    "     (global_position + Vector2(0, 8) when the origin is at the feet).",
+    "  In the Inspector: Default Surface plays when a tile has no surface (empty: stay quiet), Player takes your own",
+    "  AudioStreamPlayer2D for positional steps, Folder points at the packs if you move them away from the script.",
+    "  play_surface(\"gravel\") plays one by name; surface_at(layer, position) just tells you what is there.",
+    "",
+    "The \"surface\" custom data",
+    "  CrunchyTile tilesets already carry it: every tile says what it is made of, one of the names above.",
+    "  Any other TileSet: select the TileSet, open Custom Data Layers, Add Element, name it surface, type String.",
+    "  Then in the TileSet editor's Paint mode, pick Custom Data > surface and paint grass, stone ... onto tiles.",
+    "  A tile with no surface, or a name with no pack here, plays Default Surface (or nothing).",
+    "",
+    "Make it yours: open any surface's preset in CrunchySFX (the Footsteps by surface section: Grass Footstep ...),",
+    "change it, and export a Variations pack of it named after the surface (grass). Put its grass.tres and WAVs in",
+    "this folder in place of grass.tres and the grass folder (then set its Random Pitch to " + FOOTSTEP_PITCH.toFixed(2) + " like the rest).",
+    "",
+  ].join("\n");
+}
+// Everything the set is, as [{ name: "footsteps/…", data }] (the web zip and the desktop folder hold the same files)
+function footstepSetFiles() {
+  const out = [];
+  for (const [surface, preset] of FOOTSTEP_SURFACES) {
+    const files = footstepPackFiles(surface, preset);
+    out.push({ name: surface + ".tres", data: new TextEncoder().encode(packTres(files, FOOTSTEP_PITCH)) });
+    for (const f of files) out.push(f);
+  }
+  const enc = (t) => new TextEncoder().encode(t);
+  out.push({ name: "crunchy_footsteps.gd", data: enc(FOOTSTEP_GD) }, { name: "footsteps.tscn", data: enc(FOOTSTEP_TSCN) },
+    { name: "README.txt", data: enc(footstepReadme()) });
+  return out.map((f) => ({ name: "footsteps/" + f.name, data: f.data }));
+}
+// The desktop half: the footsteps folder (and a folder per surface) inside `dir`, then every file
+async function writeFootstepSet(T, dir, files) {
+  for (const s of FOOTSTEP_SURFACES) await T.fs.mkdir(dir + "/footsteps/" + s[0], { recursive: true });
+  for (const f of files) await T.fs.writeFile(dir + "/" + f.name, f.data);
+}
+async function exportFootstepSet() {
+  nowSay("Making the footstep set …");
+  await new Promise((r) => setTimeout(r, 30));                // let the status paint before the renders
+  const files = footstepSetFiles(), T = window.__TAURI__;
+  if (isDesktopShell()) {                                     // desktop: a footsteps folder inside the chosen one
+    let dir; try { dir = await T.dialog.open({ directory: true, title: "Choose where the footsteps folder goes (in your Godot project)" }); } catch (e) { return; }
+    if (!dir) return;
+    await writeFootstepSet(T, dir, files);
+    nowSay("Exported the footstep set: footsteps/ (" + FOOTSTEP_SURFACES.length + " surfaces, crunchy_footsteps.gd, README)");
+  } else {                                                    // web: one .zip with the footsteps folder in it
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([makeZip(files)], { type: "application/zip" }));
+    a.download = "footsteps.zip";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    nowSay("Saved footsteps.zip: unzip it into your Godot project (README inside)");
+  }
+}
+// The button sits in its own section, after the eleven presets
+(function () {
+  const sec = sections.find((s) => /^Footsteps by surface/.test((s.details.querySelector("summary") || {}).textContent || ""));
+  if (!sec) return;
+  const b = document.createElement("button");
+  b.className = "footstep-set";
+  b.id = "footstepSet";
+  setIconLabel(b, "download", "Godot footstep set (all " + FOOTSTEP_SURFACES.length + ")");
+  b.title = "Every surface as a variation pack named for it (footsteps/grass.tres …) plus crunchy_footsteps.gd, which plays the one " +
+    "for the tile under a character: it reads the tile's \"surface\" custom data (CrunchyTile's tilesets carry it)";
+  b.addEventListener("click", exportFootstepSet);
+  sec.details.querySelector(".sec-buttons").appendChild(b);
+})();
 
 // ---------- Sequence (chain sounds into one) ----------
 // The editor stays a single-sound workspace; the sequence is a separate layer that

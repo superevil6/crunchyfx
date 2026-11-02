@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, renderLayers, masterStage, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.2.1 (b868a6e — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.2.1 (d9856bc — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   98955b068edb8c61d44c4451bdd5f3c9b6689af02e16d69d69985bed66c6eb9d   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   cbd19993eab5017ef26e0ca8dc62f215ea4ab05aaac2b5a07a305bcd8494ad88   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -1125,6 +1125,20 @@ function renderPatch(st, opts) {
   let fmFbPrev = 0, fmPrevShot = -1;
   const fmModDepth = st.fmIndex * 6, fmFbAmt = st.fmFeedback * 5;
   /*
+   * THE MODULATORS' ENVELOPE (`fmEnv`, `fmEnvTime`). The index used to be a constant for the whole
+   * note, so an FM tone held one colour from the first sample to the last and only the amp
+   * envelope moved — the opposite of what makes FM sound like FM, where every operator has its own
+   * envelope: an electric piano strikes bright and melts, brass opens up as the note starts.
+   * One envelope on the modulation depth, exponential, per shot (via `lt`):
+   *   fmEnv > 0  STRIKE — up to 4x the depth at the onset, falling to `fmIndex` with time constant
+   *              `fmEnvTime`. The sustained tone is the one the patch already declared.
+   *   fmEnv < 0  SWELL  — starts at (1 + fmEnv) of the depth and opens up to `fmIndex`.
+   * DEFAULT 0 IS EXACTLY THE OLD EXPRESSION: the multiplier is the literal 1 and `x * 1` is exact,
+   * so every existing patch renders bit-for-bit as before (proved by tests/audio-hash.js).
+   * Asked for by CrunchyBGM (§724): picked blind on its Trumpet (a soft swell) and FM Bell (a swell).
+   */
+  const fmEnvAmt = st.fmEnv || 0, fmEnvT = Math.max(0.005, st.fmEnvTime || 0.15);
+  /*
    * THE OPERATORS RUN AT 2x AND ARE DECIMATED THROUGH A REAL FILTER.
    *
    * They were four bare `Math.sin` phase accumulators at SR with nothing above Nyquist removed, so
@@ -1351,6 +1365,9 @@ function renderPatch(st, opts) {
       }                                               // inherits the end of the previous one
       // FM_OS operator updates per OUTPUT sample, each pushed into the decimator's history. The
       // phase increment is per OVERSAMPLED sample, which is the whole point.
+      const fmK = fmEnvAmt > 0 ? 1 + 3 * fmEnvAmt * Math.exp(-lt / fmEnvT)
+                : fmEnvAmt < 0 ? 1 + fmEnvAmt * Math.exp(-lt / fmEnvT) : 1;   // the modulators' envelope
+      const fmDepthNow = fmModDepth * fmK;
       for (let q = 0; q < FM_OS; q++) {
         let s3 = 0;
         for (let oi = 3; oi >= 0; oi--) {              // higher ops first (they modulate lower ops)
@@ -1360,7 +1377,7 @@ function renderPatch(st, opts) {
           const raw = Math.sin(2 * Math.PI * fmPh[oi] + modIn);
           fmPh[oi] += fOsc * fmRatio[oi] / (SR * FM_OS); if (fmPh[oi] >= 1) fmPh[oi] -= 1;
           if (oi === 3) s3 = raw;
-          fmOut[oi] = fmCarr.indexOf(oi) >= 0 ? raw : raw * fmModDepth;  // carrier = audio; modulator = radians
+          fmOut[oi] = fmCarr.indexOf(oi) >= 0 ? raw : raw * fmDepthNow;  // carrier = audio; modulator = radians
         }
         fmFbPrev = s3;
         let v = 0; for (let c = 0; c < fmCarr.length; c++) v += fmOut[fmCarr[c]];
@@ -1918,6 +1935,8 @@ const PARAMS = [
   ["fmRatio4",    "Op4 ratio",  0.5, 16, 0.5, 3, "", "FM synth"],
   ["fmIndex",     "FM index",   0, 1, 0.01, 0.5, "", "FM synth"],
   ["fmFeedback",  "FM feedback",0, 1, 0.01, 0, "", "FM synth"],
+  ["fmEnv",       "FM env",     -1, 1, 0.01, 0, "", "FM synth"],      // + strike, - swell (0 = off)
+  ["fmEnvTime",   "FM env time", 0.01, 2, 0.01, 0.15, "s", "FM synth"],
   // Mix
   ["noise",      "Noise mix",  0, 1, 0.01, 0, "",   "Mix"],
   ["subOsc",     "Sub osc",    0, 1, 0.01, 0, "",   "Mix"],
@@ -1998,8 +2017,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.2.1",
-  BUILT: "b868a6e-dirty",
-  SHA256: "98955b068edb8c61d44c4451bdd5f3c9b6689af02e16d69d69985bed66c6eb9d",
+  BUILT: "d9856bc-dirty",
+  SHA256: "cbd19993eab5017ef26e0ca8dc62f215ea4ab05aaac2b5a07a305bcd8494ad88",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

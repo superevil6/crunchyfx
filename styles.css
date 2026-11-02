@@ -247,6 +247,8 @@
   /* --fam is set per-button from FAMILY_COLORS: a left edge showing the synthesis family. */
   .presetbar button { padding: 6px 10px; font-size: 12px; border-left: 3px solid var(--fam, var(--line)); }
   .presetbar button:hover { border-left-color: var(--fam, var(--accent)); }
+  /* The Footsteps by surface section's export (index.html, exportFootstepSet): a tool among presets, in the accent. */
+  .presetbar button.footstep-set { border-left-color: var(--accent); color: var(--accent); }
   .fam-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 2px; font-size: 11px; color: var(--muted); }
   .fam-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .fam-key i { width: 9px; height: 9px; flex: none; }

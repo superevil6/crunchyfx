@@ -816,6 +816,37 @@
   });
 
 
+  // FOOTSTEPS BY SURFACE (2026-11-01): a section of eleven presets named for the suite's surfaces (CrunchyTile's "surface"
+  // custom data), each a short dry step, and its Godot footstep set button (tests/godot-pack.mjs proves the set in Godot)
+  t("footsteps/a-section-of-the-eleven-surfaces-and-the-godot-set-button", function () {
+    const names = ["grass", "dirt", "sand", "gravel", "stone", "wood", "metal", "snow", "ice", "water", "carpet"];
+    const sec = Array.from(document.querySelectorAll("#presets > .preset-section")).find(function (d) { return /^Footsteps by surface/.test(d.querySelector("summary").textContent); });
+    if (!sec) return ok(false, "no section");
+    const btns = Array.from(sec.querySelectorAll(".sec-buttons button")).map(function (b) { return b.textContent; });
+    const keep = sec.open; sec.open = true;
+    const b = document.getElementById("footstepSet"), vis = shown(b) && sec.contains(b);
+    sec.open = keep;
+    return ok(same(FOOTSTEP_SURFACES.map(function (x) { return x[0]; }), names) && FOOTSTEP_SURFACES.every(function (x) { return btns.indexOf(x[1]) >= 0; }) &&
+      vis && /surface/.test(b.title) && /Godot footstep set/.test(b.textContent), btns.join(", "));
+  });
+  t("footsteps/every-surface-preset-is-a-short-dry-step", function () {
+    const bad = [];
+    FOOTSTEP_SURFACES.forEach(function (x) {
+      const r = withState(PRESETS[x[1]], render), n = r.L.length;
+      let pk = 0, last = 0, on = -1;
+      for (let i = 0; i < n; i++) { const a = Math.abs(r.L[i]); if (a > pk) pk = a; }
+      for (let i = 0; i < n; i++) { const a = Math.abs(r.L[i]); if (on < 0 && a >= pk * 0.25) on = i; if (a > pk * 0.01) last = i; }
+      if (!(n <= 0.2 * SR + 1 && on <= 0.02 * SR && last <= 0.2 * SR && r.rawPeak > AUDIBLE_FLOOR)) bad.push(x[0] + " " + Math.round(n / SR * 1000) + "ms on " + Math.round(on / SR * 1000) + " end " + Math.round(last / SR * 1000));
+    });
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("footsteps/a-surface-pack-is-named-for-its-surface", function () {
+    const f = footstepPackFiles("gravel", "Gravel Footstep"), tres = packTres(f, FOOTSTEP_PITCH);
+    return ok(f.length === FOOTSTEP_TAKES && f.every(function (x, i) { return x.name === "gravel/gravel_0" + (i + 1) + ".wav"; }) &&
+      /path="gravel\/gravel_01\.wav"/.test(tres) && /random_pitch = 1\.03/.test(tres) && /surface/.test(FOOTSTEP_GD) && /play_at/.test(footstepReadme()), tres.slice(0, 200));
+  });
+
+
   scrollTo(0, 0);
   const failed = rows.filter(function (r) { return !r.pass; });
   const b = document.getElementById("dombanner");
