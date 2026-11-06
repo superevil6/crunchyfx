@@ -582,6 +582,192 @@ function brassTune(sr, f0, cfg, p) {
   return out;
 }
 
+// ---------- Bowed string (wave "bowed", #22): a bowed waveguide ----------
+// The other half of the family question CrunchyBGM asked of brass (BGM §792): a bowed note's identity is what the
+// bow DOES — it grips and slips, so a note starts with a scratch while the string locks into its motion, and the
+// pressure and speed of the bow set how dense that motion is. A saw through a filter draws all of it on. Here:
+//
+//   nut  -1 <── NECK delay ──┬── bow: dv = v_bow - v_string, new = dv · friction(dv) into both ──┬── BRIDGE delay ──> -loss LP
+//                            (each delay is the ROUND TRIP on its side, so the two make one period)  └─> out -> TONE tilt
+//
+// After the standard published bowed waveguide (Smith's digital waveguide string as Cook builds it), written from the
+// description. Prototyped and picked by ear in CrunchyBGM (tools/_bowed.mjs) on its Violin and on a whole string
+// orchestra; the constants below are those picks. Things the prototype found, each by failing:
+//   - each delay line is a ROUND TRIP: halved, the string sounds an octave up with only even harmonics, and a pitch
+//     tracker cannot see it (a signal that repeats every half period repeats every period too);
+//   - bow SPEED against PRESSURE decides the motion: too fast for the pressure and the bow double-slips (the
+//     fundamental 16-18 dB under the 2nd harmonic). 0.1 at pressure 0.75 is a clean Helmholtz motion;
+//   - the string emits a nearly flat pulse train at the bridge, so the heard tone needs a FIXED-frequency tilt (the
+//     bridge and body), which is also what sizes the instrument: violin ~2500 Hz, cello ~300, contrabass ~200;
+//   - the tuning search stays NARROW: a bowed string speaks within a few percent of its natural length, and a wide
+//     search finds false peaks (a note tuned 386 cents sharp).
+// The amp envelope is the BOW SPEED's shape (as the brass breath is), and each note is levelled by its measured RMS.
+const BOWED_SPEED = 0.2;       // bow speed at knob 1 (0.5 = 0.1, the clean motion the picks used)
+const BOWED_NOISE = 0.02;      // rosin: a little hashed noise on the bow speed, what keeps a held note alive
+const BOWED_RMS = 0.25;        // the steady level every note is brought to
+function bowedCfg(st) {
+  return { speed: BOWED_SPEED * st.bowSpeed, pressure: st.bowPressure, pos: 0.05 + 0.2 * st.bowPos,
+           tiltHz: 100 * Math.pow(50, st.bowTone), loss: 0.6 * st.bowString };
+}
+function bowFriction(dv, slope) {   // stick-slip: near-total reflection while the bow grips, collapsing as it slips
+  const r = Math.pow(Math.abs((dv + 0.001) * slope) + 0.75, -4);
+  return r < 0.01 ? 0.01 : r > 0.98 ? 0.98 : r;
+}
+// A playing string. tick(bowSpeed, f) -> one sample. `scale` stretches the string (the calibration).
+function makeBowed(sr, cfg, fLow, scale, seedIn) {
+  const size = Math.ceil((sr / Math.max(10, fLow)) * scale * 1.05) + 8;
+  const neck = new Float32Array(size), brid = new Float32Array(size);
+  const slope = 5 - 4 * Math.max(0, Math.min(1, cfg.pressure)), pos = cfg.pos, loss = cfg.loss;
+  const tK = cfg.tiltHz > 0 ? Math.exp(-2 * Math.PI * cfg.tiltHz / sr) : 0;
+  let wn = 0, wb = 0, lp = 0, tz = 0, seed = (seedIn >>> 0) || 0x2545f491;
+  const read = (buf, w, D) => { let rp = w - D; if (rp < 0) rp += size; const i0 = rp | 0, fr = rp - i0, i1 = i0 + 1 === size ? 0 : i0 + 1; return buf[i0] * (1 - fr) + buf[i1] * fr; };
+  return {
+    tick(speed, f) {
+      const N = Math.min(size - 4, (sr / Math.max(10, f)) * scale);
+      const Dn = Math.max(2, N * (1 - pos)), Db = Math.max(2, N * pos);
+      const bOut = read(brid, wb, Db), nOut = read(neck, wn, Dn);
+      lp = (1 - loss) * bOut + loss * lp;
+      const bridgeRefl = -0.95 * lp, nutRefl = -nOut, vs = bridgeRefl + nutRefl;
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const vb = speed * (1 + BOWED_NOISE * (seed / 4294967296 * 2 - 1));
+      const dv = vb - vs, nv = dv * bowFriction(dv, slope);
+      neck[wn] = bridgeRefl + nv; wn = wn + 1 === size ? 0 : wn + 1;
+      brid[wb] = nutRefl + nv; wb = wb + 1 === size ? 0 : wb + 1;
+      if (tK) { tz = (1 - tK) * bOut + tK * tz; return tz; }
+      return bOut;
+    },
+  };
+}
+// The string length and the makeup gain for one (pitch, bow speed, knobs): a held note without vibrato, measured at
+// ~0.5 s, past the bow's capture. Narrow search (±6%, then ±3%), held within ±10%, secant steps. Cached per session.
+const BOWED_TUNE = new Map();
+function bowedTune(sr, f0, cfg) {
+  const key = f0.toFixed(4) + "|" + cfg.speed.toFixed(4) + "|" + cfg.pressure + "|" + cfg.pos + "|" + cfg.tiltHz + "|" + cfg.loss;
+  const hit = BOWED_TUNE.get(key); if (hit) return hit;
+  const at = Math.round(sr * 0.5), win = Math.max(2048, Math.ceil(3 * sr / f0));
+  const n = at + win + Math.ceil(sr * 1.1 / f0) + 8, atN = Math.round(sr * 0.08), x = new Float32Array(n);
+  const seed = 0x2545f491 ^ Math.round(f0 * 100);
+  let s = 1, rms = 0, sPrev = 0, cPrev = 0;
+  for (let it = 0; it < 8; it++) {
+    const v = makeBowed(sr, cfg, f0, s, seed);
+    for (let i = 0; i < n; i++) x[i] = v.tick(cfg.speed * (i < atN ? 0.5 - 0.5 * Math.cos(Math.PI * i / atN) : 1), f0);
+    let e = 0; for (let i = at; i < at + win; i++) e += x[i] * x[i];
+    rms = Math.sqrt(e / win);
+    if (!(rms > 1e-6)) break;
+    const f = brassPitch(x, sr, f0, at, it ? 0.03 : 0.06);
+    if (!(f > 0)) break;
+    const cents = 1200 * Math.log2(f / f0);
+    if (Math.abs(cents) < 2) break;
+    const ratio = s * f / f0, sec = it && cents !== cPrev ? s - cents * (s - sPrev) / (cents - cPrev) : ratio;
+    sPrev = s; cPrev = cents;
+    s = Math.max(0.9, Math.min(1.1, isFinite(sec) ? sec : ratio));
+  }
+  const out = { scale: s, gain: rms > 1e-6 ? BOWED_RMS / rms : 0 };
+  if (BOWED_TUNE.size > 4096) BOWED_TUNE.clear();
+  BOWED_TUNE.set(key, out);
+  return out;
+}
+
+// ---------- Reed (wave "reed", #23): a single reed on a bore, cylindrical or conical ----------
+// Woodwinds were the most drawn-on family in CrunchyBGM (BGM §794): its Flute a near-sine, its Clarinet's 3rd harmonic
+// 25 dB down where a real one's sits 3, nothing brightening with breath. A reed on a bore gets all of it from the
+// mechanism: breath against the bore's return sets the reed's opening, which beats shut — dark when blown gently, a
+// bright beating buzz when pushed, choked silent past the top of its window. After Cook's published single-reed and
+// saxophone waveguides, written from the description. Two bores:
+//   CYLINDER (clarinet): a closed-open tube, a quarter-wave resonator — odd harmonics only, the delay half a period.
+//   CONE (sax, low reeds): NOT a long cylinder (that is a clarinet an octave down, 99% of its energy off the note):
+//     two delay lines with one rigid and one lossy end, BLOWN partway along like a string, the reed at 0.4 of the
+//     bore. Earlier along it, the fundamental collapses (-19 dB at 0.2); 0.4 puts it on top.
+// Picked by ear in BGM on its Clarinet, Saxophone and Low Reed. Found building it, each by failing:
+//   - breath is stated OVER THE THRESHOLD (~0.65 for both bores, swept), as brass's is, and its window is narrow:
+//     the cylinder chokes past ~0.55 over, the cone past ~0.45;
+//   - the reed has HYSTERESIS: the onset picks the regime (a sharp start lands in the darker one), so the tuning pass
+//     plays each test note with the note's own attack and tongue, or it tunes the reed in the other regime;
+//   - a TONGUE (a breath spike) chokes the reed and SLOWS the attack; the bite is a KICK, one half-period pressure
+//     pulse into the bore, which starts the oscillation at once;
+//   - so brightness after a sharp attack comes from the BELL, a fixed high-pass after the bore (flared bell, open
+//     tone holes), and the sax's "flangy wobble" from a fixed FORMANT the vibrato sweeps the harmonics across.
+const REED_THR = 0.65;         // the breath at which the reed starts to speak (both bores, swept)
+const REED_NOISE = 0.03;       // breath noise
+const REED_RMS = 0.25;         // the steady level every note is brought to
+const REED_POS = 0.4;          // where the cone is blown, of its length
+function reedCfg(st) {
+  return { cone: Math.round(st.reedBore) === 1, over: 0.5 * st.reedBreath, kick: 2 * st.reedTongue,
+           bellHz: st.reedBell > 0 ? 100 * Math.pow(50, st.reedBell) : 0, formDb: 12 * st.reedWobble, loss: 0.7 * st.reedTone };
+}
+// A playing reed. tick(breath, f) -> one sample. `scale` stretches the bore (the calibration); `f0` sizes the kick.
+function makeReed(sr, cfg, fLow, f0, scale, seedIn) {
+  const per = cfg.cone ? 1 : 0.5, size = Math.ceil((sr / Math.max(10, fLow)) * per * scale * 1.05) + 8;
+  const d0 = new Float32Array(size), d1 = new Float32Array(size);
+  const N0 = (sr / f0) * per * scale, kickN = N0 * 0.5;
+  const bA = cfg.bellHz > 0 ? 1 / (1 + 2 * Math.PI * cfg.bellHz / sr) : 1;
+  let fB = null;
+  if (cfg.formDb > 0) {                                  // RBJ peaking EQ at 1.8 kHz, Q 6
+    const A = Math.pow(10, cfg.formDb / 40), w = 2 * Math.PI * 1800 / sr, al = Math.sin(w) / 12, a0 = 1 + al / A;
+    fB = [(1 + al * A) / a0, -2 * Math.cos(w) / a0, (1 - al * A) / a0, -2 * Math.cos(w) / a0, (1 - al / A) / a0];
+  }
+  let w0 = 0, w1 = 0, lp = 0, n = 0, bx = 0, by = 0, fx1 = 0, fx2 = 0, fy1 = 0, fy2 = 0, seed = (seedIn >>> 0) || 0x5eed;
+  const read = (buf, w, D) => { let rp = w - D; if (rp < 0) rp += size; const i0 = rp | 0, fr = rp - i0, i1 = i0 + 1 === size ? 0 : i0 + 1; return buf[i0] * (1 - fr) + buf[i1] * fr; };
+  return {
+    tick(p, f) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const breath = p * (1 + REED_NOISE * (seed / 4294967296 * 2 - 1));
+      const N = Math.min(size - 4, (sr / Math.max(10, f)) * per * scale);
+      const kk = cfg.kick && n < kickN ? cfg.kick * p * Math.sin(Math.PI * n / kickN) : 0;
+      n++;
+      let o;
+      if (!cfg.cone) {                                   // clarinet: the open end reflects inverted through a low-pass
+        const bOut = read(d0, w0, Math.max(2, N));
+        lp = (1 - cfg.loss) * bOut + cfg.loss * lp;
+        const dp = -0.95 * lp - breath;
+        let r = 0.7 - 0.3 * dp; if (r > 1) r = 1; else if (r < -1) r = -1;
+        d0[w0] = breath + dp * r + kk; w0 = w0 + 1 === size ? 0 : w0 + 1;
+        o = bOut;
+      } else {                                           // cone: blown at REED_POS, one rigid and one lossy end
+        const o0 = read(d0, w0, Math.max(2, N * (1 - REED_POS))), o1 = read(d1, w1, Math.max(2, N * REED_POS));
+        lp = (1 - cfg.loss) * o0 + cfg.loss * lp;
+        const temp = -0.95 * lp, ov = temp - o1, pd = breath - ov;
+        let r = 0.7 + 0.3 * pd; if (r > 1) r = 1; else if (r < -1) r = -1;
+        d1[w1] = temp; w1 = w1 + 1 === size ? 0 : w1 + 1;
+        d0[w0] = breath - pd * r - temp + kk; w0 = w0 + 1 === size ? 0 : w0 + 1;
+        o = ov;
+      }
+      if (bA < 1) { const h = bA * (by + o - bx); bx = o; by = h; o = h; }   // the bell radiates the highs
+      if (fB) { const y = fB[0] * o + fB[1] * fx1 + fB[2] * fx2 - fB[3] * fy1 - fB[4] * fy2; fx2 = fx1; fx1 = o; fy2 = fy1; fy1 = y; o = y; }
+      return o;
+    },
+  };
+}
+// The bore length and makeup gain for one (pitch, breath, attack, knobs): a held note played with the note's OWN attack
+// and kick (the reed's regime depends on the onset), measured at ~0.5 s. Narrow search, secant steps. Cached per session.
+const REED_TUNE = new Map();
+function reedTune(sr, f0, cfg, p, atk) {
+  const key = f0.toFixed(4) + "|" + p.toFixed(4) + "|" + (+atk).toFixed(4) + "|" + cfg.cone + "|" + cfg.kick + "|" + cfg.bellHz + "|" + cfg.formDb + "|" + cfg.loss;
+  const hit = REED_TUNE.get(key); if (hit) return hit;
+  const at = Math.round(sr * 0.5), win = Math.max(2048, Math.ceil(3 * sr / f0));
+  const n = at + win + Math.ceil(sr * 1.1 / f0) + 8, atN = Math.max(1, Math.round(sr * atk)), x = new Float32Array(n);
+  const seed = 0x5eed ^ Math.round(f0 * 100);
+  let s = 1, rms = 0, sPrev = 0, cPrev = 0;
+  for (let it = 0; it < 8; it++) {
+    const v = makeReed(sr, cfg, f0, f0, s, seed);
+    for (let i = 0; i < n; i++) x[i] = v.tick(p * (i < atN ? 0.5 - 0.5 * Math.cos(Math.PI * i / atN) : 1), f0);   // synth.js's raised-cosine breath
+    let e = 0; for (let i = at; i < at + win; i++) e += x[i] * x[i];
+    rms = Math.sqrt(e / win);
+    if (!(rms > 1e-6)) break;
+    const f = brassPitch(x, sr, f0, at, it ? 0.03 : 0.08);
+    if (!(f > 0)) break;
+    const cents = 1200 * Math.log2(f / f0);
+    if (Math.abs(cents) < 2) break;
+    const ratio = s * f / f0, sec = it && cents !== cPrev ? s - cents * (s - sPrev) / (cents - cPrev) : ratio;
+    sPrev = s; cPrev = cents;
+    s = Math.max(0.85, Math.min(1.15, isFinite(sec) ? sec : ratio));
+  }
+  const out = { scale: s, gain: rms > 1e-6 ? REED_RMS / rms : 0 };
+  if (REED_TUNE.size > 4096) REED_TUNE.clear();
+  REED_TUNE.set(key, out);
+  return out;
+}
+
 
 // ---------- Formant speech synthesis (retro robot voice) ----------
 // A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +

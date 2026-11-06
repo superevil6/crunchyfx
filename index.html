@@ -242,7 +242,7 @@ function setIconLabel(el, name, text) {
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -332,6 +332,26 @@ const PARAMS = [
   ["brassLips",   "Lips",        0, 1, 0.01, 0.4,  "",  "Brass"],
   ["brassBell",   "Bell",        0, 1, 0.01, 0.59, "",  "Brass"],
   ["brassTube",   "Tube",        0, 1, 0.01, 0.31, "",  "Brass"],
+  // Bowed string (wave 22): a bowed waveguide (dsp.js makeBowed). In DRAWN_IF_USED (wave 22 only) like the brass rows.
+  // The defaults are the instrument's (a violin, as CrunchyBGM picked it): Speed = bow speed (the envelope shapes it;
+  // past the middle it starts to double-slip, a real airy "surface" sound); Pressure = bow weight (light airy, heavy
+  // biting); Position = bridge (bright) to fingerboard (dark); Tone = the instrument's size, 100-5000 Hz (contrabass
+  // ~200, cello ~300, violin ~2500); String = the string's own damping.
+  ["bowSpeed",    "Bow speed",   0, 1, 0.01, 0.5,  "",  "Bow"],
+  ["bowPressure", "Bow pressure",0, 1, 0.01, 0.75, "",  "Bow"],
+  ["bowPos",      "Bow position",0, 1, 0.01, 0.39, "",  "Bow"],
+  ["bowTone",     "Body tone",   0, 1, 0.01, 0.82, "",  "Bow"],
+  ["bowString",   "String damping", 0, 1, 0.01, 0.17, "", "Bow"],
+  // Reed (wave 23): a single reed on a bore (dsp.js makeReed). In DRAWN_IF_USED (wave 23 only). The defaults are a
+  // saxophone as CrunchyBGM picked it. Bore = cylinder (clarinet: odd harmonics) or cone (sax, low reeds); Breath = over
+  // the speaking threshold (past ~0.9 it chokes); Tongue = a kicked, instant attack; Bell = off at 0, then 100-5000 Hz
+  // (brighter); Wobble = a formant the vibrato sweeps through; Tone = the bore's losses (higher is darker).
+  ["reedBore",    "Bore",        0, 1, 1, 1,     "",  "Reed", "enum", ["cylinder", "cone"]],
+  ["reedBreath",  "Breath",      0, 1, 0.01, 0.7,  "",  "Reed"],
+  ["reedTongue",  "Tongue",      0, 1, 0.01, 1,    "",  "Reed"],
+  ["reedBell",    "Bell",        0, 1, 0.01, 0.82, "",  "Reed"],
+  ["reedWobble",  "Wobble",      0, 1, 0.01, 1,    "",  "Reed"],
+  ["reedTone",    "Tone",        0, 1, 0.01, 0.29, "",  "Reed"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -483,6 +503,17 @@ const PARAM_HELP = {
   brassLips: "How tight the lips are: tight slaps harder and sounds brassier, loose is rounder and softer.",
   brassBell: "Where the bell lets the sound out: low for a tuba, middle for a trombone, high for a bright trumpet.",
   brassTube: "How much of the sound the tube soaks up: low is bright and ringing, high is dark and soft.",
+  bowSpeed: "How fast the bow moves: slow is soft and pure, fast gets airy and breaks into a flutey double sound.",
+  bowPressure: "How hard the bow presses: light is airy and floaty, heavy digs in with a scratchy bite.",
+  bowPos: "Where the bow touches the string: near the bridge is bright and glassy, toward the fingerboard is soft and dark.",
+  bowTone: "The size of the instrument's body: low for a double bass, middle for a cello, high for a violin.",
+  bowString: "How much the string damps itself: low rings bright and long, high is darker and softer.",
+  reedBore: "The tube's shape: a cylinder sounds hollow like a clarinet, a cone fuller like a sax or a low reed.",
+  reedBreath: "How hard it's blown: gentle is dark and soft, harder buzzes bright; too hard and the reed chokes silent.",
+  reedTongue: "How sharply each note is tongued: none fades in, full starts instantly with a little bite.",
+  reedBell: "How much the bell lets the highs out: off is mellow, higher is brighter and brassier.",
+  reedWobble: "A resonance the vibrato sweeps through, so the tone wobbles and shimmers like a sax.",
+  reedTone: "How much the tube soaks up the highs: low is bright, high is dark and soft.",
   addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
   addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
   addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
@@ -578,6 +609,8 @@ const WAVE_HELP = {
   impact: "Built for hits: punches, thuds, slams, gunshots.",
   whoosh: "Air moving past: swings, swooshes, dashes, passes.",
   brass: "A blown horn: lips buzzing into a tube. Brighter the harder it's blown: trombones, trumpets, tubas, fanfares.",
+  bowed: "A bowed string: the bow grips and slips, so every note starts with a little scratch: violins, cellos, basses.",
+  reed: "A reed buzzing on a tube: soft and dark when blown gently, a bright buzz when pushed: clarinets, saxes, low reeds.",
 };
 // One line per Console: what that old machine sounded like.
 const CONSOLE_HELP = {
@@ -632,8 +665,13 @@ for (const p of PARAMS) PARAM_DEFAULTS[p[0]] = p[5];
 // A value may also be a PREDICATE on the sound, for rows that belong to one engine: the brass knobs (wave 21) are only
 // drawn for a brass sound. A field name keeps its old meaning exactly.
 const usesBrass = (x) => Math.round(x.wave) === 21;
+const usesBow = (x) => Math.round(x.wave) === 22;
+const usesReed = (x) => Math.round(x.wave) === 23;
 const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
-                        brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass };
+                        brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass,
+                        bowSpeed: usesBow, bowPressure: usesBow, bowPos: usesBow, bowTone: usesBow, bowString: usesBow,
+                        reedBore: usesReed, reedBreath: usesReed, reedTongue: usesReed, reedBell: usesReed,
+                        reedWobble: usesReed, reedTone: usesReed };
 const undrawn = (k, ...srcs) => k in DRAWN_IF_USED
   && srcs.every((x) => (typeof DRAWN_IF_USED[k] === "function" ? !DRAWN_IF_USED[k](x) : !x[DRAWN_IF_USED[k]]));
 
@@ -1981,6 +2019,8 @@ const PANEL_WAVES = {
   "Impact": [19],
   "Whoosh": [20],
   "Brass": [21],
+  "Bow": [22],
+  "Reed": [23],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);

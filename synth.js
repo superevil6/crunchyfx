@@ -245,6 +245,36 @@ function renderPatch(st, opts) {
     const tune = brassTune(SR, baseFreq, brassCf, brassP);
     brassScale = tune.scale; brassG = tune.gain;
   }
+  // Bowed string (wave "bowed", #22): a bowed waveguide (dsp.js makeBowed). The amp envelope is the BOW SPEED's shape,
+  // as it is brass's breath. Tuned and levelled once for the note's pitch; vibrato and sweeps move the string. Mono.
+  const isBowed = waveType === 22;
+  let bowedV = null, bowedG = 0, bowedCf = null, bowedScale = 0, bowedShot = -1;
+  if (isBowed) {
+    bowedCf = bowedCfg(st);
+    const tune = bowedTune(SR, baseFreq, bowedCf);
+    bowedScale = tune.scale; bowedG = tune.gain;
+  }
+  // Reed (wave "reed", #23): a single reed on a cylinder or a cone (dsp.js makeReed). The amp envelope is the BREATH,
+  // over the reed's threshold. Tuned and levelled per pitch with the note's own attack (the reed's regime depends on it).
+  const isReed = waveType === 23;
+  let reedV = null, reedP = 0, reedG = 0, reedCf = null, reedScale = 0, reedShot = -1;
+  if (isReed) {
+    reedCf = reedCfg(st);
+    reedP = REED_THR * (1 + reedCf.over);
+    const tune = reedTune(SR, baseFreq, reedCf, reedP, atk);
+    reedScale = tune.scale; reedG = tune.gain;
+  }
+  // The amp envelope as a function, for the two engines that take it as their DRIVE (brass's breath, the bow's speed)
+  // rather than as a gain. The same expression as the gain stage below, which every other wave still uses inline.
+  const ampEnvAt = (lt) => {
+    let e;
+    if (lt < atk) e = atk > 0 ? lt / atk : 1;
+    else if (lt < atk + hold) e = 1;
+    else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); e = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
+    else if (lt < relStart) e = susLevel;
+    else { const r = rel > 0 ? (lt - relStart) / rel : 1; e = susLevel * Math.pow(1 - r, eexp); }
+    return e < 0 ? 0 : e;
+  };
   // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
   // slow amplitude-drift LFO (random rate/phase) → evolving pad. Per-partial data is constant
   // across the render, so precompute it once; only the partial phases advance per sample.
@@ -506,14 +536,19 @@ function renderPatch(st, opts) {
     } else if (isBrass) {
       // a fresh pair of lips per shot (a burst re-tongues); the slowest pitch a sweep can reach sizes the tube
       if (shotIdx !== brassShot) { brassShot = shotIdx; brassV = makeBrass(SR, brassCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, brassScale); }
-      let be;                                          // the amp envelope, read here as the breath
-      if (lt < atk) be = atk > 0 ? lt / atk : 1;
-      else if (lt < atk + hold) be = 1;
-      else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); be = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
-      else if (lt < relStart) be = susLevel;
-      else { const r = rel > 0 ? (lt - relStart) / rel : 1; be = susLevel * Math.pow(1 - r, eexp); }
-      if (be < 0) be = 0;
-      const v = brassV.tick(brassP * be, fOsc) * brassG;
+      const v = brassV.tick(brassP * ampEnvAt(lt), fOsc) * brassG;   // the amp envelope, read as the breath
+      oscL = v; oscR = v;
+    } else if (isBowed) {
+      // a fresh string per shot (a burst re-bows); the slowest pitch a sweep can reach sizes the delay lines
+      if (shotIdx !== bowedShot) { bowedShot = shotIdx; bowedV = makeBowed(SR, bowedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, bowedScale, 0x2545f491 ^ Math.round(baseFreq * 100)); }
+      const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt), fOsc) * bowedG;   // the amp envelope, read as the bow speed
+      oscL = v; oscR = v;
+    } else if (isReed) {
+      if (shotIdx !== reedShot) { reedShot = shotIdx; reedV = makeReed(SR, reedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, reedScale, 0x5eed ^ Math.round(baseFreq * 100)); }
+      // the breath rises along a RAISED COSINE through the attack, as the picked prototype's did: the reed's regime
+      // depends on its onset, and a straight ramp put the lowest notes in the dark regime (2.93 -> 1.43 at MIDI 50)
+      const ae = ampEnvAt(lt), br = lt < atk ? 0.5 - 0.5 * Math.cos(Math.PI * ae) : ae;
+      const v = reedV.tick(reedP * br, fOsc) * reedG;
       oscL = v; oscR = v;
     } else if (isAdditive) {
       let sL = 0, sR = 0;
@@ -617,7 +652,7 @@ function renderPatch(st, opts) {
     else if (lt < relStart) env = susLevel;
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    if (!isBrass) { sL *= env; sR *= env; }        // brass took the envelope as its breath, above
+    if (!isBrass && !isBowed && !isReed) { sL *= env; sR *= env; }   // the models took the envelope as their drive, above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).
