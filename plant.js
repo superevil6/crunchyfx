@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/plant.js @ 0db035c by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 40c091ad68a2d75061ded1f192e225a2478a9863ef5c80cc0985c56c5009b90c
+// GENERATED from crunchyCore/plant.js @ 14e5801 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 56a428f22a57d3475b2f2cce0c606aaac001638273cbf5eaf3a683541c08b049
 "use strict";
 // Crunchy suite — PLANTING (DESKTOP-ROADMAP.md): an app's Library lives INSIDE the game's own folder.
 //
@@ -55,7 +55,7 @@
 // Replaces project.js's separate project folder (AJ, 2026-10-11: "let's try replace"); both exist until every app
 // has moved. Prefixed plant*/PLANT_* so the two can load together while an app migrates.
 
-const PLANT_BUILD = 17;
+const PLANT_BUILD = 18;   // 18 (2026-11-05): crunchy/textures/, the suite's own (texgen.js, CrunchyTile §174.1)
 const PLANT_FORMAT = "crunchy-asset", PLANT_VERSION = 1, PLANT_EXT = ".crunchy";
 
 // Each Crunchy tool's child of crunchy/: [Godot and plain folders, Unity]. The suite view reads the others.
@@ -66,9 +66,11 @@ const PLANT_SUITE = {
   shader: ["shader", "Shader"],                                      // build 12: CrunchyShader
   moments: ["moments", "Moments"],                                   // build 16: GAME MOMENTS (moments.js), the suite's own
   palettes: ["palettes", "Palettes"],                                // build 17: SHARED PALETTES (palette.js), the suite's own
+  textures: ["textures", "Textures"],                                // build 18: YOUR TEXTURES (texgen.js), the suite's own
 };
 const PLANT_SUITE_NAMES = { tile: "CrunchyTile", ui: "CrunchyUI", sfx: "CrunchySFX", vfx: "CrunchyVFX", bgm: "CrunchyBGM", character: "CrunchyCharacter",
-                            items: "CrunchyItem", shader: "CrunchyShader", moments: "Game moments", palettes: "Palettes" };
+                            items: "CrunchyItem", shader: "CrunchyShader", moments: "Game moments", palettes: "Palettes",
+                            textures: "Textures" };
 // AN ASSET'S APP (build 16): a handle may carry its own `app` (moments.js's MOMENT_APP: game moments belong to no one
 // tool, they are the suite's, in crunchy/moments/), else it is the opening app's PROJECT_APP, as every build before.
 function plantApp(P) { return (P && P.app) || PROJECT_APP; }
