@@ -233,6 +233,18 @@ function renderPatch(st, opts) {
   const isWhoosh = waveType === 20;
   let whooshBuf = null;
   if (isWhoosh) { const wlen = Math.max(2, Math.min(n, Math.round(slot * SR))); whooshBuf = makeWhoosh(wlen, st.whooshTone, st.whooshSweep, st.whooshBody, st.whooshPeak, sd(0x51ce5ab1)); }
+  // Blown brass (wave "brass", #21): a lip-reed waveguide (dsp.js makeBrass). The AMP ENVELOPE IS
+  // THE BREATH: it drives the lips instead of scaling the output, so the attack blooms and the
+  // release lets the lips stop on their own. The tube is tuned and levelled once for the note's
+  // pitch (brassTune); a sweep or vibrato then moves the tube, as a slide does. Mono.
+  const isBrass = waveType === 21;
+  let brassV = null, brassP = 0, brassG = 0, brassCf = null, brassScale = 0, brassShot = -1;
+  if (isBrass) {
+    brassCf = brassCfg(st);
+    brassP = brassThreshold(baseFreq) * (1 + st.brassBreath);
+    const tune = brassTune(SR, baseFreq, brassCf, brassP);
+    brassScale = tune.scale; brassG = tune.gain;
+  }
   // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
   // slow amplitude-drift LFO (random rate/phase) → evolving pad. Per-partial data is constant
   // across the render, so precompute it once; only the partial phases advance per sample.
@@ -491,6 +503,18 @@ function renderPatch(st, opts) {
       const idx = (lt * SR) | 0;                       // time since this shot → replays the swing per shot
       const v = idx < whooshBuf.length ? whooshBuf[idx] : 0;
       oscL = v; oscR = v;                             // mono swish
+    } else if (isBrass) {
+      // a fresh pair of lips per shot (a burst re-tongues); the slowest pitch a sweep can reach sizes the tube
+      if (shotIdx !== brassShot) { brassShot = shotIdx; brassV = makeBrass(SR, brassCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, brassScale); }
+      let be;                                          // the amp envelope, read here as the breath
+      if (lt < atk) be = atk > 0 ? lt / atk : 1;
+      else if (lt < atk + hold) be = 1;
+      else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); be = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
+      else if (lt < relStart) be = susLevel;
+      else { const r = rel > 0 ? (lt - relStart) / rel : 1; be = susLevel * Math.pow(1 - r, eexp); }
+      if (be < 0) be = 0;
+      const v = brassV.tick(brassP * be, fOsc) * brassG;
+      oscL = v; oscR = v;
     } else if (isAdditive) {
       let sL = 0, sR = 0;
       for (let k = 0; k < nAdd; k++) {
@@ -593,7 +617,7 @@ function renderPatch(st, opts) {
     else if (lt < relStart) env = susLevel;
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    sL *= env; sR *= env;
+    if (!isBrass) { sL *= env; sR *= env; }        // brass took the envelope as its breath, above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).

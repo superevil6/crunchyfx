@@ -1749,6 +1749,12 @@ window.PRESETS = {
             _vary:{ freq:0.15, bubbleRate:0.25, noise:0.15, decay:0.2 } },
   "Carpet Footstep": { wave:19, impactTone:0.05, impactDecay:0.06, impactPunch:0.3, impactGrit:0, boom:0.2, boomFreq:70, boomDrop:0.4, boomDecay:0.05, attack:0.005, hold:0.006, decay:0.06, sustain:0, release:0.03, envCurve:0.4, cutoff:900, reso:0.05, drive:0, width:0.25, duration:0.14, noise:0.3, noiseColor:0.7, gain:0.6,
             _vary:{ impactTone:0.15, impactDecay:0.25, boomFreq:0.12, cutoff:0.12 } },
+  // BLOWN BRASS (wave 21, the lip-reed model; picked by ear in CrunchyBGM on its Trombone, Trumpet and Tuba, 2026-11-05).
+  // The envelope is the breath: a 50 ms swell in, held, a 0.2 s release that lets the lips stop on their own. Drive off
+  // and the filter open, because the brightness is the lips' and the bell's. Named apart from the saw/FM horns above.
+  "Blown Trombone": { wave:21, freq:175, brassBreath:0.57, brassLips:0.4, brassBell:0.59, brassTube:0.31, attack:0.05, hold:0, decay:0, sustain:1, release:0.2, drive:0, cutoff:18000, reverb:0.2, reverbSize:0.55, width:0.3, duration:1.1, _vary:{ freq:0.2, brassBreath:0.2, brassBell:0.1 } },
+  "Blown Trumpet": { wave:21, freq:466, brassBreath:0.57, brassLips:0.4, brassBell:0.59, brassTube:0.31, attack:0.05, hold:0, decay:0, sustain:1, release:0.2, drive:0, cutoff:18000, reverb:0.18, reverbSize:0.5, width:0.3, duration:1.0, _vary:{ freq:0.15, brassBreath:0.2, brassBell:0.1 } },
+  "Blown Tuba": { wave:21, freq:87, brassBreath:0.57, brassLips:0.4, brassBell:0.32, brassTube:0.31, attack:0.05, hold:0, decay:0, sustain:1, release:0.25, drive:0, cutoff:18000, reverb:0.15, reverbSize:0.5, width:0.2, duration:1.1, _vary:{ freq:0.2, brassBreath:0.2, brassBell:0.1 } },
 };
 
 // ORDER (2026-10-14 usability round): game-dev sounds first (Retro / Arcade, UI, consoles, hits, explosions, guns,
@@ -1786,7 +1792,7 @@ window.PRESET_CATEGORIES = [
   ["Instruments / Guitars & Plucked", ["Harp Glissando", "Pluck", "Dist Guitar", "Clean Guitar", "Power Chords", "Chug Guitar", "Sitar", "Harpsichord", "Comp Guitar", "Harp", "Slide Guitar", "Surf Guitar", "Tine Comp", "Koto", "Shamisen", "Nylon Guitar", "Rasgueado", "Banjo", "Pedal Steel", "Mandolin", "Ukulele", "Honky-tonk", "Funk Keys", "Dulcimer", "Funk Guitar", "Harp Comp", "Acoustic Guitar", "Mandolin Chop", "Nylon Comp", "Ukulele Comp"]],
   ["Instruments / Bass", ["Sub Bass", "Saw Bass", "Square Bass", "808 Bass", "Pick Bass", "Growl Bass", "Bass Chug", "Dist Bass", "FM Growl Bass", "Drone Bass", "Upright Bass", "Bowed Bass", "Slap Bass", "Finger Bass", "Fretless Bass", "Acid Bass", "Dub Bass", "Pedal Bass", "Guitarron", "Bass Reed", "Koto Bass"]],
   ["Instruments / Strings", ["Cello Pluck", "Strings", "Pizz Strings", "Theremin", "Solo Violin", "Tremolo Strings", "Erhu", "Fiddle", "Cello", "Tape Strings", "Bowed Metal"]],
-  ["Instruments / Winds & Brass", ["Harmonica Bend", "Sax Sigh", "Kazoo", "Brass", "Flute", "Low Reed", "Horn Section", "Shakuhachi", "Harmonica", "Dizi", "Whistle", "Saxophone", "Ocarina", "Clarinet", "Reed Section", "Didgeridoo"]],
+  ["Instruments / Winds & Brass", ["Harmonica Bend", "Sax Sigh", "Kazoo", "Brass", "Flute", "Low Reed", "Horn Section", "Shakuhachi", "Harmonica", "Dizi", "Whistle", "Saxophone", "Ocarina", "Clarinet", "Reed Section", "Didgeridoo", "Blown Trombone", "Blown Trumpet", "Blown Tuba"]],
   ["Instruments / Voices", ["Choir", "Vocal Pad", "Low Chant", "Soprano", "Lead Vocal", "Female Vocal", "Child Voice", "Whisper", "Vocal Ahh", "Bass Voice"]],
   ["Instruments / Synth & Leads", ["Square Lead", "Pulse Lead", "Triangle Lead", "Saw Pad", "Additive Pad", "Stab", "Palm Mute", "Screamer Lead", "Pinch Harmonic", "Detuned Wall", "Doom Chord", "Industrial Stab", "FM Shred", "FM Chug", "Clang Lead", "FM Power", "Wind Pad", "Super Saw", "Sho", "Deep Pad", "FM Lead", "FM Stab"]],
 ];

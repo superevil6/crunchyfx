@@ -465,6 +465,124 @@ function makeWhoosh(n, tone, sweep, body, peak, seed) {
   return out;
 }
 
+// ---------- Blown brass (wave "brass", #21): a lip-reed waveguide ----------
+// A brass note's identity is ONE coupling — brightness follows loudness, because the lips buzz harder
+// as the breath rises — and no other engine here has it: they set level and colour with separate
+// envelopes, so a horn had the coupling drawn on, and CrunchyBGM's maintainer refused every drawing
+// (BGM §694, §788). Here it falls out of the physics, after Cook's published lip-reed model:
+//
+//   breath -> mouth pressure --+-> dp -> LIP (a band-pass resonance at f0) -> opening = gap + motion,
+//   bore pressure <------------+                                               clipped shut/fully open
+//        ^                      out = open·mouth + (1-open)·bore   (scattering at the lips)
+//        +-- loss (one-pole LP) <-- BORE (a delay line) <-- DC block
+//                                        +--> BELL (a fixed-frequency high-pass) --> the note
+//
+// What comes out for free: the note starts dark and BLOOMS as the lips start to slap, harder breath
+// is brighter, and the bell is a FIXED filter, so brightness counted in harmonics falls as the note
+// climbs. Prototyped and picked by ear in CrunchyBGM (tools/_brass.mjs, §789-§791) on its Trombone,
+// Trumpet and Tuba before it came here; the constants below are those picks.
+//
+// THREE THINGS MAKE IT A WORKING INSTRUMENT RATHER THAN A MODEL, each found by it failing:
+//   - the lip is BAND-PASS (zeros at DC): with DC gain, steady breath pins the lips open and nothing
+//     buzzes; the opening is a rest gap PLUS the motion, because squaring a zero-mean motion (the
+//     cook-book mapping) sounds an octave up;
+//   - the TUBE LENGTH IS CALIBRATED per pitch and breath (brassTune): uncalibrated, the lips and the
+//     tube disagree and most notes do not speak at all. The search is held on one BRANCH (0.8 of the
+//     nominal two periods): the tube has another length that also sounds in tune (1.27), it is a
+//     different mode and so a different timbre, and an unheld search lands on either;
+//   - breath is stated ABOVE THE SPEAKING THRESHOLD (brassThreshold), which rises below ~147 Hz, so
+//     every note speaks at every breath level and the breath carries only the timbre.
+// The calibration also measures the steady level, so every note comes out at the same level and the
+// amp envelope's job (the breath) is the player's, not a gain's.
+// One constant per line: tools/export-synth.py's declaration scan reads only the first name of a `const A, B`.
+const BRASS_LIP = 11;          // lip response at its resonance: just over the speaking threshold, so breath carries the timbre
+const BRASS_LIPQ = 0.997;      // the lip's pole radius, the broadest it may be (sharper below ~147 Hz, see makeBrass)
+const BRASS_REFL = 0.85;       // the bore's reflection
+const BRASS_BRANCH = 0.8;      // the tube length the tuning holds to (of two periods): the mode that speaks best when soft
+const BRASS_RMS = 0.25;        // the steady level every note is brought to
+function brassThreshold(f) { return 0.7 * Math.pow(Math.max(1, 147 / Math.max(1, f)), 0.28); }
+// knob 0..1 -> physical: lips = the rest gap, bell = 100..3000 Hz (log), tube = the in-loop loss
+function brassCfg(st) {
+  return { gap: 0.05 + 0.5 * st.brassLips, bellHz: 100 * Math.pow(30, st.brassBell), loss: 0.7 * st.brassTube };
+}
+// A playing voice. tick(pressure, f) -> one sample. `scale` stretches the tube (the calibration).
+function makeBrass(sr, cfg, fLow, scale) {
+  const size = Math.ceil((sr / Math.max(10, fLow)) * 2 * scale) + 8, line = new Float32Array(size);
+  const hpA = 1 / (1 + 2 * Math.PI * cfg.bellHz / sr), lossK = cfg.loss, gap = cfg.gap;
+  let w = 0, y1 = 0, y2 = 0, x1 = 0, x2 = 0, lp = 0, dcx = 0, dcy = 0, hx = 0, hy = 0;
+  let lastF = -1, a1 = 0, a2 = 0, b0 = 0;
+  return {
+    tick(p, f) {
+      if (f !== lastF) {                                // the lip follows the pitch (vibrato, sweeps)
+        lastF = f;
+        const r = Math.max(BRASS_LIPQ, 1 - 0.9 * f / sr), th = 2 * Math.PI * f / sr;   // never broader than 0.997; sharper below ~147 Hz
+        a1 = -2 * r * Math.cos(th); a2 = r * r; b0 = (1 - r * r) / 2 * BRASS_LIP;
+      }
+      const D = Math.min(size - 4, Math.max(4, (sr / Math.max(10, f)) * 2 * scale));
+      let rp = w - D; if (rp < 0) rp += size;         // D < size, so one wrap is enough
+      const i0 = rp | 0, fr = rp - i0, i1 = i0 + 1 === size ? 0 : i0 + 1;
+      const dOut = line[i0] * (1 - fr) + line[i1] * fr;
+      lp = (1 - lossK) * dOut + lossK * lp;
+      const bore = BRASS_REFL * lp, mouth = 0.3 * p, dp = mouth - bore;
+      const y = b0 * (dp - x2) - a1 * y1 - a2 * y2; x2 = x1; x1 = dp; y2 = y1; y1 = y;
+      let open = gap + y; if (open < 0) open = 0; else if (open > 1) open = 1;
+      const sc = open * mouth + (1 - open) * bore;
+      const dc = sc - dcx + 0.995 * dcy; dcx = sc; dcy = dc;
+      line[w] = dc; w = w + 1 === size ? 0 : w + 1;
+      const h = hpA * (hy + dOut - hx); hx = dOut; hy = h;  // the bell radiates the highs
+      return h;
+    },
+  };
+}
+// Sounding pitch by autocorrelation (parabolic refinement), searched within ±span of f0. The window
+// is at least three periods, so a low E (41 Hz) is measured as well as a trumpet's C6.
+function brassPitch(x, sr, f0, at, span) {
+  const lo = Math.max(2, Math.floor(sr / (f0 * (1 + span)))), hi = Math.ceil(sr * (1 + span) / f0);
+  const N = Math.min(Math.max(2048, Math.ceil(3 * sr / f0)), x.length - at - hi - 2);
+  const ac = (L) => { let s = 0, e = 0; for (let i = 0; i < N; i++) { s += x[at + i] * x[at + i + L]; e += x[at + i] * x[at + i]; } return s / (e || 1); };
+  let best = -1, bl = lo;
+  for (let L = lo; L <= hi; L++) { const v = ac(L); if (v > best) { best = v; bl = L; } }
+  const a = ac(bl - 1), b = ac(bl), c = ac(bl + 1), den = a - 2 * b + c;
+  const d = den ? (a - c) / (2 * den) : 0;
+  return sr / (bl + Math.max(-1, Math.min(1, d)));
+}
+// The tube length and the makeup gain for one (pitch, breath, knobs), found by playing a held note
+// and listening to it at ~0.57 s (past the onset scoop, where a note lips up into tune). The first
+// pass searches ±30%; after it the pitch is close, so later passes search ±4% (about 7x cheaper).
+// Cached for the session: a render of the same sound costs nothing the second time.
+const BRASS_TUNE = new Map();
+function brassTune(sr, f0, cfg, p) {
+  const key = f0.toFixed(4) + "|" + p.toFixed(4) + "|" + cfg.gap + "|" + cfg.bellHz + "|" + cfg.loss;
+  const hit = BRASS_TUNE.get(key); if (hit) return hit;
+  const at = Math.round(sr * 0.57), win = Math.max(2048, Math.ceil(3 * sr / f0));
+  const n = at + win + Math.ceil(sr * 1.3 / f0) + 8, atN = Math.round(sr * 0.05), x = new Float32Array(n);
+  const lo = BRASS_BRANCH * 0.88, hi = BRASS_BRANCH * 1.12;
+  // SECANT, not a ratio step: the loop's filters add a fixed delay, so pitch is not proportional to
+  // the tube's length and `s *= f/f0` overshoots and walks in (1-8 passes, measured). The first step
+  // is the ratio; after it, a line through the last two (length, cents) points lands in 2-3.
+  let s = BRASS_BRANCH, rms = 0, sPrev = 0, cPrev = 0;
+  for (let it = 0; it < 8; it++) {
+    const v = makeBrass(sr, cfg, f0, s);
+    for (let i = 0; i < n; i++) x[i] = v.tick(p * (i < atN ? 0.5 - 0.5 * Math.cos(Math.PI * i / atN) : 1), f0);
+    let e = 0; for (let i = at; i < at + win; i++) e += x[i] * x[i];
+    rms = Math.sqrt(e / win);
+    if (!(rms > 1e-6)) break;                          // silent: keep the branch's nominal length
+    const f = brassPitch(x, sr, f0, at, it ? 0.04 : 0.3);
+    if (!(f > 0)) break;
+    const cents = 1200 * Math.log2(f / f0);
+    if (Math.abs(cents) < 2) break;                   // the meter itself is good to about a cent; chasing under it only costs passes
+    const ratio = s * f / f0;                          // sharp -> lengthen, flat -> shorten
+    const sec = it && cents !== cPrev ? s - cents * (s - sPrev) / (cents - cPrev) : ratio;
+    sPrev = s; cPrev = cents;
+    s = Math.max(lo, Math.min(hi, isFinite(sec) ? sec : ratio));
+  }
+  const out = { scale: s, gain: rms > 1e-6 ? BRASS_RMS / rms : 0 };
+  if (BRASS_TUNE.size > 4096) BRASS_TUNE.clear();
+  BRASS_TUNE.set(key, out);
+  return out;
+}
+
+
 // ---------- Formant speech synthesis (retro robot voice) ----------
 // A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +
 // voiced/unvoiced source, driven through 3 bandpasses. Intelligible-but-robotic (on purpose).

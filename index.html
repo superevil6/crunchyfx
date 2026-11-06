@@ -242,7 +242,7 @@ function setIconLabel(el, name, text) {
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -321,6 +321,17 @@ const PARAMS = [
   ["whooshSweep", "Whoosh sweep",0, 1, 0.01, 0.5, "",  "Whoosh"],
   ["whooshBody",  "Whoosh body", 0, 1, 0.01, 0.3, "",  "Whoosh"],
   ["whooshPeak",  "Whoosh peak", 0, 1, 0.01, 0.4, "",  "Whoosh"],
+  // Blown brass (wave 21): a lip-reed waveguide (dsp.js makeBrass). Listed in DRAWN_IF_USED
+  // (wave 21 only), or Breed/Variations/the Wizard/the footstep packs would spend a draw on these rows
+  // for every sound and move every seeded fixture (tests/audio-hash.js). Only read when wave==brass, so
+  // the defaults are the instrument's, not neutral: they are the character CrunchyBGM picked by ear
+  // on its Trombone, Trumpet and Tuba. Breath = how far over the speaking threshold (the envelope is
+  // the breath's shape); Lips = the resting gap (tight slaps sooner, brassier); Bell = where the bell
+  // starts to radiate, 100-3000 Hz (low for a tuba, high for a trumpet); Tube = losses (dark, soft).
+  ["brassBreath", "Breath",      0, 1, 0.01, 0.57, "",  "Brass"],
+  ["brassLips",   "Lips",        0, 1, 0.01, 0.4,  "",  "Brass"],
+  ["brassBell",   "Bell",        0, 1, 0.01, 0.59, "",  "Brass"],
+  ["brassTube",   "Tube",        0, 1, 0.01, 0.31, "",  "Brass"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -468,6 +479,10 @@ const PARAM_HELP = {
   whooshSweep: "How much the whoosh rises and falls as it passes by.",
   whooshBody: "How thick and heavy the whoosh is.",
   whooshPeak: "Where the loudest moment falls: early (a quick slash) or late (a slow pass).",
+  brassBreath: "How hard the horn is blown: soft is a mellow buzz, hard is a bright blare. The envelope shapes the breath.",
+  brassLips: "How tight the lips are: tight slaps harder and sounds brassier, loose is rounder and softer.",
+  brassBell: "Where the bell lets the sound out: low for a tuba, middle for a trombone, high for a bright trumpet.",
+  brassTube: "How much of the sound the tube soaks up: low is bright and ringing, high is dark and soft.",
   addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
   addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
   addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
@@ -562,6 +577,7 @@ const WAVE_HELP = {
   "FM 4op": "Four-tone FM like 90s consoles and keyboards: bells, basses, brass, metallic hits.",
   impact: "Built for hits: punches, thuds, slams, gunshots.",
   whoosh: "Air moving past: swings, swooshes, dashes, passes.",
+  brass: "A blown horn: lips buzzing into a tube. Brighter the harder it's blown: trombones, trumpets, tubas, fanfares.",
 };
 // One line per Console: what that old machine sounded like.
 const CONSOLE_HELP = {
@@ -613,8 +629,13 @@ for (const p of PARAMS) PARAM_DEFAULTS[p[0]] = p[5];
 // footstep packs walk PARAMS drawing one Math.random per row, so a new row anywhere in the table moves every seeded
 // result after it (tests/audio-hash.js's x: fixtures). Keyed row -> the field that says the sound uses it: a sound
 // with `fmEnv` at 0 draws nothing for either row and inherits them, so its stream is the one it always was.
-const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv" };
-const undrawn = (k, ...srcs) => k in DRAWN_IF_USED && srcs.every((x) => !x[DRAWN_IF_USED[k]]);
+// A value may also be a PREDICATE on the sound, for rows that belong to one engine: the brass knobs (wave 21) are only
+// drawn for a brass sound. A field name keeps its old meaning exactly.
+const usesBrass = (x) => Math.round(x.wave) === 21;
+const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
+                        brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass };
+const undrawn = (k, ...srcs) => k in DRAWN_IF_USED
+  && srcs.every((x) => (typeof DRAWN_IF_USED[k] === "function" ? !DRAWN_IF_USED[k](x) : !x[DRAWN_IF_USED[k]]));
 
 let waveLocked = false;   // when true, presets/randomize/load keep the current waveform
 let sampleBuf = null;     // imported WAV as mono Float32 at SR — used by the "sample" waveform
@@ -1959,6 +1980,7 @@ const PANEL_WAVES = {
   "FM synth": [18],
   "Impact": [19],
   "Whoosh": [20],
+  "Brass": [21],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
