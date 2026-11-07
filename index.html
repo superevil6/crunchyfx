@@ -242,7 +242,7 @@ function setIconLabel(el, name, text) {
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -342,6 +342,10 @@ const PARAMS = [
   ["bowPos",      "Bow position",0, 1, 0.01, 0.39, "",  "Bow"],
   ["bowTone",     "Body tone",   0, 1, 0.01, 0.82, "",  "Bow"],
   ["bowString",   "String damping", 0, 1, 0.01, 0.17, "", "Bow"],
+  // Tremolo (BGM §803): the bow reverses this many times a second, each stroke re-catching the string. 0 = off (a
+  // held bow, byte-identical). Phase = where in the stroke the note starts (a section's players are out of step).
+  ["bowTrem",     "Bow strokes", 0, 20, 0.1, 0,    "Hz", "Bow"],
+  ["bowTremPhase","Stroke phase", 0, 1, 0.01, 0,  "",  "Bow"],
   // Reed (wave 23): a single reed on a bore (dsp.js makeReed). In DRAWN_IF_USED (wave 23 only). The defaults are a
   // saxophone as CrunchyBGM picked it. Bore = cylinder (clarinet: odd harmonics) or cone (sax, low reeds); Breath = over
   // the speaking threshold (past ~0.9 it chokes); Tongue = a kicked, instant attack; Bell = off at 0, then 100-5000 Hz
@@ -352,6 +356,32 @@ const PARAMS = [
   ["reedBell",    "Bell",        0, 1, 0.01, 0.82, "",  "Reed"],
   ["reedWobble",  "Wobble",      0, 1, 0.01, 1,    "",  "Reed"],
   ["reedTone",    "Tone",        0, 1, 0.01, 0.29, "",  "Reed"],
+  // Struck bar (wave 24): decaying modes per bar cut (dsp.js makeBar). In DRAWN_IF_USED (wave 24 only). Bar = the cut,
+  // its mode table measured from real ones; Mallet = soft to hard, 0.5 being the recordings' balance; Ring = shorter
+  // or longer than the table; Motor = a vibraphone's tremolo (0 keeps the bar's own: on for the vibraphone).
+  ["barType",     "Bar",         0, 4, 1, 0,    "",  "Bar", "enum", ["marimba", "xylophone", "glockenspiel", "vibraphone", "tine"]],
+  ["barMallet",   "Mallet",      0, 1, 0.01, 0.5,  "",  "Bar"],
+  ["barRing",     "Ring",        0, 1, 0.01, 0.5,  "",  "Bar"],
+  ["barMotor",    "Motor",       0, 1, 0.01, 0,    "",  "Bar"],
+  // Piano (wave 25): stretched partials on two detuned strings (dsp.js makePiano). In DRAWN_IF_USED (wave 25 only). 0.5 is
+  // the upright CrunchyBGM fitted it to on every knob but Strings (0.4 = 1.2 cents, the fit). Hammer = dark to bright;
+  // Stretch = how sharp the partials run (the treble's bell-like edge); Ring = how long; Strings = the detune (shimmer).
+  ["pianoHammer", "Hammer",      0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoStretch","Stretch",     0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoRing",   "Ring",        0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoStrings","Strings",     0, 1, 0.01, 0.4,  "",  "Piano"],
+  // Flute (wave 26): an air jet driving an open pipe (dsp.js makeFlute). In DRAWN_IF_USED (wave 26 only). The defaults
+  // are the flute CrunchyBGM picked by ear (§804). Breath = how hard it is blown (soft is purer; CrunchyBGM sets it from
+  // velocity); Embouchure = the jet's travel time (low overblows to the octave, high is hollower); Aim = the jet off the
+  // edge (0 is a clarinet's odd harmonics); Breath noise = air in the jet; Tone = the top, 1-10 kHz; Breath vibrato = the
+  // diaphragm's pulse at the vibrato's rate, a flute's own vibrato.
+  ["fluteBreath", "Breath",      0, 1, 0.01, 1,    "",  "Flute"],
+  ["fluteJet",    "Embouchure",  0, 1, 0.01, 0.5,  "",  "Flute"],
+  ["fluteAim",    "Jet aim",     0, 1, 0.01, 0.4,  "",  "Flute"],
+  ["fluteNoise",  "Breath noise",0, 1, 0.01, 0.05, "",  "Flute"],
+  ["fluteTone",   "Tone",        0, 1, 0.01, 0.7,  "",  "Flute"],
+  ["fluteVib",    "Breath vibrato", 0, 1, 0.01, 0, "",  "Flute"],
+  ["fluteBuzz",   "Membrane buzz", 0, 1, 0.01, 0,  "",  "Flute"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -508,12 +538,29 @@ const PARAM_HELP = {
   bowPos: "Where the bow touches the string: near the bridge is bright and glassy, toward the fingerboard is soft and dark.",
   bowTone: "The size of the instrument's body: low for a double bass, middle for a cello, high for a violin.",
   bowString: "How much the string damps itself: low rings bright and long, high is darker and softer.",
+  bowTrem: "Bow tremolo: the bow changes direction this many times a second, each stroke catching the string with a little scratch. 0 is a held bow.",
+  bowTremPhase: "Where in a tremolo stroke the note starts. Give each player of a section its own and they stop moving in step.",
   reedBore: "The tube's shape: a cylinder sounds hollow like a clarinet, a cone fuller like a sax or a low reed.",
   reedBreath: "How hard it's blown: gentle is dark and soft, harder buzzes bright; too hard and the reed chokes silent.",
   reedTongue: "How sharply each note is tongued: none fades in, full starts instantly with a little bite.",
   reedBell: "How much the bell lets the highs out: off is mellow, higher is brighter and brassier.",
   reedWobble: "A resonance the vibrato sweeps through, so the tone wobbles and shimmers like a sax.",
   reedTone: "How much the tube soaks up the highs: low is bright, high is dark and soft.",
+  barType: "Which bar: a marimba's warm wooden ring, a xylophone's dry knock, a glockenspiel's bright steel, a vibraphone, or a plucked tine (a kalimba or a music box's comb).",
+  barMallet: "How hard the mallet is: soft yarn is round and mellow, hard plastic or brass is bright with a click.",
+  barRing: "How long the bar rings after the strike: short and dry to long and singing.",
+  barMotor: "A vibraphone's spinning-fan tremolo: the ring pulses in and out.",
+  pianoHammer: "How hard the hammer's felt is: soft is warm and round, hard is bright and ringing.",
+  pianoStretch: "How far the overtones run sharp: none is pure, more gives the high notes a glassy, bell-like edge.",
+  pianoRing: "How long the strings ring: short and dry to long and singing.",
+  pianoStrings: "How far apart each note's strings are tuned: in tune is pure, apart shimmers like an old upright.",
+  fluteBreath: "How hard it's blown: soft is round and pure, full is brighter.",
+  fluteJet: "The lips' distance to the edge: low jumps up to the octave, the middle is a flute, high turns hollow.",
+  fluteAim: "Where the air hits the edge: dead centre is hollow like a clarinet, a little off is a flute's fuller tone.",
+  fluteNoise: "Air rushing in the tone: none is clean, more is breathy and real, a lot is mostly air.",
+  fluteTone: "How much top end reaches the room: low is soft and dark, high is bright and close.",
+  fluteVib: "The flautist's vibrato, from the breath: it pulses the level and the colour at the vibrato's rate.",
+  fluteBuzz: "A paper membrane over a hole in the pipe, as on a Chinese bamboo flute: it rattles, adding a bright, reedy buzz.",
   addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
   addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
   addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
@@ -611,6 +658,9 @@ const WAVE_HELP = {
   brass: "A blown horn: lips buzzing into a tube. Brighter the harder it's blown: trombones, trumpets, tubas, fanfares.",
   bowed: "A bowed string: the bow grips and slips, so every note starts with a little scratch: violins, cellos, basses.",
   reed: "A reed buzzing on a tube: soft and dark when blown gently, a bright buzz when pushed: clarinets, saxes, low reeds.",
+  bar: "A struck bar: a bright strike that melts into a pure ring: marimbas, xylophones, glockenspiels, vibraphones.",
+  piano: "A piano string: a felt hammer, a quick drop and a long ring, overtones that run a little sharp up high.",
+  flute: "A blown flute: a jet of air across an open pipe, pure and round when soft, brighter blown hard.",
 };
 // One line per Console: what that old machine sounded like.
 const CONSOLE_HELP = {
@@ -667,11 +717,18 @@ for (const p of PARAMS) PARAM_DEFAULTS[p[0]] = p[5];
 const usesBrass = (x) => Math.round(x.wave) === 21;
 const usesBow = (x) => Math.round(x.wave) === 22;
 const usesReed = (x) => Math.round(x.wave) === 23;
+const usesBar = (x) => Math.round(x.wave) === 24;
+const usesPiano = (x) => Math.round(x.wave) === 25;
+const usesFlute = (x) => Math.round(x.wave) === 26;
 const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
                         brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass,
-                        bowSpeed: usesBow, bowPressure: usesBow, bowPos: usesBow, bowTone: usesBow, bowString: usesBow,
+                        bowSpeed: usesBow, bowPressure: usesBow, bowPos: usesBow, bowTone: usesBow, bowString: usesBow, bowTrem: usesBow, bowTremPhase: usesBow,
                         reedBore: usesReed, reedBreath: usesReed, reedTongue: usesReed, reedBell: usesReed,
-                        reedWobble: usesReed, reedTone: usesReed };
+                        reedWobble: usesReed, reedTone: usesReed,
+                        barType: usesBar, barMallet: usesBar, barRing: usesBar, barMotor: usesBar,
+                        pianoHammer: usesPiano, pianoStretch: usesPiano, pianoRing: usesPiano, pianoStrings: usesPiano,
+                        fluteBreath: usesFlute, fluteJet: usesFlute, fluteAim: usesFlute, fluteNoise: usesFlute,
+                        fluteTone: usesFlute, fluteVib: usesFlute, fluteBuzz: usesFlute };
 const undrawn = (k, ...srcs) => k in DRAWN_IF_USED
   && srcs.every((x) => (typeof DRAWN_IF_USED[k] === "function" ? !DRAWN_IF_USED[k](x) : !x[DRAWN_IF_USED[k]]));
 
@@ -2021,6 +2078,9 @@ const PANEL_WAVES = {
   "Brass": [21],
   "Bow": [22],
   "Reed": [23],
+  "Bar": [24],
+  "Piano": [25],
+  "Flute": [26],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);

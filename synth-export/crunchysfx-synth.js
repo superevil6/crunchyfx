@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, renderLayers, masterStage, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.2.1 (a782385 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.2.1 (ecade91 — DIRTY WORKING TREE)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   459e143219baa0ad236a0466d14af6a1119effb4b9f2d732ef0322918ccc2260   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   71c94b64802eb664af2f31467d0961da3d0c326da39733036ace2ebf4a1ac561   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -625,6 +625,15 @@ function bowedCfg(st) {
   return { speed: BOWED_SPEED * st.bowSpeed, pressure: st.bowPressure, pos: 0.05 + 0.2 * st.bowPos,
            tiltHz: 100 * Math.pow(50, st.bowTone), loss: 0.6 * st.bowString };
 }
+// TREMOLO AS BOW STROKES (BGM §803): the bow REVERSES `bowTrem` times a second. Each reversal takes the bow speed
+// through zero, so the string slips free and is re-caught — a scratch per stroke, from the friction law, where an
+// amplitude wobble only moves the level. A soft square (tanh of a sine, sharpness 3) is the stroke's shape;
+// `bowTremPhase` is where in the stroke the note starts, which is what lets a SECTION's players be out of step with
+// each other (CrunchyBGM sets it per player). Picked by ear on a bowed string section at 10 strokes a second.
+const BOWED_TREM_SHARP = 3;
+function bowStroke(t, hz, phase) {
+  return Math.tanh(BOWED_TREM_SHARP * Math.sin(Math.PI * (hz * t + phase))) / Math.tanh(BOWED_TREM_SHARP);
+}
 function bowFriction(dv, slope) {   // stick-slip: near-total reflection while the bow grips, collapsing as it slips
   const r = Math.pow(Math.abs((dv + 0.001) * slope) + 0.75, -4);
   return r < 0.01 ? 0.01 : r > 0.98 ? 0.98 : r;
@@ -784,6 +793,231 @@ function reedTune(sr, f0, cfg, p, atk) {
   return out;
 }
 
+// ---------- Struck bar (wave "bar", #24): the "-phones" ----------
+// CrunchyBGM measured its mallets against real ones (BGM §796, tests/measure-bar.mjs) and found them wrong three ways:
+// partials in the wrong places, a ring of 0.1-0.7 s where a marimba's bass rings 4 s, and every partial dying at the
+// fundamental's rate where a real bar's upper modes die 5-10x faster (the strike is bright and melts to a near-pure
+// ring, which IS a bar's sound). A bar is modal, so this is decaying sines with the physics in a table per CUT, the
+// ratios and levels read off VSCO-2 CE's Marimba, Xylo and Glock: a marimba bar is TUNED 1 : 4 : 10, a xylophone's
+// 1 : 3, a glockenspiel is a FREE bar 1 : 2.76 : 5.40 : 8.93. The fundamental's ring halves every `half` semitones
+// up; mode k rings ring / ratio^alpha; the mallet scales mode k by ratio^(2·dh), dh its hardness from the table's own
+// stroke, plus a few ms of click as bright as the mallet. Picked by ear in BGM on its Marimba, Xylophone and
+// Glockenspiel. No tuning pass: the modes are exact frequencies.
+const BAR_TYPES = [   // index = the `barType` knob (append-only)
+  { modes: [1, 3.99, 10.1], db: [0, -10, -8], ring: 4.3, at: 36, half: 9, alpha: 1.3, hard: 0.45, click: 0.04, trem: 0 },        // marimba
+  { modes: [1, 3.0, 6.6, 11.0], db: [0, -8, -6, -20], ring: 1.2, at: 55, half: 12, alpha: 1.5, hard: 0.75, click: 0.08, trem: 0 }, // xylophone
+  { modes: [1, 2.76, 5.40, 8.93], db: [0, 0, -12, -6], ring: 3.5, at: 67, half: 14, alpha: 1.9, hard: 0.8, click: 0.05, trem: 0 },  // glockenspiel
+  { modes: [1, 3.99, 10.1], db: [0, -22, -30], ring: 6, at: 53, half: 12, alpha: 1.2, hard: 0.5, click: 0.02, trem: 0.3 },        // vibraphone
+  // a CLAMPED tine (kalimba, music-box comb): a cantilever's modes run 1 : 6.27 : 17.55 (VCSL's kalimbas read the second
+  // at 6.29-6.49 on their low tines). Plucked by a thumb or a pin, so the click is a short buzz. BGM §801.
+  { modes: [1, 6.27, 17.55], db: [0, -10, -20], ring: 1.2, at: 60, half: 12, alpha: 1.0, hard: 0.6, click: 0.1, trem: 0 },        // tine
+];
+// One strike. tick(f, i) -> one sample (i counts from the strike). `dh` is the mallet against the table's own stroke.
+function makeBar(sr, st, f0, seedIn) {
+  const T = BAR_TYPES[Math.max(0, Math.min(BAR_TYPES.length - 1, Math.round(st.barType)))];
+  const dh = (st.barMallet - 0.5), ringMul = Math.pow(4, (st.barRing - 0.5) * 2);
+  const midi = 69 + 12 * Math.log2(Math.max(1, f0) / 440);
+  const T20 = T.ring * ringMul * Math.pow(2, -(midi - T.at) / T.half);
+  const n = T.modes.length, ratio = new Float64Array(n), amp = new Float64Array(n), dec = new Float64Array(n), ph = new Float64Array(n), env = new Float64Array(n);
+  for (let k = 0; k < n; k++) {
+    ratio[k] = T.modes[k];
+    amp[k] = Math.pow(10, T.db[k] / 20) * Math.pow(T.modes[k], dh * 2);
+    const tau = (T20 / Math.pow(T.modes[k], T.alpha)) / 2.303;
+    dec[k] = Math.exp(-1 / Math.max(1e-4, tau * sr)); env[k] = amp[k];
+  }
+  const hardAbs = Math.max(0, Math.min(1, T.hard + dh)), clickA = 0.15 + 0.8 * hardAbs, clickN = Math.round(0.004 * sr);
+  const clickG = T.click * Math.max(0, 1 + 2 * dh), trem = st.barMotor > 0 ? st.barMotor : T.trem;
+  let seed = (seedIn >>> 0) || 0x6d0, lp = 0;
+  return {
+    tick(f, i) {
+      let o = 0;
+      for (let k = 0; k < n; k++) {
+        const fk = ratio[k] * f; if (fk > sr * 0.45) continue;   // a mode past Nyquist is dropped, not folded
+        ph[k] += 2 * Math.PI * fk / sr; if (ph[k] > 6.283185307179586) ph[k] -= 6.283185307179586;
+        o += env[k] * Math.sin(ph[k]); env[k] *= dec[k];
+      }
+      if (i < clickN) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; lp += clickA * ((seed / 4294967296 * 2 - 1) - lp); o += clickG * lp * (1 - i / clickN); }
+      if (trem) o *= 1 - trem * 0.5 * (1 - Math.cos(2 * Math.PI * 5 * i / sr));   // the vibraphone's motor, 5 Hz
+      if (i < sr * 0.001) o *= i / (sr * 0.001);                                  // a 1 ms edge against a click
+      return o;
+    },
+  };
+}
+
+// ---------- Piano (wave "piano", #25) ----------
+// CrunchyBGM measured its pianos against a real upright (BGM §798, tests/measure-piano.mjs): a piano's identity is four
+// couplings, and the modal wave missed all four. STRETCH: a stiff string runs its partials sharp, f_n = n·f0·sqrt(1+B·n²),
+// and B grows ~3x an octave up the keyboard (0.8e-4 at C2, 2.7e-4 at C4, 24e-4 at C6). TWO-STAGE DECAY: each note is two
+// or three strings a few cents apart, so the sound drops fast (the prompt) and then rings long (the aftersound). The
+// BOARD radiates a bass fundamental weakly (C2's sits 36 dB under its 3rd partial). The HAMMER: a harder strike is brighter.
+// So each partial is two detuned strings with a fast and a slow decay, the hammer a roll-off (its exponent the Hammer
+// knob, lowered by velocity in BGM), the strike point a SHALLOW comb (a felt hammer is a patch: a point notched the 8th
+// partial to -115 dB), a steep 4th-order board high-pass at 100 Hz, a 3.5 kHz treble low-pass (without it the top octaves
+// read twice as bright as a real one's near-pure ring), and a felt thump. Picked by ear in BGM on its Piano.
+const PIANO_PARTIALS = 24;
+// One strike. tick(f, i) -> one sample (i counts from the strike); `f` moves every partial with it.
+function makePiano(sr, st, f0, seedIn) {
+  const midi = 69 + 12 * Math.log2(Math.max(1, f0) / 440), oct = (midi - 60) / 12;
+  const B = Math.max(0.8e-4, 2.7e-4 * Math.pow(3, oct)) * Math.pow(4, (st.pianoStretch - 0.5) * 2);
+  const ring = Math.pow(4, (st.pianoRing - 0.5) * 2) * Math.pow(1.6, -oct);
+  const tp = 0.3 * ring, ta = 2.5 * ring, roll = 1.4 - 1.2 * st.pianoHammer, det = Math.pow(2, 3 * st.pianoStrings / 1200);
+  const ratio = [], amp = [], dP = [], dA = [], ph1 = [], ph2 = [], eP = [], eA = [], dt = [];
+  let sum = 0;
+  for (let k = 1; k <= PIANO_PARTIALS; k++) {
+    const r = k * Math.sqrt(1 + B * k * k), fk = r * f0; if (fk > sr * 0.45) break;
+    const comb = 0.25 + 0.75 * Math.abs(Math.sin(Math.PI * k * 0.125)) / Math.sin(Math.PI * 0.125);
+    const rb = Math.pow(fk / 100, 4), board = rb / Math.sqrt(1 + rb * rb), lp = 1 / Math.sqrt(1 + Math.pow(fk / 3500, 4));
+    const a = Math.pow(k, -roll) * comb * board * lp; if (a < 1e-5) continue;
+    const pf = 1 + 0.5 * (k - 1);
+    ratio.push(r); amp.push(a); dP.push(Math.exp(-pf / (tp * sr))); dA.push(Math.exp(-pf / (ta * sr)));
+    ph1.push(0); ph2.push(0); eP.push(a * 0.7); eA.push(a * 0.3); dt.push(k <= 12 ? det : Math.sqrt(det)); sum += a;
+  }
+  const norm = sum > 0 ? 0.5 / sum : 0, thumpN = Math.round(0.006 * sr), thumpG = 0.15 * (0.5 + st.pianoHammer);
+  let seed = (seedIn >>> 0) || 0x9e37, lp = 0;
+  return {
+    tick(f, i) {
+      let o = 0;
+      for (let k = 0; k < ratio.length; k++) {
+        const w = 2 * Math.PI * ratio[k] * f / sr;
+        ph1[k] += w; if (ph1[k] > 6.283185307179586) ph1[k] -= 6.283185307179586;
+        ph2[k] += w * dt[k]; if (ph2[k] > 6.283185307179586) ph2[k] -= 6.283185307179586;
+        o += (eP[k] + eA[k]) * 0.5 * (Math.sin(ph1[k]) + Math.sin(ph2[k]));
+        eP[k] *= dP[k]; eA[k] *= dA[k];
+      }
+      o *= norm;
+      if (i < thumpN) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; lp += 0.08 * ((seed / 4294967296 * 2 - 1) - lp); o += thumpG * lp * (1 - i / thumpN); }
+      if (i < sr * 0.0015) o *= i / (sr * 0.0015);
+      return o;
+    },
+  };
+}
+
+
+// ---------- Flute (wave "flute", #26): an air jet driving an open pipe ----------
+// The woodwind half CrunchyBGM's reed did not cover (BGM §794, §804): a flute's identity is a JET of air flipping in and
+// out of a pipe at its edge, and an earlier jet design was refused by ear as "metallic and breathy" for two measured
+// reasons, both answered here by construction:
+//
+//   breath ─(+ a little noise)─ − pressure ─► JET delay ─► jet low-pass ─► tanh(gain·(deflection / breath + aim)) · breath
+//                                                                                      │ (the flow into the pipe)
+//   pipe: ──► ONE-period delay, both ends open (−1·−1 = +) ─► symmetric low-pass ─► + ─┘ ─► pressure ─► radiation ─► out
+//
+//   - the pipe is ONE period long and open at both ends, so every resonance it has IS a harmonic of the note: anything
+//     it colours (breath noise included) lands on the note's own series. The refused design's 1.5-period bore rang
+//     partials at multiples of 2/3 of the note — the metallic;
+//   - the loss filter is SYMMETRIC [a, 1-2a, a], a constant one-sample delay taken off the line, so the upper modes are
+//     not pulled flat the way a one-pole's phase pulls them;
+//   - the jet is deflected by the sound's velocity OVER ITS OWN SPEED (a faster jet bends less), so the threshold is the
+//     same at every breath and a soft note speaks; `FLUTE_SAT` puts back half of the breath's say over saturation, so
+//     a harder breath is brighter, as a flute is;
+//   - what leaves an open end is the RATE OF CHANGE of its flow, a +6 dB/octave tilt: the stage that puts a flute's
+//     upper harmonics where a real one's are (measured against VSCO-2's flute: 4-5 dB off on average, h2..h8);
+//   - the jet's travel time is the EMBOUCHURE: 0.28 of a period here. Shorter overblows to the octave (the edge is
+//     ~0.25, where any breath noise flips it), longer leans to the odd harmonics, a hollower tone.
+// Prototyped and picked by ear in CrunchyBGM (tools/_flute.mjs) on its Flute, with almost no breath noise ("the realism
+// of the breathiness… is disruptive in a song"). The amp envelope is the BREATH; each note is levelled by its RMS.
+const FLUTE_GAIN = 3;          // how hard the jet switches (soft is a sine, hard an edge tone)
+const FLUTE_REFL = 0.8;        // both open ends' reflection together: a lossier pipe keeps the jet near linear, so its aim shapes the wave
+const FLUTE_LOSS = 0.25;       // the symmetric loss filter, [a, 1-2a, a] with a = loss/2
+const FLUTE_MOUTH = 0.3;       // the jet's own flow, radiated at the embouchure hole as well as the foot (stated against the pipe's gain)
+const FLUTE_JETLP = 1.5;       // the jet spreads as it crosses the mouth: a one-pole at 1.5 x f0 on its deflection
+const FLUTE_SAT = 0.5;         // the breath's share of the jet's saturation (0 = the same spectrum at every breath)
+const FLUTE_RMS = 0.25;        // the steady level every note is brought to
+function fluteCfg(st) {
+  return { blow: Math.max(0.02, Math.min(1, st.fluteBreath)), ratio: 0.2 + 0.16 * st.fluteJet, aim: st.fluteAim,
+           // squared, to 0.4 (BGM §807): a linear 0.1 at the top was audible on a bright flute and lost under a dark one's
+           // top (a shakuhachi's muraiki at full read 25 dB of residual from half); the squared law keeps the bottom fine
+           noise: 0.4 * st.fluteNoise * st.fluteNoise, topHz: 1000 * Math.pow(10, st.fluteTone), buzz: st.fluteBuzz || 0 };
+}
+// A playing flute. tick(breath, f) -> one sample; `breath` is the blow times the envelope (and any breath vibrato).
+function makeFlute(sr, cfg, fLow, f0, scale, seedIn) {
+  const N0max = (sr / Math.max(10, fLow)) * scale, size = Math.ceil(N0max * 1.05) + 8, pipe = new Float32Array(size);
+  const jsize = Math.ceil(N0max * cfg.ratio * 1.05) + 8, jet = new Float32Array(jsize);
+  const a = FLUTE_LOSS / 2, jK = Math.exp(-2 * Math.PI * Math.min(0.45 * sr, FLUTE_JETLP * f0) / sr);
+  const tH = cfg.topHz > 0 ? Math.exp(-2 * Math.PI * Math.min(0.45 * sr, cfg.topHz) / sr) : 0, rN = sr / (2 * Math.PI * f0);
+  const pmax = cfg.blow, mouthG = FLUTE_MOUTH / (1 - FLUTE_REFL);
+  let w = 0, wj = 0, x1 = 0, x2 = 0, dcx = 0, dcy = 0, jz = 0, oPrev = 0, th1 = 0, th2 = 0, seed = (seedIn >>> 0) || 0xf1a7e;
+  // `buzz` (BGM §806): a DIZI's membrane, the dimo — paper over a hole in the wall, driven by the pipe's pressure. It
+  // RATTLES: what of its excursion exceeds its slack (asymmetric, since it is glued under tension) comes out as sharp
+  // spikes, periodic and so still the note's own harmonics, coloured by the membrane's resonance near 3.2 kHz. Read off
+  // the pressure normalized by its own envelope, so the rasp is the same at every level; radiated beside the tone and
+  // NOT fed back, because anything that perturbs the jet can tip the pipe into its islands (§804).
+  const bz = cfg.buzz, mw = 2 * Math.PI * Math.min(0.45 * sr, 3200) / sr, mal = Math.sin(mw) / (2 * 1.2), ma0 = 1 + mal;
+  const mb0 = mal / ma0, mb2 = -mal / ma0, ma1 = -2 * Math.cos(mw) / ma0, ma2 = (1 - mal) / ma0;
+  let pEnv = 0, mx1 = 0, mx2 = 0, my1 = 0, my2 = 0;
+  const read = (buf, wp, D, sz) => { let rp = wp - D; if (rp < 0) rp += sz; const i0 = rp | 0, fr = rp - i0, i1 = i0 + 1 === sz ? 0 : i0 + 1; return buf[i0] * (1 - fr) + buf[i1] * fr; };
+  return {
+    tick(breath, f) {
+      const N = (sr / Math.max(10, f)) * scale, D = Math.min(size - 4, Math.max(2, N - 1)), Dj = Math.min(jsize - 4, Math.max(1, N * cfg.ratio));
+      const ret = read(pipe, w, D, size);
+      const lp = a * ret + (1 - 2 * a) * x1 + a * x2; x2 = x1; x1 = ret;
+      const p = FLUTE_REFL * lp;
+      const dc = p - dcx + 0.995 * dcy; dcx = p; dcy = dc;          // the jet sees the pressure without its mean
+      // BREATH NOISE IS RADIATED AT THE EMBOUCHURE, NOT BLOWN INTO THE JET (§804): a trace of noise in the jet (0.005)
+      // kicked the pipe into a second, louder oscillation at certain lengths — islands where the pitch jumps, M84 and M91
+      // landing 16 and 89 cents out — and in the pipe it is tuned into a pitched hiss. The turbulence at the mouth hole is
+      // what a listener hears as breath, so it joins the output there and cannot touch the oscillation at all.
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const br = breath, nz = breath * cfg.noise * (seed / 4294967296 * 2 - 1);
+      jet[wj] = br - dc; wj = wj + 1 === jsize ? 0 : wj + 1;
+      let dfl = read(jet, wj, Dj, jsize) - br; jz = (1 - jK) * dfl + jK * jz; dfl = jz;
+      const den = Math.pow(br + 0.05 * pmax + 1e-9, 1 - FLUTE_SAT);   // the full breath is 1, so its power is 1
+      const q = Math.tanh(FLUTE_GAIN * (dfl / den + cfg.aim)) * br;
+      pipe[w] = p + q; w = w + 1 === size ? 0 : w + 1;
+      let o = dc + mouthG * (q + nz);
+      const d = (o - oPrev) * rN; oPrev = o; o = d;                     // radiation: the open end radiates the change
+      if (bz > 0) {
+        pEnv += (Math.abs(dc) - pEnv) * 0.002;
+        // the membrane RATTLES on each pressure peak: a burst of noise gated by how far the pressure passes its slack (a
+        // kazoo's buzz, pitch-synchronous so it is heard as a rasp ON the note). Noise rather than a periodic slap,
+        // because a buzz exactly on the tone's harmonics adds or cancels by phase — measured, a slap made the note
+        // DARKER at low settings and wiped out a harmonic at high ones
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        const xr = dc / (pEnv * 1.6 + 1e-9), gate = xr > 0.45 ? xr - 0.45 : 0, r = gate * (seed / 4294967296 * 2 - 1) * 4;
+        const m = mb0 * r + mb2 * mx2 - ma1 * my1 - ma2 * my2; mx2 = mx1; mx1 = r; my2 = my1; my1 = m;
+        o += bz * 12 * m * pEnv;                                        // stated against the pressure's own envelope
+      }
+      if (tH) { th1 = (1 - tH) * o + tH * th1; th2 = (1 - tH) * th1 + tH * th2; o = th2; }
+      return o;
+    },
+  };
+}
+// The pipe length and the makeup gain for one (pitch, knobs): a held note without vibrato, measured at ~0.5 s. The FIRST
+// search is ±12%: the loop's filters add phase a short pipe feels, so the top octave speaks 70-110 cents sharp of its
+// nominal length (M84: +72 at scale 1, in tune at 1.043), near the edge of the ±6% the bowed tuner uses. Then ±3%, held
+// within ±10%, secant steps. A pipe whose modes are the harmonics has no false neighbour that close, so the wider first
+// look is safe here where it was not for the bow.
+const FLUTE_TUNE = new Map();
+function fluteTune(sr, f0, cfg) {
+  const key = f0.toFixed(4) + "|" + cfg.blow.toFixed(4) + "|" + cfg.ratio + "|" + cfg.aim + "|" + cfg.noise + "|" + cfg.topHz;
+  const hit = FLUTE_TUNE.get(key); if (hit) return hit;
+  const at = Math.round(sr * 0.5), win = Math.max(2048, Math.ceil(3 * sr / f0));
+  const n = at + win + Math.ceil(sr * 1.1 / f0) + 8, atN = Math.round(sr * 0.06), x = new Float32Array(n);
+  const seed = 0xf1a7e ^ Math.round(f0 * 100);
+  let s = 1, rms = 0, sPrev = 0, cPrev = 0;
+  // TUNED WITHOUT THE MEMBRANE: its rattle is radiated beside the tone and does not touch the oscillation, so it cannot
+  // move the pitch — but its noise does move the TRACKER, which read the buzz as the pitch and set a dizi 13 cents out on
+  // median (100 at worst) before this. The level is the tone's too; the rattle rides on top of it.
+  const tcfg = cfg.buzz ? Object.assign({}, cfg, { buzz: 0 }) : cfg;
+  for (let it = 0; it < 8; it++) {
+    const v = makeFlute(sr, tcfg, f0, f0, s, seed);
+    for (let i = 0; i < n; i++) x[i] = v.tick(cfg.blow * (i < atN ? 0.5 - 0.5 * Math.cos(Math.PI * i / atN) : 1), f0);
+    let e = 0; for (let i = at; i < at + win; i++) e += x[i] * x[i];
+    rms = Math.sqrt(e / win);
+    if (!(rms > 1e-6)) break;
+    const f = brassPitch(x, sr, f0, at, it ? 0.03 : 0.12);
+    if (!(f > 0)) break;
+    const cents = 1200 * Math.log2(f / f0);
+    if (Math.abs(cents) < 2) break;
+    const ratio = s * f / f0, sec = it && cents !== cPrev ? s - cents * (s - sPrev) / (cents - cPrev) : ratio;
+    sPrev = s; cPrev = cents;
+    s = Math.max(0.9, Math.min(1.1, isFinite(sec) ? sec : ratio));
+  }
+  const out = { scale: s, gain: rms > 1e-6 ? FLUTE_RMS / rms : 0 };
+  if (FLUTE_TUNE.size > 4096) FLUTE_TUNE.clear();
+  FLUTE_TUNE.set(key, out);
+  return out;
+}
 
 // ---------- Formant speech synthesis (retro robot voice) ----------
 // A tiny Klatt/SAM-style formant speech synth: text → phonemes → a stream of formant targets +
@@ -1422,6 +1656,23 @@ function renderPatch(st, opts) {
     const tune = reedTune(SR, baseFreq, reedCf, reedP, atk);
     reedScale = tune.scale; reedG = tune.gain;
   }
+  // Struck bar (wave "bar", #24): decaying modes (dsp.js makeBar). A bar rings on its own: the amp envelope is NOT its
+  // gain, only its DAMPER, fading the ring over `release` at the end of the note. Mono.
+  const isBar = waveType === 24;
+  let barV = null, barShot = -1, barStart = 0;
+  // Piano (wave "piano", #25): stretched partials on two detuned strings (dsp.js makePiano). Like the bar, it decays on
+  // its own: the amp envelope is its DAMPER only, fading the ring over `release` when the key is let go. Mono.
+  const isPiano = waveType === 25;
+  let pianoV = null, pianoShot = -1, pianoStart = 0;
+  // Flute (wave "flute", #26): an air jet driving an open pipe (dsp.js makeFlute). The amp envelope is the BREATH, as it
+  // is brass's and the bow's. Tuned and levelled once for the note's pitch; vibrato and sweeps move the pipe. Mono.
+  const isFlute = waveType === 26;
+  let fluteV = null, fluteG = 0, fluteCf = null, fluteScale = 0, fluteShot = -1;
+  if (isFlute) {
+    fluteCf = fluteCfg(st);
+    const tune = fluteTune(SR, baseFreq, fluteCf);
+    fluteScale = tune.scale; fluteG = tune.gain;
+  }
   // The amp envelope as a function, for the two engines that take it as their DRIVE (brass's breath, the bow's speed)
   // rather than as a gain. The same expression as the gain stage below, which every other wave still uses inline.
   const ampEnvAt = (lt) => {
@@ -1699,7 +1950,27 @@ function renderPatch(st, opts) {
     } else if (isBowed) {
       // a fresh string per shot (a burst re-bows); the slowest pitch a sweep can reach sizes the delay lines
       if (shotIdx !== bowedShot) { bowedShot = shotIdx; bowedV = makeBowed(SR, bowedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, bowedScale, 0x2545f491 ^ Math.round(baseFreq * 100)); }
-      const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt), fOsc) * bowedG;   // the amp envelope, read as the bow speed
+      // the amp envelope, read as the bow speed — and with `bowTrem`, its direction too (a stroke at a time)
+      const dir = st.bowTrem > 0 ? bowStroke(lt, st.bowTrem, st.bowTremPhase) : 1;
+      const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt) * dir, fOsc) * bowedG;
+      oscL = v; oscR = v;
+    } else if (isBar) {
+      if (shotIdx !== barShot) { barShot = shotIdx; barStart = i; barV = makeBar(SR, st, baseFreq, 0x6d0 ^ Math.round(baseFreq * 10)); }
+      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+      const v = barV.tick(fOsc, i - barStart) * damp;
+      oscL = v; oscR = v;
+    } else if (isFlute) {
+      // a fresh pipe per shot (a burst re-tongues); the slowest pitch a sweep can reach sizes the delay lines.
+      // `fluteVib` is a flute's own vibrato — the BREATH pulsing at the vibrato's rate and onset (through the jet's
+      // saturation it moves the colour as well as the level), alongside whatever pitch vibrato the patch declares
+      if (shotIdx !== fluteShot) { fluteShot = shotIdx; fluteV = makeFlute(SR, fluteCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, fluteScale, 0xf1a7e ^ Math.round(baseFreq * 100)); }
+      const bv = st.fluteVib > 0 ? 1 + 0.3 * st.fluteVib * vibOn * Math.sin(vibPhase) : 1;
+      const v = fluteV.tick(fluteCf.blow * ampEnvAt(lt) * bv, fOsc) * fluteG;
+      oscL = v; oscR = v;
+    } else if (isPiano) {
+      if (shotIdx !== pianoShot) { pianoShot = shotIdx; pianoStart = i; pianoV = makePiano(SR, st, baseFreq, 0x9e37 ^ Math.round(baseFreq * 10)); }
+      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+      const v = pianoV.tick(fOsc, i - pianoStart) * damp;
       oscL = v; oscR = v;
     } else if (isReed) {
       if (shotIdx !== reedShot) { reedShot = shotIdx; reedV = makeReed(SR, reedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, reedScale, 0x5eed ^ Math.round(baseFreq * 100)); }
@@ -1810,7 +2081,7 @@ function renderPatch(st, opts) {
     else if (lt < relStart) env = susLevel;
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    if (!isBrass && !isBowed && !isReed) { sL *= env; sR *= env; }   // the models took the envelope as their drive, above
+    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).
@@ -2201,7 +2472,7 @@ function encodeWav(L, R, opts) {
 // ==== parameter table (from index.html) ====================================================
 // Carried so consumers read the canonical defaults instead of maintaining their own copy.
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute"];
 
 const PARAMS = [
   // Oscillator
@@ -2300,6 +2571,10 @@ const PARAMS = [
   ["bowPos",      "Bow position",0, 1, 0.01, 0.39, "",  "Bow"],
   ["bowTone",     "Body tone",   0, 1, 0.01, 0.82, "",  "Bow"],
   ["bowString",   "String damping", 0, 1, 0.01, 0.17, "", "Bow"],
+  // Tremolo (BGM §803): the bow reverses this many times a second, each stroke re-catching the string. 0 = off (a
+  // held bow, byte-identical). Phase = where in the stroke the note starts (a section's players are out of step).
+  ["bowTrem",     "Bow strokes", 0, 20, 0.1, 0,    "Hz", "Bow"],
+  ["bowTremPhase","Stroke phase", 0, 1, 0.01, 0,  "",  "Bow"],
   // Reed (wave 23): a single reed on a bore (dsp.js makeReed). In DRAWN_IF_USED (wave 23 only). The defaults are a
   // saxophone as CrunchyBGM picked it. Bore = cylinder (clarinet: odd harmonics) or cone (sax, low reeds); Breath = over
   // the speaking threshold (past ~0.9 it chokes); Tongue = a kicked, instant attack; Bell = off at 0, then 100-5000 Hz
@@ -2310,6 +2585,32 @@ const PARAMS = [
   ["reedBell",    "Bell",        0, 1, 0.01, 0.82, "",  "Reed"],
   ["reedWobble",  "Wobble",      0, 1, 0.01, 1,    "",  "Reed"],
   ["reedTone",    "Tone",        0, 1, 0.01, 0.29, "",  "Reed"],
+  // Struck bar (wave 24): decaying modes per bar cut (dsp.js makeBar). In DRAWN_IF_USED (wave 24 only). Bar = the cut,
+  // its mode table measured from real ones; Mallet = soft to hard, 0.5 being the recordings' balance; Ring = shorter
+  // or longer than the table; Motor = a vibraphone's tremolo (0 keeps the bar's own: on for the vibraphone).
+  ["barType",     "Bar",         0, 4, 1, 0,    "",  "Bar", "enum", ["marimba", "xylophone", "glockenspiel", "vibraphone", "tine"]],
+  ["barMallet",   "Mallet",      0, 1, 0.01, 0.5,  "",  "Bar"],
+  ["barRing",     "Ring",        0, 1, 0.01, 0.5,  "",  "Bar"],
+  ["barMotor",    "Motor",       0, 1, 0.01, 0,    "",  "Bar"],
+  // Piano (wave 25): stretched partials on two detuned strings (dsp.js makePiano). In DRAWN_IF_USED (wave 25 only). 0.5 is
+  // the upright CrunchyBGM fitted it to on every knob but Strings (0.4 = 1.2 cents, the fit). Hammer = dark to bright;
+  // Stretch = how sharp the partials run (the treble's bell-like edge); Ring = how long; Strings = the detune (shimmer).
+  ["pianoHammer", "Hammer",      0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoStretch","Stretch",     0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoRing",   "Ring",        0, 1, 0.01, 0.5,  "",  "Piano"],
+  ["pianoStrings","Strings",     0, 1, 0.01, 0.4,  "",  "Piano"],
+  // Flute (wave 26): an air jet driving an open pipe (dsp.js makeFlute). In DRAWN_IF_USED (wave 26 only). The defaults
+  // are the flute CrunchyBGM picked by ear (§804). Breath = how hard it is blown (soft is purer; CrunchyBGM sets it from
+  // velocity); Embouchure = the jet's travel time (low overblows to the octave, high is hollower); Aim = the jet off the
+  // edge (0 is a clarinet's odd harmonics); Breath noise = air in the jet; Tone = the top, 1-10 kHz; Breath vibrato = the
+  // diaphragm's pulse at the vibrato's rate, a flute's own vibrato.
+  ["fluteBreath", "Breath",      0, 1, 0.01, 1,    "",  "Flute"],
+  ["fluteJet",    "Embouchure",  0, 1, 0.01, 0.5,  "",  "Flute"],
+  ["fluteAim",    "Jet aim",     0, 1, 0.01, 0.4,  "",  "Flute"],
+  ["fluteNoise",  "Breath noise",0, 1, 0.01, 0.05, "",  "Flute"],
+  ["fluteTone",   "Tone",        0, 1, 0.01, 0.7,  "",  "Flute"],
+  ["fluteVib",    "Breath vibrato", 0, 1, 0.01, 0, "",  "Flute"],
+  ["fluteBuzz",   "Membrane buzz", 0, 1, 0.01, 0,  "",  "Flute"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -2411,8 +2712,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.2.1",
-  BUILT: "a782385-dirty",
-  SHA256: "459e143219baa0ad236a0466d14af6a1119effb4b9f2d732ef0322918ccc2260",
+  BUILT: "ecade91-dirty",
+  SHA256: "71c94b64802eb664af2f31467d0961da3d0c326da39733036ace2ebf4a1ac561",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

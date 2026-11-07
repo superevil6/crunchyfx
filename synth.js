@@ -264,6 +264,23 @@ function renderPatch(st, opts) {
     const tune = reedTune(SR, baseFreq, reedCf, reedP, atk);
     reedScale = tune.scale; reedG = tune.gain;
   }
+  // Struck bar (wave "bar", #24): decaying modes (dsp.js makeBar). A bar rings on its own: the amp envelope is NOT its
+  // gain, only its DAMPER, fading the ring over `release` at the end of the note. Mono.
+  const isBar = waveType === 24;
+  let barV = null, barShot = -1, barStart = 0;
+  // Piano (wave "piano", #25): stretched partials on two detuned strings (dsp.js makePiano). Like the bar, it decays on
+  // its own: the amp envelope is its DAMPER only, fading the ring over `release` when the key is let go. Mono.
+  const isPiano = waveType === 25;
+  let pianoV = null, pianoShot = -1, pianoStart = 0;
+  // Flute (wave "flute", #26): an air jet driving an open pipe (dsp.js makeFlute). The amp envelope is the BREATH, as it
+  // is brass's and the bow's. Tuned and levelled once for the note's pitch; vibrato and sweeps move the pipe. Mono.
+  const isFlute = waveType === 26;
+  let fluteV = null, fluteG = 0, fluteCf = null, fluteScale = 0, fluteShot = -1;
+  if (isFlute) {
+    fluteCf = fluteCfg(st);
+    const tune = fluteTune(SR, baseFreq, fluteCf);
+    fluteScale = tune.scale; fluteG = tune.gain;
+  }
   // The amp envelope as a function, for the two engines that take it as their DRIVE (brass's breath, the bow's speed)
   // rather than as a gain. The same expression as the gain stage below, which every other wave still uses inline.
   const ampEnvAt = (lt) => {
@@ -541,7 +558,27 @@ function renderPatch(st, opts) {
     } else if (isBowed) {
       // a fresh string per shot (a burst re-bows); the slowest pitch a sweep can reach sizes the delay lines
       if (shotIdx !== bowedShot) { bowedShot = shotIdx; bowedV = makeBowed(SR, bowedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, bowedScale, 0x2545f491 ^ Math.round(baseFreq * 100)); }
-      const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt), fOsc) * bowedG;   // the amp envelope, read as the bow speed
+      // the amp envelope, read as the bow speed — and with `bowTrem`, its direction too (a stroke at a time)
+      const dir = st.bowTrem > 0 ? bowStroke(lt, st.bowTrem, st.bowTremPhase) : 1;
+      const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt) * dir, fOsc) * bowedG;
+      oscL = v; oscR = v;
+    } else if (isBar) {
+      if (shotIdx !== barShot) { barShot = shotIdx; barStart = i; barV = makeBar(SR, st, baseFreq, 0x6d0 ^ Math.round(baseFreq * 10)); }
+      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+      const v = barV.tick(fOsc, i - barStart) * damp;
+      oscL = v; oscR = v;
+    } else if (isFlute) {
+      // a fresh pipe per shot (a burst re-tongues); the slowest pitch a sweep can reach sizes the delay lines.
+      // `fluteVib` is a flute's own vibrato — the BREATH pulsing at the vibrato's rate and onset (through the jet's
+      // saturation it moves the colour as well as the level), alongside whatever pitch vibrato the patch declares
+      if (shotIdx !== fluteShot) { fluteShot = shotIdx; fluteV = makeFlute(SR, fluteCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, fluteScale, 0xf1a7e ^ Math.round(baseFreq * 100)); }
+      const bv = st.fluteVib > 0 ? 1 + 0.3 * st.fluteVib * vibOn * Math.sin(vibPhase) : 1;
+      const v = fluteV.tick(fluteCf.blow * ampEnvAt(lt) * bv, fOsc) * fluteG;
+      oscL = v; oscR = v;
+    } else if (isPiano) {
+      if (shotIdx !== pianoShot) { pianoShot = shotIdx; pianoStart = i; pianoV = makePiano(SR, st, baseFreq, 0x9e37 ^ Math.round(baseFreq * 10)); }
+      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+      const v = pianoV.tick(fOsc, i - pianoStart) * damp;
       oscL = v; oscR = v;
     } else if (isReed) {
       if (shotIdx !== reedShot) { reedShot = shotIdx; reedV = makeReed(SR, reedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, reedScale, 0x5eed ^ Math.round(baseFreq * 100)); }
@@ -652,7 +689,7 @@ function renderPatch(st, opts) {
     else if (lt < relStart) env = susLevel;
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    if (!isBrass && !isBowed && !isReed) { sL *= env; sR *= env; }   // the models took the envelope as their drive, above
+    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).
