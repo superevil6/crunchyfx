@@ -233,6 +233,42 @@ function renderPatch(st, opts) {
   const isWhoosh = waveType === 20;
   let whooshBuf = null;
   if (isWhoosh) { const wlen = Math.max(2, Math.min(n, Math.round(slot * SR))); whooshBuf = makeWhoosh(wlen, st.whooshTone, st.whooshSweep, st.whooshBody, st.whooshPeak, sd(0x51ce5ab1)); }
+  // Chirp (wave "chirp", #27): birdsong and insects (dsp.js makeChirp), built up front into a stereo buffer like the
+  // bubbles and read per sample. Its seed is the patch's own `chirpSeed` (which take of the call) and is NOT salted per
+  // layer: chirp layers are told apart by that row, and salting would change the take a preset names. Stereo already.
+  const isChirp = waveType === 27;
+  let chiL = null, chiR = null;
+  if (isChirp) { const c = makeChirp(SR, n, chirpCfg(st), Math.round(st.chirpSeed || 0)); chiL = c.L; chiR = c.R; }
+  // Motor (wave "motor", #30): engines, rotors and steam as trains of firing events (dsp.js makeMotor), run along the
+  // patch's own rpm curve (motorIdle ... motorRevGap) into a mono buffer up front, like the chirps, and levelled once
+  // (motorLevel). The amp envelope is its plain gain. Its seed is the patch's own `motorSeed` (which take), not salted
+  // per layer, like chirpSeed.
+  const isMotor = waveType === 30;
+  let motX = null;
+  if (isMotor) { motX = motorBuffer(SR, n, motorCfg(st), (0x6d07 ^ (Math.round(st.motorSeed || 0) * 7919)) >>> 0); motorLevel(motX); }
+  // Blast (wave "blast", #31): explosions and gunshots (dsp.js makeBlast), a pressure wave carried through a modeled
+  // place, built up front into a stereo buffer like the weather (the place is a convolution: it needs the whole source)
+  // and levelled once (blastLevel, after its own Peak control). The amp envelope is its plain gain. Its seed is the
+  // patch's own `blastSeed` (which take), not salted per layer, like chirpSeed. The place IS its room: the blast presets
+  // run with Reverb 0.
+  const isBlast = waveType === 31;
+  let blL = null, blR = null;
+  if (isBlast) { const b = makeBlast(SR, n, blastCfg(st), Math.round(st.blastSeed || 0)); blastLevel(b.L, b.R, st.blastPeak || 0); blL = b.L; blR = b.R; }
+  // Servo (wave "servo", #33): electric motors, gearboxes and clockwork locked to one shaft (dsp.js makeServo), run
+  // along the patch's own power curve (servoAt ... servoSpeed3: up to three powered moves, or one run from a shaft already
+  // turning) into a mono buffer up front, like the motor's, and levelled once (servoLevel). The amp envelope is its plain
+  // gain. Its seed is the patch's own `servoSeed` (which take), not salted per layer, like motorSeed.
+  const isServo = waveType === 33;
+  let svX = null;
+  if (isServo) { svX = servoBuffer(SR, n, servoCfg(st), (0x5e70 ^ (Math.round(st.servoSeed || 0) * 7919)) >>> 0); servoLevel(svX); }
+  // Friction (wave "friction", #34): creaks, squeaks and squeals, stick-slip on a resonant body (dsp.js makeFriction), run
+  // along the patch's own push (fricSpeed ... fricStop, fricPress ... fricPress3: the drag speed and the pressure over
+  // time) into a mono buffer up front, like the servo's, and levelled once (frictionLevel). The amp envelope is its plain
+  // gain. Frequency is the body's size (its base mode). Seeded by the body's pitch and the patch's own `fricSeed` (which
+  // take), not salted per layer, like servoSeed: the model is chaotic, so the seed is what a preset names.
+  const isFriction = waveType === 34;
+  let frX = null;
+  if (isFriction) { frX = frictionBuffer(SR, n, frictionCfg(st), (0x51ce ^ Math.round(st.freq * 7) ^ Math.round(st.fricSeed || 0)) >>> 0); frictionLevel(frX); }
   // Blown brass (wave "brass", #21): a lip-reed waveguide (dsp.js makeBrass). The AMP ENVELOPE IS
   // THE BREATH: it drives the lips instead of scaling the output, so the attack blooms and the
   // release lets the lips stop on their own. The tube is tuned and levelled once for the note's
@@ -280,6 +316,34 @@ function renderPatch(st, opts) {
     fluteCf = fluteCfg(st);
     const tune = fluteTune(SR, baseFreq, fluteCf);
     fluteScale = tune.scale; fluteG = tune.gain;
+  }
+  // Creature voice (wave "creature", #28): a larynx and a moving vocal tract (dsp.js makeCreature). Each shot is one CALL,
+  // and the call lasts as long as the envelope sounds: the whole shot when it sustains, attack + hold + decay when it
+  // does not (a bark: sustain 0, the decay is the bark closing). The pitch, mouth and vowel trajectories run over that.
+  // Levelled once for the note's pitch (creatureLevel), so it does not lean on Normalize; seeded like the noise (salted
+  // per layer, so two creature layers are two animals). A burst's later calls each vary a little (creatureShot). Mono;
+  // the amp envelope is its gain, as for any oscillator.
+  const isCreature = waveType === 28;
+  let crV = null, crShot = -1, crSemi = 1, crCf = null, crCall = 1, crG = 1, crSeed = 0;
+  if (isCreature) {
+    crCf = creatureCfg(st);
+    crCall = susLevel > 0 ? slot : Math.max(0.01, Math.min(slot, atk + hold + dec));
+    crSeed = sd(0xc4ea7a1);
+    crG = creatureLevel(SR, crCf, baseFreq, crCall, crSeed);
+  }
+  // Spring (wave "spring", #32): boings, doorstops, spring tanks and the jaw harp (dsp.js makeSpring), a per-sample voice
+  // like the creature's, one per shot (a burst plucks again; an arpeggio steps each pluck's pitch). The pitch is the
+  // note's at the pluck: a coil's or a doorstop's loop is designed for it, the twang's reed follows the sweep and the
+  // vibrato too. Levelled once for the note's pitch (springLevel), so it does not lean on Normalize. Its seed is the
+  // patch's own `springSeed` (which take), not salted per layer, like chirpSeed; a later pluck in a burst moves it on.
+  // Stereo; the amp envelope is its gain, as for any oscillator (the spring's own ring is the decay).
+  const isSpring = waveType === 32;
+  let spV = null, spShot = -1, spCf = null, spG = 1, spSeed = 0, spTwang = false;
+  if (isSpring) {
+    spCf = springCfg(st);
+    spSeed = Math.round(st.springSeed || 0);
+    spTwang = spCf.type === 2;
+    spG = springLevel(SR, spCf, baseFreq, slot, spSeed);
   }
   // The amp envelope as a function, for the two engines that take it as their DRIVE (brass's breath, the bow's speed)
   // rather than as a gain. The same expression as the gain stage below, which every other wave still uses inline.
@@ -410,6 +474,34 @@ function renderPatch(st, opts) {
   // colored-noise state + exponential-envelope exponent (both default to neutral → unchanged output)
   const noiseColor = st.noiseColor, eexp = 1 + st.envCurve * 3;
   let brownN = 0;
+  // Weather (wave "weather", #29): wind, rain, thunder (dsp.js makeWeather), built up front into a stereo buffer like
+  // the chirps, with the AMP ENVELOPE AS ITS DRIVE: for wind it is the wind's speed (so the band's color and the whistles
+  // follow it, not only the level), for rain the drop rate, for thunder a gain. So the gain stage below skips it, as for
+  // brass. Levelled once (weatherLevel). Built here, below `eexp`, which ampEnvAt reads. Its seed is the patch's own `wxSeed` (which take), not salted per layer.
+  const isWeather = waveType === 29;
+  let wxL = null, wxR = null;
+  if (isWeather) {
+    const wb = weatherBuffer(SR, n, weatherCfg(st), Math.round(st.wxSeed || 0), (i) => {
+      const t = i / SR, k = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
+      return ampEnvAt(t - k * slot);
+    });
+    weatherLevel(wb.L, wb.R);
+    wxL = wb.L; wxR = wb.R;
+  }
+  // Flow (wave "flow", #35): moving water, a stream, a waterfall, surf, pouring into a vessel (dsp.js makeFlow), built up
+  // front into a stereo buffer like the weather, with the AMP ENVELOPE AS ITS DRIVE: a stream's or a waterfall's flow, the
+  // surf's gain, the pour's jet. So the gain stage below skips it, as for weather. Levelled once (flowLevel). Its seed is
+  // the patch's own `flowSeed` (which take), not salted per layer, like wxSeed. A pour fills over the patch's duration.
+  const isFlow = waveType === 35;
+  let flowL = null, flowR = null;
+  if (isFlow) {
+    const fb = flowBuffer(SR, n, flowCfg(st), Math.round(st.flowSeed || 0), (i) => {
+      const t = i / SR, k = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
+      return ampEnvAt(t - k * slot);
+    });
+    flowLevel(fb.L, fb.R);
+    flowL = fb.L; flowR = fb.R;
+  }
 
   // flicker's state and its own generator (seeded like the rest, so a salted layer flickers differently)
   let flSeed = sd(0x2f6b91c3), flLevel = 1, flTarget = 1, flLeft = 0;
@@ -540,6 +632,30 @@ function renderPatch(st, opts) {
       oscL = y * 1.6 * ampMul; oscR = y * 1.6 * ampMul;   // mono, centered; makeup for a healthy level
     } else if (isBubble) {
       oscL = bubL[i]; oscR = bubR[i];                 // prebuilt bubble cloud (already stereo)
+    } else if (isChirp) {
+      oscL = chiL[i]; oscR = chiR[i];                 // prebuilt calls (already stereo)
+    } else if (isMotor) {
+      oscL = motX[i]; oscR = motX[i];                 // prebuilt engine (mono)
+    } else if (isServo) {
+      oscL = svX[i]; oscR = svX[i];                   // prebuilt motor / gear train / clockwork (mono)
+    } else if (isFriction) {
+      oscL = frX[i]; oscR = frX[i];                   // prebuilt creak / squeak / squeal (mono)
+    } else if (isBlast) {
+      oscL = blL[i]; oscR = blR[i];                   // prebuilt blast and its place (already stereo)
+    } else if (isWeather) {
+      oscL = wxL[i]; oscR = wxR[i];                   // prebuilt weather (already stereo, the envelope inside it)
+    } else if (isFlow) {
+      oscL = flowL[i]; oscR = flowR[i];               // prebuilt water (already stereo, the envelope inside it)
+    } else if (isCreature) {
+      // a fresh voice per shot (a burst calls again); u = how far into the call this sample is
+      if (shotIdx !== crShot) { crShot = shotIdx; const sh = creatureShot(crCf, shotIdx, crSeed); crSemi = Math.pow(2, sh.semi / 12); crV = makeCreature(SR, sh.cfg, (crSeed + shotIdx * 7919) >>> 0); }
+      const v = crV.tick(lt / crCall, fOsc * crSemi) * crG;
+      oscL = v; oscR = v;
+    } else if (isSpring) {
+      // a fresh pluck per shot, at the note's pitch as it fires
+      if (shotIdx !== spShot) { spShot = shotIdx; spV = makeSpring(SR, spCf, fOsc, (spSeed + shotIdx * 7919) >>> 0); }
+      const o = spV.tick(spTwang ? fOsc : 0);
+      oscL = o[0] * spG; oscR = o[1] * spG;
     } else if (isParticle) {
       oscL = parL[i]; oscR = parR[i];                 // prebuilt particle cloud (already stereo)
     } else if (isImpact) {
@@ -689,7 +805,7 @@ function renderPatch(st, opts) {
     else if (lt < relStart) env = susLevel;
     else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
+    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute && !isWeather && !isFlow) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).

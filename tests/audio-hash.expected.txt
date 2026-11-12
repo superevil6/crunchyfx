@@ -6,10 +6,39 @@
 # Struck bars (2026-11-06, CrunchyBGM §796): wave 24 "bar" and its rows barType, barMallet, barRing, barMotor ADDED, with Struck Marimba, Struck Xylophone and Struck Glockenspiel. Every sound's audio proved unchanged (all lines identical with the four new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the four keys, so those 11 lines and the AUDIOXHASH total moved with them, and the three presets' lines and the AUDIOHASH total are new.
 # Piano (2026-11-06, CrunchyBGM §798): wave 25 "piano" and its rows pianoHammer, pianoStretch, pianoRing, pianoStrings ADDED, with Struck Piano. Every sound's audio proved unchanged (all lines identical with the four new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the four keys, so those 11 lines and the AUDIOXHASH total moved with them, and the preset's line and the AUDIOHASH total are new.
 # Tine (2026-11-06, CrunchyBGM §801): bar type 4 "tine" APPENDED to barType's enum (a clamped tine, 1 : 6.27 : 17.55), with Plucked Music Box. Its line and the AUDIOHASH total are new. Struck Piano's line MOVED with NO audio change: it sits one place later in the list and the hash rotates each preset's WAV export format by its position (FORMATS[i % 3]); with the new preset removed every line is identical to the previous file. The x: lines (seeded Breed/Variations/Wizard) are unchanged — widening the enum moved no draw.
+# SFX 1.3 layered presets (2026-10-28): the seven Layered lines below were ADDED; the AUDIOHASH total moved with them. Every other line is unchanged.
+# SFX care pass (2026-10-29): Transformer Buzz ADDED (AJ's pick, round electric-buzz); the AUDIOHASH total moved with it.
+# SFX care pass round 2 (2026-10-29): Double Jump, Checkpoint and Dash ADDED (AJ's picks); the AUDIOHASH total moved with them.
+# SFX care pass round 3 (2026-10-29): ten presets ADDED (AJ's picks); the AUDIOHASH total moved with them.
+# SFX care pass round 4 (2026-10-29): Wood Break ADDED (AJ's pick); the AUDIOHASH total moved with it.
+# Footsteps by surface (2026-11-01): the eleven surface footsteps ADDED (Grass … Carpet Footstep, the suite's surface names); the AUDIOHASH total moved with them. Every other line is unchanged.
+# SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
+# SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
+# SFX 1.3 the Wizard (2026-10-28): the three x:wizard lines below were ADDED (three answers' nine, seeded); the AUDIOXHASH total moved with them. Every line above is unchanged.
+# SFX 1.3 Tremolo + Flicker (2026-10-28): four PARAMS rows added (neutral). Every preset line is unchanged. The random tools' fixtures MOVED (x:breed, x:vary, x:pack:zip, x:wizard): their lines hash each result's whole genome, which now carries the new keys, and Breed/Variations draw a random number per parameter, so the same seed rolls differently. No saved sound changes.
+# Footsteps by surface (2026-11-01): the twelve x:footsteps lines below were ADDED (the seeded Godot footstep set: one line per surface, its .tres and takes; one for crunchy_footsteps.gd, footsteps.tscn and the README); the AUDIOXHASH total moved with them. Every line above is unchanged.
+# Bow tremolo (2026-11-06, CrunchyBGM §803): rows bowTrem and bowTremPhase ADDED to the bowed model (wave 22), default 0 = a held bow, no preset. Every sound's audio proved unchanged (all 11 breed, vary and wizard lines identical to before with the two new keys left out of the hashed JSON, the AUDIOXHASH total with them); with the keys in, those 11 lines and the AUDIOXHASH total moved, and nothing else did.
+# Flute (2026-11-06, CrunchyBGM §804): wave 26 "flute" and its rows fluteBreath, fluteJet, fluteAim, fluteNoise, fluteTone, fluteVib ADDED, with Blown Flute APPENDED (the hash picks each preset's WAV format by position, so an insert re-hashes every preset after it). Every sound's audio proved unchanged (all lines identical with the six new keys left out of the hashed JSON, the new preset's line and the AUDIOHASH total aside); the breed, vary and wizard lines hash each genome's JSON, which now names the six keys, so those 11 lines and the AUDIOXHASH total moved with them, and the new preset's line and the AUDIOHASH total are new.
+# Membrane buzz (2026-11-06, CrunchyBGM §806): flute row fluteBuzz ADDED (default 0, byte-identical; no preset). Every sound's audio proved unchanged (all lines identical with the new key left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names it, so those 11 lines and the AUDIOXHASH total moved, and nothing else did.
+# Flute breath law (2026-11-06, CrunchyBGM §807): fluteNoise is SQUARED now (0.4 x knob², was 0.1 x knob) so a dark flute's breath can be heard. Blown Flute (0.05) moved from 0.005 to 0.001 of the flow, both inaudible; its line and the AUDIOHASH total moved, and nothing else did.
+# Engine sweep (2026-11-10, AJ: "every engine sound is a dramatic improvement"): 35 instrument presets MOVED onto the engines built for them (waves 21-26), same names and sections, each with its own _vary (tools/make-engine-sweep.mjs --apply; SOUND-REVIEW.md). Exactly those 35 lines and the AUDIOHASH total moved; no x: line and no other preset did.
+# Chirp (2026-11-10, the chirp engine, picked by ear: AJ "literally every chirp is perfect"): wave 27 "chirp" and its rows chirpMode … chirpSeed ADDED; presets may carry `_alts` (ARCHETYPES: other versions only the preset BUTTON plays). Bird Chirp, Bird Trill and Cricket Chirp gained three alts each; Songbird Phrase and Night Insects APPENDED (their lines are new). Cricket Chirp`s attack 0 -> 0.001 (it started on a step: a click), so ITS line moved, and with attack 0 it is proved identical. Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the eighteen chirp keys, so those 11 lines moved, and are proved identical with the chirp keys left out of the hashed JSON. The thirteen x:alt lines are new (each alt rendered whole, layered ones too); the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Creature (2026-11-10, the creature voice engine, picked by ear: it won all five of AJ's rounds): wave 28 "creature" and its rows crSize … crFlutterRate ADDED (17; the prototype's crGap dropped: a call is timed by the envelope). Cat Meow, Monster Growl and Wolf Howl REPLACED by AJ's picks (their lines moved, deliberately); Cow Moo and Dog Bark APPENDED (the names the 1.2 formant presets left; their lines are new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the seventeen creature keys, so those 11 lines moved, and are proved identical with the creature keys left out of the hashed JSON. The three x:alt lines for Cat Meow and Monster Growl are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Weather (2026-11-10, the weather engine, picked by ear: it won all five of AJ`s rounds): wave 29 "weather" and its rows wxType … wxSeed ADDED (25; the prototype`s sheet rate fixed at 0.8 Hz, its width and whistle pitch read from the patch`s width and freq). Rain, Wind Gust and Howling Squall REPLACED by AJ`s picks (their lines moved, deliberately); Thunder and Heavy Rain keep their base UNCHANGED and gained alts. Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the twenty-five weather keys, so those 11 lines moved, and are proved identical with the wx keys left out of the hashed JSON. The twelve x:alt lines (Thunder 3, Heavy Rain 3, Rain 2, Wind Gust 2, Howling Squall 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Motor (2026-11-10, the motor engine, picked by ear: it won all five of AJ`s rounds): wave 30 "motor" and its rows motorType … motorSeed ADDED (39; the rpm curve is the engine`s own rows, the amp envelope stays the gain; the prototype`s burst Q follows the type, its tail-rotor pulse is fixed at 1 ms and its clack spacing at 0.19 s). Chainsaw, Helicopter and Train REPLACED by AJ`s picks (their lines moved, deliberately); Car Engine keeps its base UNCHANGED and gained three alts; Motorcycle APPENDED (its line is new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the thirty-nine motor keys, so those 11 lines moved, and are proved identical with the motor keys left out of the hashed JSON. The nine x:alt lines (Car Engine 3, Chainsaw 2, Helicopter 1, Train 1, Motorcycle 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Blast (2026-11-11, the blast engine, picked by ear: it won all five of AJ`s rounds): wave 31 "blast" and its rows blastSize … blastSeed ADDED (19; the stereo spread is the patch`s own width; Peak control 0-2 is the app`s own lookahead limiter on the blast alone, before the chain, in one or two passes, so no blast preset needs the master Limiter). Explosion, Grenade Blast, Distant Boom, Pistol Shot and Sniper Rifle REPLACED by AJ`s picks (their lines moved, deliberately), and with Explosion the lines that render it: nonorm:Explosion, x:ir:Explosion:1 and :0.4, x:layers:three, :muted, :no-normalize and :same-engine (all proved identical with the five old patches swapped back in). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the nineteen blast keys, so those 11 lines moved, and are proved identical with the blast keys left out of the hashed JSON. Variations treat a blast as stretchable (no line here varies one). The x:alt line for Distant Boom is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Spring (2026-11-11, the spring engine, picked by ear: it won all five of AJ`s rounds, four with its twang type): wave 32 "spring" and its rows springType … springSeed ADDED (10; the patch`s Frequency is the spring`s pitch, the amp envelope its plain gain). Cartoon Boing, Springy Boing and Bouncy Blip REPLACED by AJ`s picks (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them); Doorstop Spring and Jaw Harp APPENDED (their lines are new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the ten spring keys, so those 11 lines moved, and are proved identical (with the three old patches swapped back in, every one of the 1106 earlier lines is identical) with the spring keys left out of the hashed JSON. Variations treat a spring as stretchable (no line here varies one). The x:alt line for Jaw Harp is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Servo (2026-11-11, the servo engine, picked by ear: it won all five of AJ`s rounds): wave 33 "servo" and its rows servoType … servoSeed ADDED (67; the power curve is the engine`s own rows, up to three powered moves or one run from a shaft already turning, the amp envelope its plain gain; the prototype`s start click (0.35 of the stop click), hold-buzz frame rate (50 Hz), first escapement tick and ratchet pitch are fixed). Servo Motor, Robot Servo, Mechanical Whir, Conveyor Belt and Clockwork Whir REPLACED by AJ`s picks, clean (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the sixty-seven servo keys, so those 11 lines moved, and are proved identical (with the five old patches swapped back in, every one of the 1109 earlier lines is identical) with the servo keys left out of the hashed JSON. The six x:alt lines (Servo Motor 1, Robot Servo 1, Mechanical Whir 2, Conveyor Belt 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Car Engine level (2026-11-11, AJ): its base (today's patch, kept) played ~7 dB louder than its three motor alts; gain 0.33 (was the 0.7 default) puts it at -16.0 LUFS like them. Exactly its line and the AUDIOHASH total moved.
+# Friction (2026-11-11, the friction engine, picked by ear: it won all five of AJ`s rounds): wave 34 "friction" and its rows fricBody … fricSeed ADDED (21; the push is the engine`s own rows, the drag speed and the pressure at a start and up to three later points, the speed`s stop time, the amp envelope its plain gain; the prototype`s 15 ms push ease-in, 4 kHz contact patch and 1.5% grit are fixed). Creaking Door, Trapdoor Creak, Squeaky Toy and Heavy Gate REPLACED by AJ`s picks, clean (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them); Brake Squeal APPENDED (its line is new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the twenty-one friction keys, so those 11 lines moved, and are proved identical (with the four old patches swapped back in and Brake Squeal left out, every one of the 1115 earlier lines is identical, both totals included) with the fric keys left out of the hashed JSON. The x:alt line for Trapdoor Creak is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# Flow (2026-11-11, the flow engine, picked by ear: it won or matched all five of AJ`s rounds): wave 35 "flow" and its rows flowType … flowSeed ADDED (17; the stereo spread is the patch`s own width, a pour fills over the patch`s Duration). Stream Babble REPLACED by AJ`s pick (its line moved, deliberately; no fixture renders it, and nothing but its button uses it); Filling a Bottle APPENDED (its line is new); Waterfall, Ocean Surf and Wave of Water keep their base UNCHANGED and gained three alts each (each alt set within 1 dB of its base by the Limiter). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the seventeen flow keys, so those 11 lines moved, and are proved identical (with the old Stream Babble swapped back in, Filling a Bottle and the new alts left out, every one of the 1117 earlier lines is identical, both totals included) with the flow keys left out of the hashed JSON. The ten x:alt lines (Waterfall 3, Ocean Surf 3, Wave of Water 3, Filling a Bottle 1) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
+# New presets on the new engines (2026-11-11, AJ: "let's add them, then if they seem odd, I'll do an ab test"): 25 ADDED — wings/coil (Mosquito, Housefly, Hummingbird, Cicada Drone, Spring Tank Crash, Slinky), wood friction (Chair Scrape, Floorboard Creak + alt, Ship Hull Creak, Rope Creak), blast (Bullet Whiz, Sniper From Afar, Canyon Blast, Mine Charge, Cannon, Dynamite, Bolt-Action Reload), electric motor (Ratchet Wrench + alt, Winding a Toy, Clock Tick + alt, Pocket Watch, Fridge Hum, Cordless Drill, Electric Car Pass, Ceiling Fan). Only their lines, the three x:alt lines and the totals are new; NO existing line moved. Same change: chirpBuzz Doppler sign (dir) fixed — no earlier preset used Buzz mode, and the new ones use seeds that fly dir +1, where the fix is a no-op; chirpPitch min 500 -> 40.
+# Creature redo (2026-11-12, AJ: "none of those should be using [formant]"; all three groups heard and kept: "a big improvement… significantly better… all named are better"): the 35 Animal / Monster presets on the formant engine MOVED onto the creature engine (wave 28), same names, sections and order — 8 animals (Rooster Crow and Owl Hoot layered one call per syllable), 4 named monsters, and the 23 adjective x noun monsters composed from two tables (tools/proto/creature-redo-family.mjs). Exactly their 35 lines and the AUDIOHASH total moved; x:alt lines for Rooster Crow (bantam) and Troll Grunt (uh-HUH) were ADDED with the AUDIOXHASH total. Every other line is unchanged.
+# Variations of a layered sound (2026-11-12, AJ): every layer varied with one shared pitch move, the arrangement kept (varySound); the seed is the WHOLE sound (soundGenome), where it used to drop every layer but the selected one. Four x:vary:layered lines (Rooster Crow) were APPENDED with the AUDIOXHASH total; every other line, the one-layer vary, pack and footstep lines included, is unchanged. Same day: the Length macro clamps Duration to durationMax (the engine's ceiling) instead of the row's 2 s; no preset's audio moves.
 AUDIO Coin 47f12edd7c9e75e4
 AUDIO Laser f6c22d2b195a2a1a
 AUDIO Jump b3f0d9e61a01ac31
-AUDIO Explosion 7176a9d2cf8b0521
+AUDIO Explosion 3ff536213c98310e
 AUDIO Hit b9950edd75358394
 AUDIO Powerup 18ff3f6cf6f964a7
 AUDIO Blip 657e8178755b57f9
@@ -48,12 +77,12 @@ AUDIO Teleport e1596732bf0f3c07
 AUDIO Magic Sparkle e94f8e0691d9eb2f
 AUDIO Robot Beep 59431d830855d7fe
 AUDIO Alarm Siren 443193347643f4ff
-AUDIO Wind Gust 512779012f90e6a2
+AUDIO Wind Gust 2a9200258c2f9882
 AUDIO Boulder Rumble a2ba1336a1e22991
 AUDIO Footstep ff9dbe808f0adee5
 AUDIO Bounce 680ee80631508bc3
 AUDIO Bubble Pop 052b4847c80dfdb8
-AUDIO Monster Growl 0992e11a9c65d611
+AUDIO Monster Growl 11a03a53208e1f82
 AUDIO Katana Slice 2cdaa70996f81cec
 AUDIO Heavy Cleave d05bb708f325f55f
 AUDIO Dagger Stab bb88d1b2983dfd21
@@ -73,19 +102,19 @@ AUDIO Mana Charge 580de8f345f25d46
 AUDIO Magic Missile 5ecc7733e89ef89c
 AUDIO Crossbow Bolt 9cc8ff436587917c
 AUDIO Wind Slash acb81f6188a424e4
-AUDIO Cat Meow a414ff56e149d371
+AUDIO Cat Meow 7f5cfe1cf46ec01d
 AUDIO Bird Chirp c8be8ffc2eda6423
-AUDIO Frog Croak 95d185e634724e25
-AUDIO Cricket Chirp 492f8f3431aad767
-AUDIO Owl Hoot 4e7a585ed1877915
+AUDIO Frog Croak 24be238f5e17778e
+AUDIO Cricket Chirp 01f2ed2583a5ab62
+AUDIO Owl Hoot 92153adf1524f3a0
 AUDIO Snake Hiss 152290a5b831bffc
 AUDIO Bee Buzz a528f1f37f28f9f2
-AUDIO Wolf Howl 178235189a8a64c3
-AUDIO Horse Neigh fce0a443451fa334
-AUDIO Rooster Crow 0e7d13e62a74abc5
-AUDIO Duck Quack ce49d42a30f588df
+AUDIO Wolf Howl d7f380911f72adde
+AUDIO Horse Neigh efeb6894949c4181
+AUDIO Rooster Crow 3e5f0bc9252f8f12
+AUDIO Duck Quack 8b1e46be747dd3bd
 AUDIO Elephant Trumpet f0d025e6f7f5014b
-AUDIO Rain b67ede91220c09e4
+AUDIO Rain 46d8bd695f056d6e
 AUDIO Rustling Leaves 010f3344a0f87dff
 AUDIO Waterfall 453ebf23d6a3f4fa
 AUDIO Ocean Surf 1907192caeb7e835
@@ -97,7 +126,7 @@ AUDIO Ghostly Wail 0f3bd5c753f4af66
 AUDIO Demonic Roar cde05319f00107e4
 AUDIO Creepy Whisper fb7c25cd7830ba3c
 AUDIO Heartbeat eedcc54f5f1975d4
-AUDIO Creaking Door 6fe1d6551ce839b0
+AUDIO Creaking Door 2e7fa84085b0ea13
 AUDIO Distant Scream 6b33e0b95196fe8e
 AUDIO Sinister Laugh f83e0b3f44f2a4dc
 AUDIO Music Box 7e0d8d9ddd2b4e1e
@@ -120,13 +149,13 @@ AUDIO Toxic Bubble 419d5f7f93cb97a8
 AUDIO Gas Leak 26c4e908521cf605
 AUDIO Gas Puff 8ae99f71decaa06a
 AUDIO Steam Vent d772e0af811d0a92
-AUDIO Cartoon Boing e4a75fdfad604886
+AUDIO Cartoon Boing 1407e0bf60c68a36
 AUDIO Slide Whistle Up cb0b7e70fb62873b
 AUDIO Slide Whistle Down e7d33f881f7e0fa9
 AUDIO Fart 757e7bdfd5b8f01e
 AUDIO Burp d73e8141eed18c98
 AUDIO Slime Splat fc473951169a0f88
-AUDIO Squeaky Toy bbe84d7ecfe2ff19
+AUDIO Squeaky Toy ecc232d5fe03e60c
 AUDIO Bubble Blorp f68e08e4f02350c1
 AUDIO Lava Bubble c7cb8f1f899e319c
 AUDIO Mud Squelch 4739a824a046963b
@@ -139,12 +168,12 @@ AUDIO Dragon Fire Breath caf00724a726ccc1
 AUDIO Match Strike 4c8729c095a200cf
 AUDIO Inferno Roar 06946cc5a0d0987c
 AUDIO Fire Sparks 20ff80a7893ec3be
-AUDIO Robot Servo 17d09cbac793ed65
+AUDIO Robot Servo a36900484e0b152b
 AUDIO Robot Power Up 9591bb6d5eda5a24
 AUDIO Robot Power Down a1dfc798ad541617
 AUDIO Robot Talk 4456af8cc82d104b
 AUDIO Robot Stomp 7d45b7e805b23d41
-AUDIO Mechanical Whir e526fdcf8de36b6a
+AUDIO Mechanical Whir e58aaddf772939ca
 AUDIO Hydraulic Hiss 5294a6f426b0d6a5
 AUDIO Robot Alarm 09f46b7049cb05d9
 AUDIO Scanner Ping f97be27f79fb004c
@@ -156,20 +185,20 @@ AUDIO Curse Whoosh 3d4aa3f3fca4b5ea
 AUDIO Shield Cast 8d02f4e56e4fb228
 AUDIO Notification d8a1ab260133a4fd
 AUDIO Menu Open 2d9cdeec1814de69
-AUDIO Grenade Blast 570e445875b310b7
-AUDIO Distant Boom 63876926e27f8a0b
-AUDIO Servo Motor 82a5cba5617b56d6
+AUDIO Grenade Blast 9e7177fd23338e0a
+AUDIO Distant Boom 98c6b4cfad53c53c
+AUDIO Servo Motor e597f4dd0585dcc6
 AUDIO Power Down fdcb7ccd0fc72374
 AUDIO Campfire Crackle eec1d7218d0aa0b2
 AUDIO Bird Trill df1b8d1562b94fa6
-AUDIO Goblin Chatter 206b306441f24ae9
-AUDIO Beast Roar 91b0f771fe9bd694
+AUDIO Goblin Chatter bca0f764ab7a01a1
+AUDIO Beast Roar b9be3269822dfb1a
 AUDIO Insect Buzz 4564d30a43ca1245
 AUDIO Ghost Moan 69efc3376986c434
 AUDIO Jumpscare Hit 855316eb668846c0
 AUDIO Whispering Void 15185b0f1b2c743c
-AUDIO Pistol Shot 33a8a78a6bc1ef83
-AUDIO Sniper Rifle 0f5e7f7fb65f2148
+AUDIO Pistol Shot ed97f6b2646d988b
+AUDIO Sniper Rifle 6b2c9b30c0a91191
 AUDIO Spear Thrust 45ae24afc042052e
 AUDIO Axe Chop 9962ae908a15dcef
 AUDIO Whip Crack 1f3192c66ac41feb
@@ -189,12 +218,12 @@ AUDIO Unlock 6ed2a814a57c7ba5
 AUDIO Barrel Burst daf714b0444b236b
 AUDIO Nuke Rumble 621c4ee0ed0ff053
 AUDIO Drone Hover 1dfccf0d808a8220
-AUDIO Conveyor Belt 2c89c9c46e0b9ff9
+AUDIO Conveyor Belt 5c36cff45b23bb79
 AUDIO Thunderclap 92a33bbba9982840
-AUDIO Stream Babble 87ef1cdc41e3dc93
+AUDIO Stream Babble cc17dd2bf9303934
 AUDIO Slime Gurgle 80a555b13ca4670a
-AUDIO Bat Screech 2f23685e4815fa2b
-AUDIO Troll Grunt 7b6a0d26d3e8ba49
+AUDIO Bat Screech 7bbb064ed042d87d
+AUDIO Troll Grunt 69c3ebe29b43a3dd
 AUDIO Demon Whisper 0c180e5ec5563d03
 AUDIO Bone Crack a5fd9e3437dc8fdb
 AUDIO Cursed Chime 4a2cb320c8885a0f
@@ -220,7 +249,7 @@ AUDIO Robot Beep 2 162ed562154a021b
 AUDIO Robot Talk 2 1f8a34e3185546e4
 AUDIO Thunder 2 b9bb260b9e27bd80
 AUDIO Wind Gust 2 16a5a2105e412643
-AUDIO Monster Growl 2 ba0a0d761177c209
+AUDIO Monster Growl 2 845774d7b1112768
 AUDIO Jump Scare Stinger 2 567500278a08594a
 AUDIO Ghostly Wail 2 27c66cca0c75f689
 AUDIO Heartbeat 2 fb410f892339c5ca
@@ -294,7 +323,7 @@ AUDIO Rusty Buzz 9fbb5cdc963624fb
 AUDIO Servo Drone d5f751549f7cc913
 AUDIO Pneumatic Relay 13b705551ecab7fe
 AUDIO Pneumatic Hum 6a79112ddeb7e9e2
-AUDIO Clockwork Whir e521f3b3218f0094
+AUDIO Clockwork Whir b428281edf0994db
 AUDIO Grinding Motor 3cefc7b19026fa64
 AUDIO Pneumatic Buzz 5eb2995b4f596294
 AUDIO Hydraulic Piston d0fb66b2a163cb0d
@@ -322,7 +351,7 @@ AUDIO Restless Drizzle e7d13e5dd95d1914
 AUDIO Windswept Gust c3cfacb98f0e420a
 AUDIO Quiet Cascade 6dc94b3c92de5307
 AUDIO Frozen Drizzle bacd937360e5c034
-AUDIO Howling Squall 13bb590fc60a782c
+AUDIO Howling Squall 6a7f23606ece9b73
 AUDIO Rushing Tide bba7d3ff976dc9dc
 AUDIO Windswept Cascade 69a98258812422bd
 AUDIO Rushing Rumble 2f153e35a61c4926
@@ -332,33 +361,33 @@ AUDIO Restless Tide ae059d926618f91f
 AUDIO Gentle Drizzle c12f8db528b1f842
 AUDIO Howling Hollow b65ad8886c7bc4fb
 AUDIO Frozen Squall 19a07437cf2eb1d4
-AUDIO Giant Growl a7f3a870e264ff23
-AUDIO Angry Wail d661f99463d57619
-AUDIO Feral Gnash 7a8e187da33b5714
-AUDIO Tiny Roar 08f9f4b2ee193f4b
-AUDIO Slithering Growl fa4058fe277ff57f
+AUDIO Giant Growl cfefcfc207839ce5
+AUDIO Angry Wail 4b6ac964947648c1
+AUDIO Feral Gnash c1e4a5257950a9ba
+AUDIO Tiny Roar 98fbd544dc00a9fd
+AUDIO Slithering Growl cbe97a2582cb401a
 AUDIO Guttural Hiss 12aa76c6d39dc827
-AUDIO Ancient Squeal 1dd80455d1131e04
-AUDIO Feral Croak a26123efb098d07e
-AUDIO Wailing Gnash d3da7982ccc78bd7
-AUDIO Angry Growl 3b3b3cb8bd894337
-AUDIO Rabid Snarl 31f5aa2a948437ab
-AUDIO Ancient Growl 1370bc362765d1a5
+AUDIO Ancient Squeal de15c609286adbf0
+AUDIO Feral Croak 1c049c538c5e0686
+AUDIO Wailing Gnash 9942e5e639b24af5
+AUDIO Angry Growl 028e6a832c59be30
+AUDIO Rabid Snarl eaec603fd6cdee4c
+AUDIO Ancient Growl 34e22d0cd1cdb5c7
 AUDIO Chittering Chirp 7229635745914074
-AUDIO Rabid Bellow d05f1070af89dbad
-AUDIO Tiny Snarl 54f845635356233c
-AUDIO Feral Howl 5e330633b500d40a
-AUDIO Giant Howl c66c4f5bb2e326d4
-AUDIO Guttural Bellow eb4e50188cd0c203
+AUDIO Rabid Bellow a4db538f7b7b8528
+AUDIO Tiny Snarl 9468972897c60a25
+AUDIO Feral Howl 1b48fdd280796511
+AUDIO Giant Howl 03b77c57a0c6e15c
+AUDIO Guttural Bellow 76add5c0e1300145
 AUDIO Tiny Hiss 6b01b5e72df594d6
-AUDIO Ancient Croak ef9974c290e90f6b
-AUDIO Tiny Bellow e31d6d0518bf6106
-AUDIO Feral Roar b80023e734036566
+AUDIO Ancient Croak 8181a6ddffaf1f1e
+AUDIO Tiny Bellow ae70f95e349eeadd
+AUDIO Feral Roar 5910f6994765e40e
 AUDIO Wailing Hiss 8b7cb408a405a1e5
-AUDIO Tiny Gnash 0b4357077697730e
-AUDIO Wailing Screech 209885f0bef3beb3
-AUDIO Slithering Wail e6b0ac2ddbe0de5c
-AUDIO Guttural Growl 9a718d4cd4cd9ee5
+AUDIO Tiny Gnash ed200a829af525db
+AUDIO Wailing Screech 2936813d9a2bc4de
+AUDIO Slithering Wail 8708a565cd10d1ac
+AUDIO Guttural Growl 89dc121edd5ec3fb
 AUDIO Ghastly Murmur 52f5cb473152dd3e
 AUDIO Creeping Toll 8b86a054b1c4d673
 AUDIO Creeping Murmur 7adfcc2423c46fd5
@@ -543,11 +572,11 @@ AUDIO Bell e8bbcbac508129d7
 AUDIO Church Bell 9ed842092001afaa
 AUDIO Hand Bell 32215ac5bb0cba94
 AUDIO Wind Chime 40a5827f39cf19fe
-AUDIO Kalimba f989c6488650534f
-AUDIO Music Box Note 00f00a08a2061209
+AUDIO Kalimba ba82df6071ae2e6f
+AUDIO Music Box Note 1312fab79b01f96c
 AUDIO Glass Ping 00f0e6cc4dd4f7b1
-AUDIO Marimba c93accb4565d0877
-AUDIO Vibraphone a24bf13e86a190b9
+AUDIO Marimba 13ad43e84412bed7
+AUDIO Vibraphone 9a49257ed0954473
 AUDIO Metal Clang bec0967e6c7eb193
 AUDIO Gong db1f7125bb1c8a02
 AUDIO Triangle Ting b93a7a86391bcf67
@@ -629,11 +658,11 @@ AUDIO Chorus Keys 27d4989f8ebbbb0e
 AUDIO Ping-Pong Pluck ea5e90d23d6898dd
 AUDIO Brown Noise Wind 56a83694bf870b93
 AUDIO Fireworks 6d9a7227bd48f540
-AUDIO Car Engine f981465796efc6f6
-AUDIO Helicopter dfcc78bc0844e4ed
+AUDIO Car Engine 4369201349824646
+AUDIO Helicopter 14faea28adac4009
 AUDIO Plane Flyby 3051856ab16ea5a5
-AUDIO Train 578ae0c7468d4608
-AUDIO Chainsaw 220d30b2d7daa3db
+AUDIO Train 8b0edeab39294782
+AUDIO Chainsaw 05dd4e2ac77fc923
 AUDIO Tubular Bell cc7aa6649f420b71
 AUDIO Grain Storm 3deff5b8387c5829
 AUDIO Frozen Choir c975fb674849e5f4
@@ -683,7 +712,7 @@ AUDIO Cabinet Close 78aaf9b570ccfed6
 AUDIO Metal Locker acaa6496505e7d27
 AUDIO Key Jingle 20ed1c80828ed8dd
 AUDIO Vault Door 7465047ce92e441b
-AUDIO Trapdoor Creak bf9076d4634617bb
+AUDIO Trapdoor Creak 81510aed85dff15a
 AUDIO Reverse Piano f6b63a17f5d07b4a
 AUDIO Reverse Snare 8eb1146c43607e71
 AUDIO Reverse Laser 6eaeb6da3d1cbde7
@@ -721,7 +750,7 @@ AUDIO Door Slam 817b951dd2ac0ee8
 AUDIO Latch Click 0b4c22e46fc31f47
 AUDIO Chest Open 118af47d180af294
 AUDIO Drawer Slide e4e9938f4ef45618
-AUDIO Heavy Gate 9663ac71e5b77fc0
+AUDIO Heavy Gate 8d0e643b3a370b96
 AUDIO Sliding Door d3604745b9d142ec
 AUDIO Elevator Ding 4e1571a098d6b2bd
 AUDIO Safe Tumbler 0309e0f4368a2c31
@@ -734,7 +763,7 @@ AUDIO Reverse Vocal 891fd26f58b1aedc
 AUDIO Backwards Splash 79033142cd76a007
 AUDIO Rewind Tape a34acb6d9a339aac
 AUDIO Reverse Impact 55d894eb478304f8
-AUDIO Springy Boing 439117ab4ea22aa6
+AUDIO Springy Boing 7c3116459852d86e
 AUDIO Flying Saucer dcc9566d7149da38
 AUDIO Ascend Chime 5d7934931a5a14ba
 AUDIO Robot Chuckle 7511d29c0142cf1b
@@ -743,12 +772,12 @@ AUDIO Camera Shutter ac70b232d42c6bd1
 AUDIO Goopy Slurp 7dd435c5314ebd3a
 AUDIO Ricochet Zing 855bbbd9e72f1670
 AUDIO Stardust Chime 45887bd4b89c6985
-AUDIO Bouncy Blip ed788d11eb9cd448
+AUDIO Bouncy Blip 5be2b7f0ed06cfb5
 AUDIO Trumpet 7d6250b995583abe
-AUDIO Trombone 987f32cc6a3df4ad
-AUDIO French Horn c910b4e876d954e1
-AUDIO Tuba f344cbbb733cce8e
-AUDIO Brass Section 38ed9b3248d59e1b
+AUDIO Trombone f75e5b8091f47763
+AUDIO French Horn 2dfa13d8030204d9
+AUDIO Tuba 91e68f6f93116c9e
+AUDIO Brass Section 1f6a120a2d778047
 AUDIO Brass Stab 89b9b8838f3a60f4
 AUDIO Muted Trumpet 1968744dbe9e88c2
 AUDIO Sci-Fi Brass d5669737b85c18d8
@@ -767,13 +796,13 @@ AUDIO Stab 00199ad94556ffd2
 AUDIO Dist Guitar 378daacb5942c11c
 AUDIO Clean Guitar 04f2fd2c634ab7a9
 AUDIO E-Piano 99a1c0b8b0a0d203
-AUDIO Brass 25af6b7297044393
+AUDIO Brass 0cdb67b443d5622d
 AUDIO Choir 17ea775655e29113
 AUDIO 808 Bass 7303861cec5e3ff9
 AUDIO Pick Bass 32664d3743a2608e
 AUDIO Growl Bass d7b80b7ec5f083f3
 AUDIO Power Chords 9d3cb3698ba3e47e
-AUDIO Strings 46bb2f68b91341c5
+AUDIO Strings a9305f73897fd8bc
 AUDIO Palm Mute 2724f2d854af2d25
 AUDIO Screamer Lead bc4e7546733a868b
 AUDIO Pinch Harmonic c523f889efa98302
@@ -790,7 +819,7 @@ AUDIO Clang Lead ddc77dbfe227714a
 AUDIO FM Power e948a7cf445a59ce
 AUDIO FM Growl Bass 168a5093b68469be
 AUDIO Sitar ee8d0df6887362d5
-AUDIO Flute 38c0e79da934bfb0
+AUDIO Flute f0fe3491ebede1dc
 AUDIO Ice Bells 8a3f3a5e25ed6507
 AUDIO Drone Bass 6349b66115bd6ea4
 AUDIO Pizz Strings e1583b3fa42ba992
@@ -799,38 +828,38 @@ AUDIO Theremin 004e8cd1cab875ca
 AUDIO Pipe Organ ba32af8996bee492
 AUDIO Comp Guitar e2752da84cf5b2e3
 AUDIO Upright Bass bfe5a6f54a2cb6e6
-AUDIO Bowed Bass 1ac1fde74e2c74ac
-AUDIO Low Reed bfa6a113a7e41ac6
-AUDIO Glockenspiel f92940fcef3d7f7f
+AUDIO Bowed Bass c37ad6e8d7cb1703
+AUDIO Low Reed d6f23c7985949012
+AUDIO Glockenspiel b30af3281b3cfe07
 AUDIO Horn Section e366a6aacde44265
 AUDIO Wind Pad b0c77d3542679c8a
-AUDIO Piano 405192ac146215a5
+AUDIO Piano 6a5d2ab09708decd
 AUDIO Harp 5805b644d20406df
 AUDIO Accordion 98601370513750d7
-AUDIO Solo Violin 5b8966b5230af8c6
-AUDIO Shakuhachi a0cb117c782709e9
+AUDIO Solo Violin 135260296ab6a846
+AUDIO Shakuhachi cc8d289fbad4ed86
 AUDIO Temple Bell fa740ea1352a32e0
-AUDIO Tremolo Strings df832c7e6d42dd15
+AUDIO Tremolo Strings 2efd752b7adc0d06
 AUDIO Slide Guitar 503b499a81dc2fcd
 AUDIO Surf Guitar 68bef24a8ba7443d
 AUDIO Vocal Pad 3d447178705826f7
 AUDIO Low Chant dc0c961993badcae
-AUDIO Toy Piano faf1312aac0d049f
+AUDIO Toy Piano 98df6d9a61e14157
 AUDIO Harmonica bb435ec7553c9c36
 AUDIO Tine Comp 3ecf293f00332c88
 AUDIO Slap Bass e3684026ccac4e0b
 AUDIO Koto 25466d235d980b4c
 AUDIO Shamisen fdd24c16bb64bd8f
-AUDIO Erhu c7feef4a81117c6f
-AUDIO Dizi 3bf49ecee9758595
+AUDIO Erhu 48df1c326537804f
+AUDIO Dizi dc0bca8219614245
 AUDIO Nylon Guitar db33a7a47c24b433
 AUDIO Rasgueado 42b7fc16c934492f
 AUDIO Banjo 87e5481da8254c84
 AUDIO Pedal Steel 622d15ba1bbc18ad
-AUDIO Whistle 83ffc9264589d481
+AUDIO Whistle d5f625b491d9e5bd
 AUDIO Soprano 9d9e858538851494
-AUDIO Celesta a0cd10d16199ef82
-AUDIO Fiddle 3c103edab5d4576f
+AUDIO Celesta 00767c707698ad81
+AUDIO Fiddle d43e12d69aa95c7f
 AUDIO Lead Vocal bcdfefd89c68b691
 AUDIO Female Vocal 329993e88eb5ee73
 AUDIO Child Voice 1f821454682a467f
@@ -842,32 +871,32 @@ AUDIO Fretless Bass eec78389e2435588
 AUDIO Acid Bass 2e606462e53a89e5
 AUDIO Dub Bass ed495feaae36832b
 AUDIO Pedal Bass c85272822bdc6003
-AUDIO Saxophone beefb84ff7577b0c
-AUDIO Ocarina 6cdfcdcac630ce03
-AUDIO Cello 33db1a4836795111
+AUDIO Saxophone cdca9309e3675e48
+AUDIO Ocarina 05a7d9761359e62b
+AUDIO Cello 324b4bc7251c409c
 AUDIO Mandolin e6efb11ddf43ebbe
 AUDIO Ukulele e39fb1284d832a61
-AUDIO Honky-tonk da01b4c53e7cd98e
+AUDIO Honky-tonk 03cb1742b5f566a5
 AUDIO Funk Keys 60be1458d9b7680d
 AUDIO Tape Strings cd8397154ef19914
 AUDIO Guitarron 1d5b1fc9f6796a28
 AUDIO Dulcimer 0d12bdab5eeb305a
 AUDIO Funk Guitar c40bbbc1495f54b4
-AUDIO Clarinet 8b8ee8fd55fecf82
+AUDIO Clarinet d6b4fef7e1083b92
 AUDIO Bandoneon 3867880aac8d6263
-AUDIO Xylophone ab6d5f694d67bb32
+AUDIO Xylophone d9df84e9974d004a
 AUDIO Super Saw c065436015c5edd5
-AUDIO Jazz Piano d2d6d3e2c41de079
+AUDIO Jazz Piano a360cde4a90570b5
 AUDIO Calliope de30ecdf2bc1cf02
 AUDIO Sho 2523bedff20f92d6
 AUDIO Deep Pad 855442b5acdfb5c2
 AUDIO Bowed Metal 5cb21bdfab5debf8
-AUDIO Bass Reed 281b3d087e3555fb
+AUDIO Bass Reed 4ed049f5f68e829e
 AUDIO Koto Bass 3c816476f3a61ca5
 AUDIO Harp Comp 90145f0bb451cada
-AUDIO Reed Section 1f864696d3eb8b5d
+AUDIO Reed Section 8c0fc048972ea00b
 AUDIO Didgeridoo 5d6bf420459fe799
-AUDIO Grand Piano f311b4a44135ed89
+AUDIO Grand Piano 02f595e05cd98991
 AUDIO Acoustic Guitar 44c327a4c510685b
 AUDIO Mandolin Chop 7c784bba16a778a9
 AUDIO Nylon Comp 7b434d6ccc59b05f
@@ -901,7 +930,7 @@ AUDIO Tambourine b916082da2632bf0
 AUDIO Typewriter Clack 176d20082b5672df
 AUDIO Cello Pluck bb7934af31faa564
 AUDIO Kazoo 8c34904c4feca3ed
-AUDIO Cluck da474484e8529e3b
+AUDIO Cluck f885dd64e27f7e59
 AUDIO Chain Clink 24c5ef378553ffe4
 AUDIO Sword Ting 00f8f640fe29c37f
 AUDIO Countdown Beep d9dff93e231f6b6b
@@ -915,7 +944,7 @@ AUDIO Shears Snip eb1aa3d172a9e40c
 AUDIO Petal Scatter 451e9eb7e6681616
 AUDIO Cape Whoosh 7a3a72e54a9a466e
 AUDIO Finger Snap 6c6c0de89227f107
-AUDIO Sax Sigh 57a053d9c0d26358
+AUDIO Sax Sigh 9ab11bc3d68de6ee
 AUDIO Harmonica Bend db60e4f923e13e0e
 AUDIO Cymbal Swell 9c303387a4831480
 AUDIO Van Horn 7da36ccd6007f3d8
@@ -936,10 +965,9 @@ AUDIO Gauntlet Creak 0732624a14940ab7
 AUDIO Triumphant Clank ecc5a3b558134b90
 AUDIO Coin Tumble 265bfd259c0fc5ca
 AUDIO Gold Bar Clunk b96cdc43b99e26ac
-AUDIO Distant Cluck a52ce4b39b9808fe
+AUDIO Distant Cluck 892a9639db2bb4b0
 AUDIO Feather Rustle c8d63e8e70cb773f
 AUDIO Chord Swell 34adae8622b18479
-# SFX 1.3 layered presets (2026-10-28): the seven Layered lines below were ADDED; the AUDIOHASH total moved with them. Every other line is unchanged.
 AUDIO Layered Gunshot 73b3829ceaf65505
 AUDIO Layered Shotgun e45c66b1b92beb74
 AUDIO Layered Machine Gun 243b7988a8bec2d5
@@ -947,13 +975,10 @@ AUDIO Layered Laser Rifle 1ca869e93222ffa8
 AUDIO Layered Sword Clash b0141c0a2c81c25d
 AUDIO Layered Explosion dbee4157dfae853a
 AUDIO Layered Punch 9b61ba384f474b0b
-# SFX care pass (2026-10-29): Transformer Buzz ADDED (AJ's pick, round electric-buzz); the AUDIOHASH total moved with it.
 AUDIO Transformer Buzz 4d5570ff48ab96be
-# SFX care pass round 2 (2026-10-29): Double Jump, Checkpoint and Dash ADDED (AJ's picks); the AUDIOHASH total moved with them.
 AUDIO Double Jump 87814ad2c95222bf
 AUDIO Checkpoint a92f8f5ebb5a621b
 AUDIO Dash 78681232d4f958c5
-# SFX care pass round 3 (2026-10-29): ten presets ADDED (AJ's picks); the AUDIOHASH total moved with them.
 AUDIO Quick Reload 104c2a618cc6d924
 AUDIO Shell Casing 559e8b9c5106b1a7
 AUDIO Enemy Death a620f8a1bf89f298
@@ -964,9 +989,7 @@ AUDIO Swim Stroke 147535ea67f53943
 AUDIO Line Clear f6d658c2db8347af
 AUDIO Rotate 5c09e21b229d06de
 AUDIO Slider Tick 4fe27fdfb908d060
-# SFX care pass round 4 (2026-10-29): Wood Break ADDED (AJ's pick); the AUDIOHASH total moved with it.
 AUDIO Wood Break 880894900529ee35
-# Footsteps by surface (2026-11-01): the eleven surface footsteps ADDED (Grass … Carpet Footstep, the suite's surface names); the AUDIOHASH total moved with them. Every other line is unchanged.
 AUDIO Grass Footstep 3f15b593497733fa
 AUDIO Dirt Footstep bccbd676853cc0ed
 AUDIO Sand Footstep 314d8470dc6fff6f
@@ -993,10 +1016,44 @@ AUDIO Struck Glockenspiel ac55ee1f82b66e0e
 AUDIO Plucked Music Box f10da6412ce342a4
 AUDIO Struck Piano b04b25b1a78dee7a
 AUDIO Blown Flute b6f82c2b0b04d816
+AUDIO Songbird Phrase 08ea985ef799327d
+AUDIO Night Insects 349bb12260c9c411
+AUDIO Cow Moo b3ad1caefb3d0c17
+AUDIO Dog Bark 5d97f7281b45071d
+AUDIO Motorcycle dd6ebedd4e47a030
+AUDIO Doorstop Spring 984564b96bdbdd02
+AUDIO Jaw Harp f9cbc08b09525c88
+AUDIO Brake Squeal c95bcdde9be9f11b
+AUDIO Filling a Bottle 3e484b83c43a0914
+AUDIO Mosquito 1f76b3342ea7348f
+AUDIO Housefly ff3696fce1764e23
+AUDIO Hummingbird db3a5c46ea8fcbc3
+AUDIO Cicada Drone e4920c79b95bd05e
+AUDIO Spring Tank Crash 31a2bddaf3c4b363
+AUDIO Slinky cc99e2b724738eec
+AUDIO Chair Scrape 78b79b0891ea8bd5
+AUDIO Floorboard Creak db7abee6dfee6b45
+AUDIO Rope Creak 672edad2f4924b63
+AUDIO Ship Hull Creak b0f4a5846866fc25
+AUDIO Bullet Whiz 15d7c9e034cc590d
+AUDIO Sniper From Afar 05eee6aceddaa4fd
+AUDIO Canyon Blast 1545f5b103b6ff92
+AUDIO Mine Charge bae80116881489f3
+AUDIO Cannon 3d8c4510383bd729
+AUDIO Dynamite 0b1a6c48284ca5cb
+AUDIO Bolt-Action Reload f5614ecf8c106802
+AUDIO Ratchet Wrench 401ed19acd5c858d
+AUDIO Winding a Toy 1e3b309812a72a5f
+AUDIO Clock Tick 798bd3411949efd8
+AUDIO Pocket Watch e6a764e5bca2dc74
+AUDIO Fridge Hum 08712b390e81c60e
+AUDIO Cordless Drill c67c15929587de59
+AUDIO Electric Car Pass 1d31ded6f40ad5d5
+AUDIO Ceiling Fan 2366863fef75de10
 AUDIO nonorm:Coin 9b44f2f52967386e
 AUDIO nonorm:Laser bfdaabc91508b1fe
 AUDIO nonorm:Jump 29a16949ca59543e
-AUDIO nonorm:Explosion 98d13451fa8f1f9e
+AUDIO nonorm:Explosion c9f75903e07f7b42
 AUDIO nonorm:Hit 1358bbffbffa1956
 AUDIO nonorm:Powerup d5ffe751c34eaaae
 AUDIO nonorm:Blip 6edf1f4db1145a56
@@ -1036,37 +1093,32 @@ AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH 18f27d873651e3fc over 1023
-# SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
+AUDIOHASH 9c34bc60d103d501 over 1057
 AUDIO x:ir:Coin:1 5cfd7548039d3a9d
 AUDIO x:ir:Coin:0.4 ffce912929480e8c
 AUDIO x:ir:Laser:1 a6950da6aeefe1fb
 AUDIO x:ir:Laser:0.4 5fb761fdac017e32
-AUDIO x:ir:Explosion:1 988d81986d05aa2b
-AUDIO x:ir:Explosion:0.4 72cd2880738fc767
+AUDIO x:ir:Explosion:1 d82778eda76b30d8
+AUDIO x:ir:Explosion:0.4 e37a6339a4bdc5aa
 AUDIO x:granular-sample:0 bd22e8753db266c6
 AUDIO x:granular-sample:1 45c852229e3e1273
-AUDIO x:breed:0 3e2e1f5be5c83178
-AUDIO x:breed:1 d42f6aabe24a6a2a
-AUDIO x:breed:2 cb9ad9bbe46ceefc
-AUDIO x:breed:cross e58c30c3d9d6f744
-AUDIO x:vary:0 9f6f9916341a1565
-AUDIO x:vary:1 9f4e2a7c2818d5d5
-AUDIO x:vary:2 9720b24f4fcdb394
-AUDIO x:vary:3 bc96d7cbb38437b4
+AUDIO x:breed:0 9f9f242c275b60b5
+AUDIO x:breed:1 0cf7601a2d231783
+AUDIO x:breed:2 e6017aaef8c83255
+AUDIO x:breed:cross 98172fcc6acb99e9
+AUDIO x:vary:0 5b4bff35c7a657f8
+AUDIO x:vary:1 fefb78635bd55120
+AUDIO x:vary:2 fb8a73c4e2c97f51
+AUDIO x:vary:3 83cf656ebfc1b2bd
 AUDIO x:pack:tres 0ee5611ee441bcfb
 AUDIO x:pack:zip f8d79bb8f0a928cb
-# SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
-AUDIO x:layers:three e65820c579bbef36
-AUDIO x:layers:muted a9015f513759839e
-AUDIO x:layers:no-normalize 1c4c1e0d0d344206
-AUDIO x:layers:same-engine 8bc0db05e41c0dc6
-# SFX 1.3 the Wizard (2026-10-28): the three x:wizard lines below were ADDED (three answers' nine, seeded); the AUDIOXHASH total moved with them. Every line above is unchanged.
-AUDIO x:wizard:gunshot-metal 8412de6ae3d2ca09
-AUDIO x:wizard:explosion-fire-stone-8bit-9 fd6d423cc90681cf
-AUDIO x:wizard:pickup-1 df729712bae4e0ad
-# SFX 1.3 Tremolo + Flicker (2026-10-28): four PARAMS rows added (neutral). Every preset line is unchanged. The random tools' fixtures MOVED (x:breed, x:vary, x:pack:zip, x:wizard): their lines hash each result's whole genome, which now carries the new keys, and Breed/Variations draw a random number per parameter, so the same seed rolls differently. No saved sound changes.
-# Footsteps by surface (2026-11-01): the twelve x:footsteps lines below were ADDED (the seeded Godot footstep set: one line per surface, its .tres and takes; one for crunchy_footsteps.gd, footsteps.tscn and the README); the AUDIOXHASH total moved with them. Every line above is unchanged.
+AUDIO x:layers:three f3f231f50efc13f8
+AUDIO x:layers:muted aef549e49a75c01b
+AUDIO x:layers:no-normalize 791384b1ee9f82be
+AUDIO x:layers:same-engine 794b64a73f5aa826
+AUDIO x:wizard:gunshot-metal e454f3dd631027dc
+AUDIO x:wizard:explosion-fire-stone-8bit-9 89c8f94986bbf786
+AUDIO x:wizard:pickup-1 95ea0e1710cbf6f4
 AUDIO x:footsteps:grass 620a03050d7a103e
 AUDIO x:footsteps:dirt 60e4248d12df2110
 AUDIO x:footsteps:sand 222f3e2a92cab9bf
@@ -1079,8 +1131,69 @@ AUDIO x:footsteps:ice c62a524fa8979ae4
 AUDIO x:footsteps:water ad1a4602f35b7b71
 AUDIO x:footsteps:carpet e88b77a5b41eecb8
 AUDIO x:footsteps:helper 3a7108e7e586554e
-AUDIOXHASH cb2685498d3d0e50 over 37
-# Bow tremolo (2026-11-06, CrunchyBGM §803): rows bowTrem and bowTremPhase ADDED to the bowed model (wave 22), default 0 = a held bow, no preset. Every sound's audio proved unchanged (all 11 breed, vary and wizard lines identical to before with the two new keys left out of the hashed JSON, the AUDIOXHASH total with them); with the keys in, those 11 lines and the AUDIOXHASH total moved, and nothing else did.
-# Flute (2026-11-06, CrunchyBGM §804): wave 26 "flute" and its rows fluteBreath, fluteJet, fluteAim, fluteNoise, fluteTone, fluteVib ADDED, with Blown Flute APPENDED (the hash picks each preset's WAV format by position, so an insert re-hashes every preset after it). Every sound's audio proved unchanged (all lines identical with the six new keys left out of the hashed JSON, the new preset's line and the AUDIOHASH total aside); the breed, vary and wizard lines hash each genome's JSON, which now names the six keys, so those 11 lines and the AUDIOXHASH total moved with them, and the new preset's line and the AUDIOHASH total are new.
-# Membrane buzz (2026-11-06, CrunchyBGM §806): flute row fluteBuzz ADDED (default 0, byte-identical; no preset). Every sound's audio proved unchanged (all lines identical with the new key left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names it, so those 11 lines and the AUDIOXHASH total moved, and nothing else did.
-# Flute breath law (2026-11-06, CrunchyBGM §807): fluteNoise is SQUARED now (0.4 x knob², was 0.1 x knob) so a dark flute's breath can be heard. Blown Flute (0.05) moved from 0.005 to 0.001 of the flow, both inaudible; its line and the AUDIOHASH total moved, and nothing else did.
+AUDIO x:alt:Thunder:1 1fbf2fd728e93588
+AUDIO x:alt:Thunder:2 e36fe9135d9e8384
+AUDIO x:alt:Thunder:3 bced8b60ed50b9b3
+AUDIO x:alt:Wave of Water:1 4596107f08015002
+AUDIO x:alt:Wave of Water:2 c7f29658ddee1533
+AUDIO x:alt:Wave of Water:3 0c814bb07f3f47cb
+AUDIO x:alt:Wind Gust:1 6202b7b70eda9384
+AUDIO x:alt:Wind Gust:2 79cc30f439073c81
+AUDIO x:alt:Monster Growl:1 a3d7a041160b7c5e
+AUDIO x:alt:Monster Growl:2 5b7084458377dc9e
+AUDIO x:alt:Cat Meow:1 8fb6f425f296f7b6
+AUDIO x:alt:Bird Chirp:1 bfdde28501c60e96
+AUDIO x:alt:Bird Chirp:2 79b04b45f9936ee6
+AUDIO x:alt:Bird Chirp:3 88610b855a5e9606
+AUDIO x:alt:Cricket Chirp:1 5e6b0299527f3476
+AUDIO x:alt:Cricket Chirp:2 10e1db1d366200f6
+AUDIO x:alt:Cricket Chirp:3 416f5c71a5bf7cde
+AUDIO x:alt:Rooster Crow:1 89847685be005976
+AUDIO x:alt:Rain:1 6f49085ada648e61
+AUDIO x:alt:Rain:2 e09b4bccdfe793b1
+AUDIO x:alt:Waterfall:1 c435eb95c7724ad6
+AUDIO x:alt:Waterfall:2 b549eee83044d5f1
+AUDIO x:alt:Waterfall:3 a8d15a33b585fe7c
+AUDIO x:alt:Ocean Surf:1 fad34bfc879f3517
+AUDIO x:alt:Ocean Surf:2 bc30f4ae7fd599d5
+AUDIO x:alt:Ocean Surf:3 07503ef961150fd4
+AUDIO x:alt:Robot Servo:1 cce2da7d136e601e
+AUDIO x:alt:Mechanical Whir:1 b3f485993ce0a7fe
+AUDIO x:alt:Mechanical Whir:2 3f4845ada0e00d96
+AUDIO x:alt:Distant Boom:1 0727200471311527
+AUDIO x:alt:Servo Motor:1 c2195a6da8ec4fce
+AUDIO x:alt:Bird Trill:1 9e57fb7deb6a3750
+AUDIO x:alt:Bird Trill:2 7052416113ef925c
+AUDIO x:alt:Bird Trill:3 77d21be1d6e47b58
+AUDIO x:alt:Conveyor Belt:1 e8d4cc6d9fe92a8e
+AUDIO x:alt:Conveyor Belt:2 a2f66aed2a2ab7e6
+AUDIO x:alt:Troll Grunt:1 82f1caedc56d37a6
+AUDIO x:alt:Howling Squall:1 72733b0365b09cdc
+AUDIO x:alt:Howling Squall:2 4ceee56c9760d9dd
+AUDIO x:alt:Heavy Rain:1 51d268cc0a828b01
+AUDIO x:alt:Heavy Rain:2 bd8a941250599963
+AUDIO x:alt:Heavy Rain:3 df15b0250d5b9b52
+AUDIO x:alt:Car Engine:1 3491094db024565e
+AUDIO x:alt:Car Engine:2 ad5433ad73c7dc76
+AUDIO x:alt:Car Engine:3 bdbbd7b594972266
+AUDIO x:alt:Helicopter:1 359350012d40c5ec
+AUDIO x:alt:Train:1 41ef9e8f2b679294
+AUDIO x:alt:Chainsaw:1 c02f866947270a56
+AUDIO x:alt:Chainsaw:2 f95fe371d5db25fe
+AUDIO x:alt:Trapdoor Creak:1 7d38d8b9bfdac8fa
+AUDIO x:alt:Songbird Phrase:1 266646ca7909aa3d
+AUDIO x:alt:Songbird Phrase:2 dfd12a44a5ca2c5f
+AUDIO x:alt:Night Insects:1 c6e7bff78e4963b2
+AUDIO x:alt:Night Insects:2 8cb1041e0c46e1fb
+AUDIO x:alt:Motorcycle:1 3a8553ddd953567e
+AUDIO x:alt:Motorcycle:2 2c1bbd2d475dc79e
+AUDIO x:alt:Jaw Harp:1 89bd78b5e1d68186
+AUDIO x:alt:Filling a Bottle:1 9e786858632611db
+AUDIO x:alt:Floorboard Creak:1 4e26932b46b5f9a2
+AUDIO x:alt:Ratchet Wrench:1 ff26e315e21df1e6
+AUDIO x:alt:Clock Tick:1 b9c6d8f5dc3eb4f8
+AUDIO x:vary:layered:0 64938bc96b36b9d6
+AUDIO x:vary:layered:1 6e7627c323ee5cfc
+AUDIO x:vary:layered:2 c2737aa489a6c8f9
+AUDIO x:vary:layered:3 1577a095b3306400
+AUDIOXHASH 30de6009a0039b1a over 102

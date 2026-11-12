@@ -427,7 +427,9 @@ function run(name) {
   let seed = 0x5f3759df;
   for (const ch of name) seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) >>> 0;
   const order = round.takes.map((_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; const j = seed % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+  for (let i = order.length - 1; i > 0; i--) { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; const j = (seed >>> 16) % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+  // 2026-11-10: the HIGH bits. An LCG mod 2^32's low bits cycle with a tiny period, so `seed % 4` put the control take
+  // first in 4 of 5 rounds (found by the creature prototype). Re-running an old round reshuffles it; KEY.md follows.
   const out = join(ROOT, "soundtests", "ab-" + name), key = [];
   mkdirSync(out, { recursive: true });
   order.forEach((ti, slot) => {

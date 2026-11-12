@@ -112,7 +112,8 @@ Full findings are in the review (lead's session, 2026-10-27); file:line pointers
 > - godot-check 10 and godot-pack 7 in real Godot.
 >
 > **Not yet:**
-> - Variations (and so the Godot pack) of a layered sound vary and render the SELECTED layer alone.
+> - ~~Variations (and so the Godot pack) of a layered sound vary and render the SELECTED layer alone.~~ Fixed 2026-11-12:
+>   every layer varies, one shared pitch move, the arrangement kept (`varySound`, `soundGenome`).
 > - The riff transposes layer 1 only.
 > - One imported sample and one IR serve every layer.
 > - VFX and BGM play layer 1 until they re-pull the bundle (VFX: re-pulling moves one frame-hash line, AJ's call, below).

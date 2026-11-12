@@ -242,7 +242,7 @@ function setIconLabel(el, name, text) {
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute", "chirp", "creature", "weather", "motor", "blast", "spring", "servo", "friction", "flow"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -382,6 +382,294 @@ const PARAMS = [
   ["fluteTone",   "Tone",        0, 1, 0.01, 0.7,  "",  "Flute"],
   ["fluteVib",    "Breath vibrato", 0, 1, 0.01, 0, "",  "Flute"],
   ["fluteBuzz",   "Membrane buzz", 0, 1, 0.01, 0,  "",  "Flute"],
+  // Chirp (wave 27): birdsong and insects (dsp.js makeChirp). In DRAWN_IF_USED (wave 27 only), so no other sound draws
+  // them. Creature = a bird's syrinx (whistled syllables), a cricket's stridulation (pulses grouped into chirps) or a
+  // wingbeat buzz. Pitch is its own row (`freq` stops at 4 kHz; crickets and songbirds sit at 2-8). Syllables = per
+  // phrase (a cricket: pulses per chirp); Phrases 0 = keep going to the end. Variation = the seed: which take of the
+  // call, so a preset names exactly the one picked by ear.
+  ["chirpMode",   "Creature",    0, 2, 1, 0,    "",   "Chirp", "enum", ["Bird (syrinx)", "Cricket (stridulation)", "Buzz (wings)"]],
+  ["chirpPitch",  "Pitch",       40, 10000,  1, 3200, "Hz", "Chirp"],
+  ["chirpGesture","Gesture",     0, 7, 1, 1,    "",   "Chirp", "enum", ["Whistle", "Up-slur", "Down-slur", "Arch", "Dip", "Warble", "Chip", "Mixed phrase"]],
+  ["chirpSpan",   "Slur",        0, 2, 0.01, 0.6, "oct", "Chirp"],
+  ["chirpRate",   "Syllable rate", 1, 60, 0.1, 8, "/s", "Chirp"],
+  ["chirpDuty",   "Syllable length", 0.1, 1, 0.01, 0.6, "", "Chirp"],
+  ["chirpCount",  "Syllables",   1, 400, 1, 3,  "",   "Chirp"],
+  ["chirpGroups", "Phrases",     0, 12, 1, 1,   "",   "Chirp"],
+  ["chirpGroupGap","Phrase gap", 0, 2, 0.01, 0.25, "s", "Chirp"],
+  ["chirpAccel",  "Accelerate",  -2, 2, 0.01, 0, "oct", "Chirp"],
+  ["chirpDrift",  "Pitch drift", -2, 2, 0.01, 0, "oct", "Chirp"],
+  ["chirpRand",   "Randomness",  0, 1, 0.01, 0.2, "",  "Chirp"],
+  ["chirpHarm",   "Harmonics",   0, 1, 0.01, 0.15, "", "Chirp"],
+  ["chirpVoice2", "Second voice", 0, 1, 0.01, 0, "",   "Chirp"],
+  ["chirpInterval","Voice interval", -12, 12, 0.1, 5, "st", "Chirp"],
+  ["chirpRasp",   "Rasp",        0, 1, 0.01, 0,  "",   "Chirp"],
+  ["chirpChorus", "Individuals", 1, 8, 1, 1,    "",   "Chirp"],
+  ["chirpSeed",   "Variation",   0, 999, 1, 0,  "",   "Chirp"],
+  // Creature (wave 28): animal and monster calls (dsp.js makeCreature). In DRAWN_IF_USED (wave 28 only), so no other
+  // sound draws them. One shot is one CALL, timed by the envelope (the whole shot when it sustains; attack + hold +
+  // decay when it does not: a bark). Over the call the pitch moves start -> peak -> end (semitones about Frequency,
+  // which is the peak), the mouth opens and closes, the vowel moves front -> back. Body size scales the vocal tract
+  // (0.4 a cat, 1 a person, 2 a cow). Every default is neutral: no contour, mouth half open, no nose, a clean voice.
+  ["crSize",       "Body size",    0.3, 3, 0.01, 1,  "",   "Creature"],
+  ["crPitchStart", "Pitch start",  -24, 24, 0.1, 0,  "st", "Creature"],
+  ["crPitchEnd",   "Pitch end",    -24, 24, 0.1, 0,  "st", "Creature"],
+  ["crPeak",       "Peak at",      0, 1, 0.01, 0.4,  "",   "Creature"],
+  ["crOpenStart",  "Mouth start",  0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crOpenPeak",   "Mouth peak",   0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crOpenEnd",    "Mouth end",    0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crVowelStart", "Vowel start",  0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crVowelEnd",   "Vowel end",    0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crNasal",      "Nasal",        0, 1, 0.01, 0,    "",   "Creature"],
+  ["crTension",    "Tension",      0, 1, 0.01, 0.5,  "",   "Creature"],
+  ["crJitter",     "Jitter",       0, 1, 0.01, 0,    "",   "Creature"],
+  ["crShimmer",    "Shimmer",      0, 1, 0.01, 0,    "",   "Creature"],
+  ["crRough",      "Roughness",    0, 1, 0.01, 0,    "",   "Creature"],
+  ["crBreath",     "Breath",       0, 1, 0.01, 0,    "",   "Creature"],
+  ["crFlutter",    "Rattle",       0, 1, 0.01, 0,    "",   "Creature"],
+  ["crFlutterRate","Rattle rate",  2, 60, 0.1, 20,   "Hz", "Creature"],
+  // Weather (wave 29): wind, rain and thunder (dsp.js makeWeather). In DRAWN_IF_USED (wave 29 only), so no other sound
+  // draws them. The AMP ENVELOPE is the drive: the wind's speed, the rain's drop rate, the thunder's gain. Each type reads
+  // its own rows (wind: strength .. whistle purity, body; rain: drops .. sheets, body; thunder: distance .. bolt length),
+  // Tone and Variation are shared, Frequency is the whistles' pitch and Stereo width the spread. Variation is the seed:
+  // which take, so a preset names exactly the one picked by ear. (The prototype's sheet rate is fixed at 0.8 Hz and its
+  // width is the patch's own: no shipped take needed either as a row.)
+  ["wxType",      "Weather",       0, 2, 1, 0,       "",   "Weather", "enum", ["Wind", "Rain", "Thunder"]],
+  ["wxIntensity", "Wind strength", 0, 1, 0.01, 0.7,  "",   "Weather"],
+  ["wxGust",      "Gustiness",     0, 1, 0.01, 0.5,  "",   "Weather"],
+  ["wxGustRate",  "Gusts",         0.1, 4, 0.01, 0.8, "/s", "Weather"],
+  ["wxWhistle",   "Whistle",       0, 1, 0.01, 0,    "",   "Weather"],
+  ["wxWhistles",  "Whistles",      0, 3, 1, 2,       "",   "Weather"],
+  ["wxWhistleQ",  "Whistle purity",10, 120, 1, 60,   "",   "Weather"],
+  ["wxBody",      "Body",          0, 1, 0.01, 0.3,  "",   "Weather"],
+  ["wxTone",      "Tone",          0, 1, 0.01, 0.5,  "",   "Weather"],
+  ["wxDensity",   "Drops",         5, 4000, 1, 300,  "/s", "Weather"],
+  ["wxDrop",      "Drop size",     0.3, 4, 0.01, 1.2, "mm", "Weather"],
+  ["wxSurface",   "Surface",       0, 2, 1, 0,       "",   "Weather", "enum", ["Hard", "Leaves", "Water"]],
+  ["wxSpread",    "Spread",        2, 20, 0.1, 12,   "",   "Weather"],
+  ["wxHiss",      "Hiss",          0, 1, 0.01, 0.5,  "",   "Weather"],
+  ["wxBubbles",   "Bubbles",       0, 1, 0.01, 0.7,  "",   "Weather"],
+  ["wxRing",      "Bubble ring",   0.2, 3, 0.01, 1,  "",   "Weather"],
+  ["wxSheets",    "Sheets",        0, 1, 0.01, 0,    "",   "Weather"],
+  ["wxDistance",  "Distance",      0.2, 10, 0.01, 2, "km", "Weather"],
+  ["wxBolt",      "Bolt",          0, 1, 1, 0,       "",   "Weather", "enum", ["Cloud to ground", "In the cloud"]],
+  ["wxRoll",      "Roll",          0.5, 6, 0.01, 1.6, "s", "Weather"],
+  ["wxPulse",     "Boom length",   1, 8, 0.1, 4,     "ms", "Weather"],
+  ["wxCrackle",   "Crackle",       0, 1, 0.01, 0.5,  "",   "Weather"],
+  ["wxHeight",    "Cloud height",  500, 5000, 10, 2500, "m", "Weather"],
+  ["wxLength",    "Bolt length",   500, 8000, 10, 2500, "m", "Weather"],
+  ["wxSeed",      "Variation",     0, 999, 1, 0,     "",   "Weather"],
+  // Motor (wave 30): engines, rotors and steam as trains of firing events (dsp.js makeMotor). In DRAWN_IF_USED (wave 30
+  // only), so no other sound draws them. The RPM CURVE is these rows, not the amp envelope (which stays the gain): idle,
+  // then at `At` the throttle opens and the engine revs to Peak over Rise, holds, shuts and falls to End over Fall;
+  // Revs repeats that every Rev gap (0 = a steady engine at Idle). The three throttles are the LOAD at idle, on the rev
+  // and after the let-off: load is what makes a rev bark and a let-off pop. Variation is the seed: which take, so a
+  // preset names exactly the one picked by ear. (The prototype's burst Q follows the type and its tail-rotor pulse is
+  // fixed at 1 ms, its clack pair spacing at 0.19 s: no shipped take needed them as rows.)
+  ["motorType",      "Motor",           0, 3, 1, 0,       "",    "Motor", "enum", ["Four-stroke", "Two-stroke", "Rotor", "Steam"]],
+  ["motorCyl",       "Cylinders",       1, 16, 1, 4,      "",    "Motor"],
+  ["motorIdle",      "Idle",            10, 15000, 1, 900, "rpm", "Motor"],
+  ["motorPeak",      "Peak",            10, 15000, 1, 5800, "rpm", "Motor"],
+  ["motorEnd",       "Settle",          10, 15000, 1, 950, "rpm", "Motor"],
+  ["motorAt",        "Rev at",          0, 2, 0.01, 0.2,   "s",   "Motor"],
+  ["motorRise",      "Rev up",          0.01, 3, 0.01, 0.45, "s", "Motor"],
+  ["motorHold",      "Hold",            0, 5, 0.01, 0.1,   "s",   "Motor"],
+  ["motorFall",      "Rev down",        0.03, 3, 0.01, 0.6, "s",  "Motor"],
+  ["motorRevs",      "Revs",            0, 4, 1, 1,        "",    "Motor"],
+  ["motorRevGap",    "Rev gap",         0.1, 2, 0.01, 0.6, "s",   "Motor"],
+  ["motorIdleLoad",  "Idle throttle",   0, 1, 0.01, 0.25,  "",    "Motor"],
+  ["motorRevLoad",   "Rev throttle",    0, 1, 0.01, 1,     "",    "Motor"],
+  ["motorOffLoad",   "Let-off throttle",0, 1, 0.01, 0.05,  "",    "Motor"],
+  ["motorLope",      "Lope",            0, 1, 0.01, 0,     "",    "Motor"],
+  ["motorUneven",    "Uneven firing",   0, 1, 0.01, 0,     "",    "Motor"],
+  ["motorImbalance", "Imbalance",       0, 1, 0.01, 0.15,  "",    "Motor"],
+  ["motorRough",     "Roughness",       0, 1, 0.01, 0.2,   "",    "Motor"],
+  ["motorWander",    "Wander",          0, 1, 0.01, 0.3,   "",    "Motor"],
+  ["motorPulse",     "Pulse length",    0.2, 8, 0.01, 0.9, "ms",  "Motor"],
+  ["motorThump",     "Thump",           0, 2, 0.01, 1,     "",    "Motor"],
+  ["motorBurst",     "Burst",           0, 2, 0.01, 0.35,  "",    "Motor"],
+  ["motorBurstMs",   "Burst length",    0.3, 40, 0.1, 1,   "ms",  "Motor"],
+  ["motorBurstHz",   "Burst tone",      100, 6000, 10, 2500, "Hz", "Motor"],
+  ["motorPipe",      "Pipe length",     0.2, 4, 0.01, 1.4, "m",   "Motor"],
+  ["motorPipeRing",  "Pipe ring",       0, 0.9, 0.01, 0.55, "",   "Motor"],
+  ["motorPipeDamp",  "Pipe damping",    0, 0.9, 0.01, 0.3, "",    "Motor"],
+  ["motorTone",      "Muffler",         200, 8000, 10, 1600, "Hz", "Motor"],
+  ["motorRasp",      "Rasp",            0, 1, 0.01, 0.55,  "",    "Motor"],
+  ["motorRaspHz",    "Rasp tone",       200, 5000, 10, 1700, "Hz", "Motor"],
+  ["motorAir",       "Air",             0, 1, 0.01, 0.08,  "",    "Motor"],
+  ["motorAirHz",     "Air tone",        100, 8000, 10, 1500, "Hz", "Motor"],
+  ["motorWhine",     "Whine",           0, 0.3, 0.005, 0,  "",    "Motor"],
+  ["motorWhineRatio","Whine ratio",     0.5, 1000, 0.1, 3, "x",   "Motor"],
+  ["motorPops",      "Pops",            0, 1, 0.01, 0.15,  "",    "Motor"],
+  ["motorTail",      "Tail rotor",      0, 1, 0.01, 0,     "",    "Motor"],
+  ["motorTailRatio", "Tail speed",      2, 10, 0.01, 5.2,  "x",   "Motor"],
+  ["motorClack",     "Rail clack",      0, 1, 0.01, 0,     "",    "Motor"],
+  ["motorClackRate", "Clacks",          0.1, 2, 0.01, 0.42, "/turn", "Motor"],
+  ["motorSeed",      "Variation",       0, 999, 1, 0,      "",    "Motor"],
+  // Blast (wave 31): explosions and gunshots, a pressure wave carried through a modeled place (dsp.js makeBlast). In
+  // DRAWN_IF_USED (wave 31 only), so no other sound draws them and Breed/Variations leave them alone elsewhere. The
+  // stereo spread is the patch's own `width`; the place is the engine's room (its presets run Reverb 0).
+  ["blastSize",       "Size",            0, 1, 0.01, 0.6,   "",    "Blast"],
+  ["blastDist",       "Distance",        1, 2000, 1, 20,    "m",   "Blast"],
+  ["blastEnv",        "Place",           0, 4, 1, 0,        "",    "Blast", "enum", ["Open field", "Street", "Indoors", "Canyon", "Forest"]],
+  ["blastRoom",       "Place level",     0, 2, 0.01, 1,     "",    "Blast"],
+  ["blastTail",       "Place length",    0.3, 2, 0.01, 1,   "",    "Blast"],
+  ["blastPulse",      "Weight",          1, 6, 0.01, 1,     "",    "Blast"],
+  ["blastShape",      "Wave shape",      0.3, 3, 0.01, 1,   "",    "Blast"],
+  ["blastRoar",       "Fire / gas",      0, 1, 0.01, 0.5,   "",    "Blast"],
+  ["blastRumble",     "Rumble",          0, 1, 0.01, 0.5,   "",    "Blast"],
+  ["blastDebris",     "Debris",          0, 1, 0.01, 0,     "",    "Blast"],
+  ["blastDebrisType", "Debris type",     0, 2, 1, 0,        "",    "Blast", "enum", ["Earth", "Rubble", "Urban"]],
+  ["blastCrack",      "Bullet crack",    0, 1, 0.01, 0,     "",    "Blast"],
+  ["blastDownrange",  "Heard from",      0, 1, 1, 0,        "",    "Blast", "enum", ["The gun", "Downrange"]],
+  ["blastSpeed",      "Bullet speed",    360, 1200, 1, 850, "m/s", "Blast"],
+  ["blastAction",     "Mechanism",       0, 1, 0.01, 0,     "",    "Blast"],
+  ["blastActionType", "Action",          0, 2, 1, 1,        "",    "Blast", "enum", ["None", "Semi-auto", "Bolt"]],
+  ["blastCasing",     "Casing",          0, 1, 0.01, 0,     "",    "Blast"],
+  ["blastPeak",       "Peak control",    0, 2, 0.01, 0,     "",    "Blast"],
+  ["blastSeed",       "Variation",       0, 999, 1, 0,      "",    "Blast"],
+  // Spring (wave 32): boings, doorstops, spring tanks and the jaw harp (dsp.js makeSpring). In DRAWN_IF_USED (wave 32
+  // only), so no other sound draws them and Breed/Variations leave them alone elsewhere. The patch's Frequency is the
+  // spring's pitch (a coil's band, a doorstop's or a reed's note). Length is the coil's round trip (a doorstop is one
+  // period of its pitch, a twang has no loop); Mouth and Vowel are the jaw harp's mouth (on a coil or a doorstop, a
+  // "talking" spring when Mouth is not 0). Variation = the seed: which take, so a preset names the one picked by ear.
+  ["springType",      "Spring",          0, 2, 1, 0,        "",    "Spring", "enum", ["Coil (spring tank / toy coil)", "Doorstop", "Twang (jaw harp)"]],
+  ["springLength",    "Coil length",     5, 400, 1, 60,     "ms",  "Spring"],
+  ["springDisp",      "Dispersion",      -1, 1, 0.01, 0.6,  "",    "Spring"],
+  ["springDamp",      "Damping",         0, 1, 0.01, 0.4,   "",    "Spring"],
+  ["springSway",      "Sway",            0, 1, 0.01, 0,     "",    "Spring"],
+  ["springSwayRate",  "Sway rate",       0.5, 30, 0.1, 7,   "Hz",  "Spring"],
+  ["springPluck",     "Pluck",           0, 1, 0.01, 0.5,   "",    "Spring"],
+  ["springMouth",     "Mouth",           -1, 1, 0.01, 0,    "",    "Spring"],
+  ["springVowel",     "Vowel",           0, 1, 0.01, 0.4,   "",    "Spring"],
+  ["springSeed",      "Variation",       0, 999, 1, 0,      "",    "Spring"],
+  // Servo (wave 33): electric motors, gearboxes and clockwork, every sound locked to one shaft (dsp.js makeServo). In
+  // DRAWN_IF_USED (wave 33 only), so no other sound draws them. THE POWER CURVE is these rows, not the amp envelope (which
+  // stays the gain): up to three powered MOVES (power on at / run for / speed; the power is off between them and the
+  // shaft brakes or coasts on its own), the first able to drift to `Speed at end` and ramp its load to `Load at end`, or
+  // one run from a shaft already turning (Starts: Running). Speeds are the motor shaft's rpm; for clockwork the escape
+  // wheel's. Types gate what is physically there (brushless: no commutator; brushed: no gear backlash to click;
+  // clockwork: nothing electric). Variation is the seed: which take, so a preset names exactly the one picked by ear.
+  // (The prototype's start click is fixed at 0.35 of the stop click, the hold buzz's frame rate at 50 Hz, the escapement's
+  // first tick at 0.85 of a step and the ratchet's pitch at 4.3 kHz: no shipped take needed them as rows.)
+  ["servoType",      "Motor",           0, 3, 1, 0,       "",    "Servo", "enum", ["Brushless", "Brushed", "Geared", "Clockwork"]],
+  ["servoSpeed",     "Speed",           1, 24000, 0.1, 6000, "rpm", "Servo"],
+  ["servoDrift",     "Speed at end",    0.1, 2, 0.001, 1, "x",   "Servo"],
+  ["servoStart",     "Starts",          0, 1, 1, 0,       "",    "Servo", "enum", ["From rest", "Running"]],
+  ["servoAt",        "Power on at",     0, 3, 0.001, 0.02, "s",  "Servo"],
+  ["servoRun",       "Run for",         0.01, 10, 0.001, 0.5, "s", "Servo"],
+  ["servoAt2",       "Move 2 at",       0, 3, 0.001, 0,   "s",   "Servo"],
+  ["servoRun2",      "Move 2 for",      0, 3, 0.001, 0,   "s",   "Servo"],
+  ["servoSpeed2",    "Move 2 speed",    1, 24000, 0.1, 6000, "rpm", "Servo"],
+  ["servoAt3",       "Move 3 at",       0, 3, 0.001, 0,   "s",   "Servo"],
+  ["servoRun3",      "Move 3 for",      0, 3, 0.001, 0,   "s",   "Servo"],
+  ["servoSpeed3",    "Move 3 speed",    1, 24000, 0.1, 6000, "rpm", "Servo"],
+  ["servoLoad",      "Load",            0, 1, 0.01, 0.3,  "",    "Servo"],
+  ["servoLoadEnd",   "Load at end",     0, 1, 0.01, 0.3,  "",    "Servo"],
+  ["servoOffLoad",   "Load when off",   0, 1, 0.01, 0.3,  "",    "Servo"],
+  ["servoInertia",   "Spin-up",         0.005, 1, 0.001, 0.08, "s", "Servo"],
+  ["servoDecel",     "Slow-down",       0.005, 1, 0.001, 0.08, "s", "Servo"],
+  ["servoCoast",     "Coast",           0.01, 3, 0.01, 0.32, "s",  "Servo"],
+  ["servoBrake",     "When it stops",   0, 1, 1, 0,       "",    "Servo", "enum", ["Coasts", "Brakes"]],
+  ["servoSag",       "Sag",             0, 1, 0.01, 0.15, "",    "Servo"],
+  ["servoSlots",     "Slots",           1, 48, 1, 12,     "",    "Servo"],
+  ["servoWhine",     "Whine",           0, 2, 0.01, 1,    "",    "Servo"],
+  ["servoWhineHarm", "Whine harmonics", 1, 12, 1, 8,      "",    "Servo"],
+  ["servoWhineRoll", "Whine darkness",  0.3, 3, 0.01, 1.3, "",   "Servo"],
+  ["servoBars",      "Commutations",    0, 24, 1, 6,      "/turn", "Servo"],
+  ["servoComm",      "Brush buzz",      0, 2, 0.01, 1,    "",    "Servo"],
+  ["servoSpark",     "Sparks",          0, 2, 0.01, 0.5,  "",    "Servo"],
+  ["servoSparkHz",   "Spark tone",      500, 12000, 10, 4200, "Hz", "Servo"],
+  ["servoStages",    "Gear stages",     0, 3, 1, 0,       "",    "Servo"],
+  ["servoPinion1",   "Gear 1 pinion",   4, 60, 1, 10,     "teeth", "Servo"],
+  ["servoGear1",     "Gear 1 wheel",    4, 200, 1, 40,    "teeth", "Servo"],
+  ["servoMesh1",     "Gear 1 mesh",     0, 2, 0.001, 0.5, "",    "Servo"],
+  ["servoPinion2",   "Gear 2 pinion",   4, 60, 1, 10,     "teeth", "Servo"],
+  ["servoGear2",     "Gear 2 wheel",    4, 200, 1, 40,    "teeth", "Servo"],
+  ["servoMesh2",     "Gear 2 mesh",     0, 2, 0.001, 0.5, "",    "Servo"],
+  ["servoPinion3",   "Gear 3 pinion",   4, 60, 1, 10,     "teeth", "Servo"],
+  ["servoGear3",     "Gear 3 wheel",    4, 200, 1, 40,    "teeth", "Servo"],
+  ["servoMesh3",     "Gear 3 mesh",     0, 2, 0.001, 0.5, "",    "Servo"],
+  ["servoWear",      "Wear",            0, 1, 0.01, 0,    "",    "Servo"],
+  ["servoKnock",     "Knock",           0, 2, 0.01, 0,    "",    "Servo"],
+  ["servoKnockShaft","Knock on",        0, 3, 1, 0,       "",    "Servo", "enum", ["Motor shaft", "After gear 1", "After gear 2", "After gear 3"]],
+  ["servoKnockRate", "Knocks",          0.1, 32, 0.1, 1,  "/turn", "Servo"],
+  ["servoKnockHz",   "Knock tone",      100, 8000, 0.01, 1000, "Hz", "Servo"],
+  ["servoStop",      "Stop click",      0, 2, 0.01, 0,    "",    "Servo"],
+  ["servoHold",      "Hold buzz",       0, 1, 0.01, 0,    "",    "Servo"],
+  ["servoClickHz",   "Click tone",      300, 8000, 0.01, 2000, "Hz", "Servo"],
+  ["servoHum",       "Mains hum",       0, 1, 0.01, 0,    "",    "Servo"],
+  ["servoHumHz",     "Mains",           40, 70, 1, 60,    "Hz",  "Servo"],
+  ["servoPwm",       "Drive whine",     0, 0.2, 0.001, 0, "",    "Servo"],
+  ["servoPwmHz",     "Drive pitch",     2000, 20000, 10, 9000, "Hz", "Servo"],
+  ["servoBearing",   "Bearings",        0, 1, 0.01, 0.12, "",    "Servo"],
+  ["servoBearingHz", "Bearing tone",    500, 12000, 10, 7000, "Hz", "Servo"],
+  ["servoRumble",    "Rumble",          0, 1.5, 0.01, 0,  "",    "Servo"],
+  ["servoSize",      "Size",            0, 1, 0.01, 0.4,  "",    "Servo"],
+  ["servoBody",      "Housing",         0, 1, 0.01, 0.5,  "",    "Servo"],
+  ["servoWander",    "Wander",          0, 1, 0.01, 0,    "",    "Servo"],
+  ["servoCog",       "Cogging",         0, 1, 0.01, 0,    "",    "Servo"],
+  ["servoCogN",      "Cogs",            1, 16, 1, 4,      "/turn", "Servo"],
+  ["servoTicks",     "Escapement",      0, 2, 0.01, 0,    "",    "Servo"],
+  ["servoEscTeeth",  "Escape teeth",    4, 40, 1, 15,     "",    "Servo"],
+  ["servoDrop",      "Drop",            0.5, 15, 0.1, 4,  "ms",  "Servo"],
+  ["servoTock",      "Tock",            0, 1.5, 0.01, 0.75, "",  "Servo"],
+  ["servoPawlHz",    "Tick tone",       1000, 9000, 10, 3400, "Hz", "Servo"],
+  ["servoRatchet",   "Ratchet",         0, 2, 0.01, 0,    "",    "Servo"],
+  ["servoRatchetRate","Ratchet clicks", 1, 60, 0.1, 22,   "/s",  "Servo"],
+  ["servoRatchetEnd","Wind for",        0.01, 3, 0.01, 0.3, "s", "Servo"],
+  ["servoSeed",      "Variation",       0, 999, 1, 0,     "",    "Servo"],
+  // Friction (wave 34): creaks, squeaks and squeals, stick-slip on a resonant body (dsp.js makeFriction). In
+  // DRAWN_IF_USED (wave 34 only), so no other sound draws them. Frequency is the BODY's size (its base mode). THE PUSH is
+  // these rows, not the amp envelope (which stays the gain): the drag speed at the start and at up to three times after
+  // it (a time of 0 = unused), the time it stops, and the pressure the same way, eased between points. Speed is the slip
+  // rate (0 separate ticks, ~0.6 a groan, ~0.9 up a squeal that can lock to the body); pressure slows and deepens it.
+  // Variation is the seed: which take. The model is chaotic near a regime boundary (another seed can turn a squeal into
+  // ticks), so a preset names exactly the one picked by ear. (The prototype's 15 ms push ease-in, its contact patch at
+  // 4 kHz and its grit at 1.5% are fixed: no shipped take needed them as rows.)
+  ["fricBody",       "Body",            0, 3, 1, 0,       "",    "Friction", "enum", ["Wood", "Iron", "Rubber", "Hinged wood"]],
+  ["fricTone",       "Contact stiffness", 0, 1, 0.01, 0.4, "",   "Friction"],
+  ["fricGrip",       "Grip",            0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricRough",      "Roughness",       0, 1, 0.01, 0.3,  "",    "Friction"],
+  ["fricLock",       "Lock to body",    0, 1, 0.01, 0.3,  "",    "Friction"],
+  ["fricSpeed",      "Speed",           0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricT1",         "Speed 2 at",      0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricSpeed1",     "Speed 2",         0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricT2",         "Speed 3 at",      0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricSpeed2",     "Speed 3",         0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricT3",         "Speed 4 at",      0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricSpeed3",     "Speed 4",         0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricStop",       "Stops at",        0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricPress",      "Pressure",        0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricPressT1",    "Pressure 2 at",   0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricPress1",     "Pressure 2",      0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricPressT2",    "Pressure 3 at",   0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricPress2",     "Pressure 3",      0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricPressT3",    "Pressure 4 at",   0, 3, 0.001, 0,   "s",   "Friction"],
+  ["fricPress3",     "Pressure 4",      0, 1, 0.01, 0.5,  "",    "Friction"],
+  ["fricSeed",       "Variation",       0, 999, 1, 0,     "",    "Friction"],
+  // Flow (wave 35): moving water, a stream, a waterfall, surf and pouring into a vessel (dsp.js makeFlow). In
+  // DRAWN_IF_USED (wave 35 only), so no other sound draws them. The AMP ENVELOPE is the drive: a stream's or a
+  // waterfall's flow, the surf's gain, the pour's jet. Each type reads its own rows (stream and waterfall: amount ..
+  // rise; surf: period .. waves; pour: fill .. vessel; babble is the pour's glugging), Tone, Distance and Variation are
+  // shared, Stereo width is the spread, and a pour fills over the Duration. Variation is the seed: which take, so a
+  // preset names exactly the one picked by ear. A surf cycle is 6-12 s, so its Duration slider stretches (syncUI).
+  ["flowType",       "Water",           0, 3, 1, 0,       "",    "Flow", "enum", ["Stream", "Waterfall", "Surf", "Pour"]],
+  ["flowAmount",     "Flow",            0, 1, 0.01, 0.5,  "",    "Flow"],
+  ["flowSize",       "Bubble size",     0.3, 10, 0.01, 2, "mm",  "Flow"],
+  ["flowBabble",     "Babble",          0, 1, 0.01, 0.5,  "",    "Flow"],
+  ["flowBody",       "Body",            0, 1, 0.01, 0.3,  "",    "Flow"],
+  ["flowRise",       "Bubble rise",     0, 1, 0.01, 0.3,  "",    "Flow"],
+  ["flowTone",       "Tone",            0, 1, 0.01, 0.5,  "",    "Flow"],
+  ["flowDistance",   "Distance",        0, 1, 0.01, 0.2,  "",    "Flow"],
+  ["flowPeriod",     "Wave period",     2, 14, 0.1, 8,    "s",   "Flow"],
+  ["flowWaveSize",   "Wave size",       0.05, 1.3, 0.01, 0.6, "", "Flow"],
+  ["flowDrawback",   "Sand / pebbles",  0, 1, 0.01, 0.3,  "",    "Flow"],
+  ["flowPhase",      "Starts at",       0, 1, 0.01, 0.1,  "",    "Flow"],
+  ["flowWaves",      "Waves",           0, 5, 1, 0,       "",    "Flow"],
+  ["flowFill",       "Fills to",        0, 1, 0.01, 0.85, "",    "Flow"],
+  ["flowFillStart",  "Fills from",      0, 1, 0.01, 0.05, "",    "Flow"],
+  ["flowVessel",     "Bottle / glass",  0, 1, 0.01, 0.2,  "",    "Flow"],
+  ["flowSeed",       "Variation",       0, 999, 1, 0,     "",    "Flow"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -556,11 +844,245 @@ const PARAM_HELP = {
   pianoStrings: "How far apart each note's strings are tuned: in tune is pure, apart shimmers like an old upright.",
   fluteBreath: "How hard it's blown: soft is round and pure, full is brighter.",
   fluteJet: "The lips' distance to the edge: low jumps up to the octave, the middle is a flute, high turns hollow.",
-  fluteAim: "Where the air hits the edge: dead centre is hollow like a clarinet, a little off is a flute's fuller tone.",
+  fluteAim: "Where the air hits the edge: dead center is hollow like a clarinet, a little off is a flute's fuller tone.",
   fluteNoise: "Air rushing in the tone: none is clean, more is breathy and real, a lot is mostly air.",
   fluteTone: "How much top end reaches the room: low is soft and dark, high is bright and close.",
-  fluteVib: "The flautist's vibrato, from the breath: it pulses the level and the colour at the vibrato's rate.",
+  fluteVib: "The flautist's vibrato, from the breath: it pulses the level and the color at the vibrato's rate.",
   fluteBuzz: "A paper membrane over a hole in the pipe, as on a Chinese bamboo flute: it rattles, adding a bright, reedy buzz.",
+  chirpMode: "What makes the sound: a bird's whistle (the syrinx), a cricket rubbing its wings (pulses grouped into chirps), or wings buzzing past.",
+  chirpPitch: "The pitch of the call. Songbirds and crickets sit around 2,000-8,000 Hz; a buzzing wing is 40-600 Hz (a hummingbird's wings beat about 60 times a second).",
+  chirpGesture: "How each note bends: held, up, down, up-and-over, down-and-back, warbling, a quick falling chip, or a mixed song of them.",
+  chirpSpan: "How far each note bends, in octaves. For a cricket, how far the tone drops through each pulse; for a buzz, the pitch swing as it flies past.",
+  chirpRate: "How many notes (a cricket: pulses) per second inside a phrase. Ten to forty is a trill.",
+  chirpDuty: "How much of each note's slot it sounds for: short is a clipped chip, long notes nearly join up.",
+  chirpCount: "Notes per phrase. For a cricket, pulses per chirp (three to five is a field cricket).",
+  chirpGroups: "How many phrases (a cricket: chirps). 0 keeps going until the sound ends: ambience.",
+  chirpGroupGap: "The silence between phrases, in seconds.",
+  chirpAccel: "Speeds the notes up through a phrase (or slows them, below 0): a bouncing-ball song.",
+  chirpDrift: "Moves the pitch up or down across the whole song, in octaves: many songs fall as they go.",
+  chirpRand: "How much each note varies in pitch, length and timing. With several individuals, low keeps them chirping in time.",
+  chirpHarm: "Adds a little of the 2nd and 3rd harmonics: 0 is a pure whistle, higher is a throatier call.",
+  chirpVoice2: "A second, independent voice (the other side of a bird's syrinx) bending the other way: two tones at once.",
+  chirpInterval: "How far above or below the main voice the second voice sits, in semitones.",
+  chirpRasp: "For a cricket: turns the clean whistle of each pulse into a scrape of tooth strikes, from a cricket to a katydid.",
+  chirpChorus: "How many animals: each at its own pitch, timing, distance and place left to right. A night full of crickets.",
+  chirpSeed: "Which take of the call: each number is a different (but repeatable) pattern of notes, with the same settings.",
+  crSize: "How big the animal is: its throat and mouth. Small is high and thin (a cat, 0.4), 1 a person, big is deep and dark (a cow, 2; a monster, 2.5).",
+  crPitchStart: "Where the call's pitch starts, in semitones from Frequency (which is the pitch at its peak). Below 0 it rises into the peak.",
+  crPitchEnd: "Where the call's pitch ends, in semitones from Frequency. Most calls fall away at the end.",
+  crPeak: "Where in the call the pitch and the mouth peak: early for a bark or a yip, late for a complaint that builds.",
+  crOpenStart: "How open the mouth is as the call starts: closed with Nasal up is the \"m\" of a meow or a moo.",
+  crOpenPeak: "How wide the mouth opens at the call's peak: wide is loud and bright (\"AA\"), less is a rounder, quieter call.",
+  crOpenEnd: "How open the mouth is as the call ends: closing it is the \"ow\" at the end of a meow.",
+  crVowelStart: "The vowel the call starts on: 0 is a front \"ee\", 1 a rounded back \"oo\".",
+  crVowelEnd: "The vowel the call ends on: a meow moves from \"ee-a\" to a rounded \"ow\", a howl stays near \"oo\".",
+  crNasal: "Sound through the nose while the mouth is closed: a humming \"mmm\". It fades as the mouth opens.",
+  crTension: "How hard the throat presses: soft is breathy and dark, pressed is buzzy and bright.",
+  crJitter: "How much the pitch wavers from one vibration to the next: a living throat is never perfectly steady.",
+  crShimmer: "How much the level wavers from one vibration to the next: more is a rougher, older voice.",
+  crRough: "How the voice breaks up: a little adds a growl an octave below, more doubles it, the most is a chaotic bark or roar.",
+  crBreath: "Air rushing through the voice: a hiss on top of it. A bark or a roar is mostly breath.",
+  crFlutter: "A rattle in the throat: the level beats on and off, as in a growl or a trilled \"rrr\".",
+  crFlutterRate: "How fast the rattle beats, per second: slow is a purr, fast a gravelly growl.",
+  wxType: "Which weather: wind (moving air, whistling past edges), rain (drops on a surface) or thunder (a bolt heard from a distance). The envelope is the wind's strength, the rain's rate, the thunder's level.",
+  wxIntensity: "Wind: how hard it blows at the envelope's peak. Stronger wind is louder AND brighter, and only strong gusts make the whistles sing.",
+  wxGust: "Wind: how much the wind rises and falls in gusts. 0 is a steady blow; high eases right off between gusts.",
+  wxGustRate: "Wind: how many gusts a second, on average. Slow is a swell, fast is buffeting.",
+  wxWhistle: "Wind: the whistle of air through a gap or across a wire. Its pitch rises with each gust and it only sounds when the wind is strong. Frequency sets its pitch.",
+  wxWhistles: "Wind: how many whistles (each a little higher than the last, each waking at a stronger gust).",
+  wxWhistleQ: "Wind: how pure the whistles are: low is a hollow moan (a chimney, a cave mouth), high a thin shriek (wires, a window frame).",
+  wxBody: "Wind: the low buffeting of air shoving at things. Rain: the low roar of a downpour.",
+  wxTone: "How bright it is: wind's band, the rain's drops and hiss, the thunder's crack.",
+  wxDensity: "Rain: drops per second. A few hundred is steady rain; a couple of thousand is a downpour.",
+  wxDrop: "Rain: the average drop size, in millimeters. Big drops are louder and lower and splatter on a hard surface.",
+  wxSurface: "Rain: what it falls on: a hard surface (clicks), leaves (papery taps) or water (soft slaps and ringing bubbles).",
+  wxSpread: "Rain: how far around you the drops land. Small is close: you hear separate drops. Large is a wide, far wash.",
+  wxHiss: "Rain: the hiss of the drops too many and too far away to hear one by one.",
+  wxBubbles: "Rain on water: how many drops trap a bubble that rings (the plink of rain on a pond).",
+  wxRing: "Rain on water: how long the bubbles ring: short is a tick, long a clear plink.",
+  wxSheets: "Rain: wind driving the rain in sheets, its rate surging and falling.",
+  wxDistance: "Thunder: how far away the strike is, in kilometers. Close is a ripping crack and a roll; far is dark, with no crack.",
+  wxBolt: "Thunder: a strike to the ground (a crack from its nearest point, then the roll) or a flash inside the cloud (no crack: a long rolling rumble overhead).",
+  wxRoll: "Thunder: how long the roll lasts, in seconds (a real one takes many; this squeezes it, keeping its swells).",
+  wxPulse: "Thunder: the length of each boom in the roll: short is brighter and rattling, long is deeper.",
+  wxCrackle: "Thunder: the tearing crackle of the bolt's small kinks. It is the first thing distance takes away.",
+  wxHeight: "Thunder: how high the cloud is, in meters. A higher cloud means a longer bolt and a longer roll.",
+  wxLength: "Thunder: how far the bolt runs through the cloud, in meters.",
+  wxSeed: "Which take: each number is a different (but repeatable) pattern of gusts, drops or bolt, with the same settings.",
+  motorType: "What kind of motor: a four-stroke engine (cars, motorcycles), a two-stroke (chainsaws, dirt bikes, mopeds), a rotor (a helicopter's blades chopping the air) or steam (a locomotive's chuffs).",
+  motorCyl: "How many cylinders fire each cycle. For a rotor, how many blades; for steam, how many chuffs each turn of the wheels (4 for a two-cylinder locomotive).",
+  motorIdle: "The engine's speed at idle (or its steady speed, with Revs at 0), in turns a minute. A car idles near 800, a chainsaw near 2800, a helicopter rotor turns about 330, a locomotive's wheels from a crawl of 20 up.",
+  motorPeak: "How fast the rev takes it, in turns a minute. Lower than Idle is an engine bogging down under a load.",
+  motorEnd: "Where the speed falls back to after the rev (then it idles there).",
+  motorAt: "When the throttle opens, in seconds from the start.",
+  motorRise: "How long the rev up takes. An engine gets most of the way quickly, then creeps.",
+  motorHold: "How long the throttle stays open at the top.",
+  motorFall: "How long the rev down takes once the throttle shuts.",
+  motorRevs: "How many revs. 0 is a steady engine at Idle; 2 is a quick double blip.",
+  motorRevGap: "Seconds from one rev to the next (each starts from wherever the last one had got to).",
+  motorIdleLoad: "How hard the engine works at idle: light is soft and lumpy, heavy is loud and rough.",
+  motorRevLoad: "How hard it works on the rev: the bark of an open throttle. Under a heavy load it is louder and darker.",
+  motorOffLoad: "How hard it works after the throttle shuts: near 0 it goes soft and burbles (and pops, with Pops).",
+  motorLope: "The uneven lumpy beat of some cylinders firing louder than others: a big V8's burble, a twin's thump, a locomotive's chuff-a-chuff.",
+  motorUneven: "Fires alternate cylinders closer together: a V-twin's potato-potato (0.25 is a 45 degree twin).",
+  motorImbalance: "A random difference in strength between cylinders (or blades): a worn engine, a rotor out of track.",
+  motorRough: "How ragged the firing is: timing and strength wobble from one firing to the next, and some misfire. A two-stroke misfires more at idle.",
+  motorWander: "How much the speed drifts on its own: an idle that hunts.",
+  motorPulse: "How long each firing's pressure pulse is: short is crisp and bright, long is a deep thud. It shortens on its own as the engine speeds up.",
+  motorThump: "How strong each firing's low pulse is (a rotor's whop, a steam chuff's low beat).",
+  motorBurst: "The noise in each firing: combustion rasp, a blade's slap, the hiss of a steam chuff.",
+  motorBurstMs: "How long each firing's noise lasts: short is a tick or slap, long a chuff.",
+  motorBurstHz: "The pitch of each firing's noise.",
+  motorPipe: "The exhaust pipe's length in meters: long is a deep drone, short a buzzy rasp. It sets the pipe's resonance.",
+  motorPipeRing: "How strongly the pipe resonates: none is a dry pulse, high a hollow, pitched exhaust note.",
+  motorPipeDamp: "How much the pipe dulls each echo: more is a darker, softer resonance.",
+  motorTone: "The muffler: how bright the exhaust gets. It opens as the throttle opens.",
+  motorRasp: "The bark of a hard-working engine: a band of grit that grows with the throttle.",
+  motorRaspHz: "The pitch of the rasp band.",
+  motorAir: "Air noise: the intake's roar, a rotor's wash, a locomotive's steam hiss. It grows with speed and throttle.",
+  motorAirHz: "The pitch of the air noise.",
+  motorWhine: "A tone locked to the engine's speed: a blower's whine, a gearbox, a helicopter's turbine.",
+  motorWhineRatio: "The whine's pitch, as a multiple of the engine's turns a second (a few times for a blower or gearbox, several hundred for a turbine).",
+  motorPops: "Pops and crackles when the throttle shuts: unburnt fuel lighting in the hot pipe.",
+  motorTail: "Rotor: the tail rotor's faster buzz under the main blades.",
+  motorTailRatio: "Rotor: how many times faster than the main rotor the tail rotor turns.",
+  motorClack: "Steam: the clickety-clack of the wheels over rail joints, in pairs (a bogie's two axles).",
+  motorClackRate: "Steam: how many rail joints pass each turn of the driving wheels: the clacks follow the speed.",
+  motorSeed: "Which take: each number is a different (but repeatable) run of the same engine, with the same settings.",
+  blastSize: "How big the blast is, from a pistol's powder to a large bomb. Bigger is longer and deeper: the pressure wave stretches and its weight moves into the low end.",
+  blastDist: "How far away you hear it, in meters. Distance takes the highs first (the air absorbs them), softens the hit, and lets the place's echoes catch up with it.",
+  blastEnv: "Where it goes off: an open field (the ground and a far treeline answer), a street (the walls flutter), indoors (a dense boom and a room tail), a canyon (rock walls throw back slow echoes) or a forest (the trees scatter it into a bright wash, no echoes).",
+  blastRoom: "How loud the place answers: 0 is the blast alone, with no reflections at all.",
+  blastTail: "How long the place keeps ringing.",
+  blastPulse: "Extra weight: stretches the pressure wave past its real length for a bigger, thicker hit. 1 is true to the size.",
+  blastShape: "The shape of the pressure wave: low is fat with a deep suck-back after the hit, high is a spiky snap.",
+  blastRoar: "The fireball (an explosion) or the burst of gas from the muzzle (a gun): the rushing, tearing noise behind the hit.",
+  blastRumble: "A deep sub rumble under the blast, rolling with slow swells.",
+  blastDebris: "Chunks thrown up by the blast landing around you over the next second or two: big blasts throw them higher, so they take longer to come down.",
+  blastDebrisType: "What falls: earth (dirt and stones), rubble (stone and metal) or urban (glass, metal and masonry).",
+  blastCrack: "The sharp crack of a bullet faster than sound. At the gun it lands with the shot; a few tens of meters behind the gun it is gone.",
+  blastDownrange: "Where you are: at the gun, or downrange where the bullet passes you. Downrange the crack arrives FIRST and the shot follows later, the farther the later.",
+  blastSpeed: "How fast the bullet flies. Faster is a sharper crack and, downrange, a longer gap before the shot.",
+  blastAction: "The gun's mechanism: the click before the shot and the metal of the action after it.",
+  blastActionType: "Which mechanism: none, a semi-automatic (the slide snaps back into place right after the shot) or a bolt worked by hand half a second later.",
+  blastCasing: "The empty brass casing bouncing on a hard floor.",
+  blastPeak: "Tames the very first instant so the whole blast can be louder: a gunshot is almost all spike. Up to 1 squeezes the spike once; past 1 squeezes it again. The blast presets use this instead of the Limiter.",
+  blastSeed: "Which take: each number is a different (but repeatable) blast, debris and place, with the same settings.",
+  springType: "What kind of spring. Coil: a long spring or a spring tank, a tap comes back as falling \"pew\" echoes. Doorstop: a short stiff spring flicked, a metallic \"doinng\" that wobbles. Twang: a jaw harp, a buzzing steel reed shaped by the mouth.",
+  springLength: "Coil only: how long a tap takes to run along the coil and back, so how far apart the echoes are. A doorstop rings at its pitch instead, and a twang has no coil.",
+  springDisp: "How much the coil smears a tap into a chirp: the highs run faster than the lows. Above 0 each echo falls (\"pew\"), below 0 it rises. On a doorstop: how out of tune and metallic its overtones are.",
+  springDamp: "How quickly it stops ringing: low rings on for seconds, high is a short, dull boink.",
+  springSway: "How much the spring swings about as it rings: a wobble in its level and pitch (a doorstop's \"wah-wah\"). On a twang: how much the mouth wobbles (\"oy-oy\").",
+  springSwayRate: "How fast it swings, per second: a big floor spring sways slowly, a small stiff one fast.",
+  springPluck: "How hard it is plucked or flicked: harder is brighter, with a little clang.",
+  springMouth: "The mouth moving after the pluck: above 0 it opens from \"oo\" to \"ee\" (\"bwoing\"), below 0 it closes (\"boyng\"). On a coil or a doorstop it makes the spring talk.",
+  springVowel: "The mouth's shape when the pluck starts: 0 a rounded \"oo\", 1 a bright \"ee\".",
+  springSeed: "Which take: each number is a different (but repeatable) swing, flick and ring, with the same settings.",
+  servoType: "What turns: a brushless motor (a smooth magnetic whine: drones, robot arms, fans), a brushed motor (a gritty buzz from its brushes: toys, drills, little servos), a geared servo (a brushed motor through a gearbox, with a click as the gears settle when it stops) or clockwork (a wound spring and a gear train, ticking: nothing electric).",
+  servoSpeed: "How fast the motor's shaft turns, in turns a minute: the pitch of everything you hear. A tiny servo spins near 10000-13000, a fan or a conveyor's motor near 1500-5000. For clockwork, the escape wheel (tens) or the governor's fan (thousands).",
+  servoDrift: "Where the first move's speed ends up, as a multiple of Speed: under 1 is a spring running down or a motor slowing under strain, over 1 one speeding up.",
+  servoStart: "From rest: the power comes on at Power on at and the shaft spins up from still. Running: it is already turning at Speed when the sound starts (a conveyor, a toy already wound).",
+  servoAt: "When the power comes on, in seconds from the start.",
+  servoRun: "How long the power stays on for the first move. When it goes off the shaft brakes or coasts to a stop on its own.",
+  servoAt2: "When a second move starts (a correction after the first, a robot's second step).",
+  servoRun2: "How long the second move's power stays on. 0 is no second move.",
+  servoSpeed2: "The second move's speed, in turns a minute.",
+  servoAt3: "When a third move starts.",
+  servoRun3: "How long the third move's power stays on. 0 is no third move.",
+  servoSpeed3: "The third move's speed, in turns a minute.",
+  servoLoad: "How hard the motor works: under load it slows a little (Sag), its gears sing louder and it buzzes more.",
+  servoLoadEnd: "The load at the end of the first move (it changes smoothly from Load): a belt that eases as it gets going.",
+  servoOffLoad: "The load while the power is off, between and after the moves.",
+  servoInertia: "How long it takes to spin up: small for a tiny servo motor, long for a heavy fan or a loaded belt. Spinning up draws extra current, so the buzz is loudest on the way up.",
+  servoDecel: "How quickly it slows when the power is turned down or braked.",
+  servoCoast: "How long it takes to wind down when the power is simply cut and it coasts (with When it stops on Coasts): the electrical sound stops at once and the whir spins down.",
+  servoBrake: "When the power goes off: Coasts lets the shaft wind down on its own (Coast), Brakes stops it (Slow-down), as a servo's controller does.",
+  servoSag: "How much the load slows the motor down.",
+  servoSlots: "How many slots (or magnet poles, or rotor bars) pass each turn: the whine's pitch is Slots x the speed.",
+  servoWhine: "The magnetic whine: a tone at Slots x the speed and its harmonics, louder while the motor works hard and gone the moment the power is cut.",
+  servoWhineHarm: "How many harmonics the whine has: few is a pure hum, many a buzzy whine. They fade out on their own before they get too high to play cleanly.",
+  servoWhineRoll: "How fast the whine's harmonics fall away: more is darker and purer.",
+  servoBars: "Brushed motors: how many times a turn the brushes switch over (twice the commutator's bars on a small motor): the brush buzz's pitch is this x the speed.",
+  servoComm: "Brushed and geared motors: the brushes' buzz, a click each time they switch over. Brushless motors have none.",
+  servoSpark: "Brushed and geared motors: the crackle of the brushes sparking, which grows as the motor works harder.",
+  servoSparkHz: "The pitch of the sparks' crackle.",
+  servoStages: "How many gear stages the motor drives: each one sings at its pinion's teeth x its shaft's speed and turns the next shaft slower.",
+  servoPinion1: "The teeth on the small gear the motor turns: the first stage's singing pitch is this x the motor's speed.",
+  servoGear1: "The teeth on the big gear it drives: the next shaft turns pinion / wheel as fast.",
+  servoMesh1: "How loud the first stage's gears sing.",
+  servoPinion2: "The teeth on the second stage's small gear.",
+  servoGear2: "The teeth on the second stage's big gear.",
+  servoMesh2: "How loud the second stage's gears sing.",
+  servoPinion3: "The teeth on the third stage's small gear.",
+  servoGear3: "The teeth on the third stage's big gear.",
+  servoMesh3: "How loud the third stage's gears sing.",
+  servoWear: "Worn parts: the gears' song warbles and grinds (it wobbles once per turn), the brush buzz goes uneven and the bearings get louder.",
+  servoKnock: "A knock once (or Knocks times) per turn of a shaft: the slats of a conveyor passing a roller, a chipped tooth, a belt's join, a toy's cam.",
+  servoKnockShaft: "Which shaft the knock rides on: the motor's own, or the shaft after a gear stage (slower).",
+  servoKnockRate: "How many knocks each turn of that shaft.",
+  servoKnockHz: "The knock's pitch: low for a big frame, high for a small metal part.",
+  servoStop: "Geared servos: the click of the gears settling when a move stops (and a softer one when it starts), louder after a faster move.",
+  servoHold: "Geared servos: the faint buzz of a servo holding its position after it stops, nudged fifty times a second.",
+  servoClickHz: "The pitch of the gears' click: high for little plastic gears, lower for big metal ones.",
+  servoHum: "The mains hum of a motor run straight off the power (a fan, a conveyor's motor, a fridge): it comes on and off with the power.",
+  servoHumHz: "The mains frequency: 60 or 50 (the hum is mostly twice this).",
+  servoPwm: "A brushless motor's drive whine: the high steady tone of its electronics, louder while it works hard.",
+  servoPwmHz: "The drive whine's pitch.",
+  servoBearing: "The hiss of the bearings, growing with the speed.",
+  servoBearingHz: "The pitch of the bearings' hiss.",
+  servoRumble: "A low rumble that grows with the speed: worn rollers, a belt on its frame.",
+  servoSize: "How big the housing is: small is a bright plastic case, large a big metal frame that booms.",
+  servoBody: "How much the housing rings with the motor inside it.",
+  servoWander: "How much the speed drifts on its own.",
+  servoCog: "A ripple in the speed once per magnet pole: a cheap motor's lumpy turning.",
+  servoCogN: "How many times a turn the speed ripples (Cogging).",
+  servoTicks: "Clockwork: the escapement's ticks, a pawl striking the escape wheel twice per tooth (tick, tock), each a light click as the pallet lets go, then a harder one as the tooth drops.",
+  servoEscTeeth: "Clockwork: the escape wheel's teeth: two ticks per tooth, so the tick rate is twice this x the wheel's turns a second.",
+  servoDrop: "Clockwork: the gap between each tick's light first click and its drop.",
+  servoTock: "Clockwork: how loud the tock is against the tick.",
+  servoPawlHz: "Clockwork: the pitch of the ticks: higher for a small watch, lower for a big clock.",
+  servoRatchet: "Winding: the clicks of the key turning the ratchet, from the start for Wind for.",
+  servoRatchetRate: "Winding: how many ratchet clicks a second.",
+  servoRatchetEnd: "Winding: how long the ratchet clicks for.",
+  servoSeed: "Which take: each number is a different (but repeatable) run of the same mechanism, with the same settings.",
+  fricBody: "What is rubbing and ringing: a wooden panel (a door, a floor), iron (a hinge, a gate, a brake), a hollow rubber toy, or a wooden door on an iron hinge pin. Frequency is the body's size: lower is bigger.",
+  fricTone: "How stiff the contact is: soft keeps the creak low and slow, stiff lets it run up into a higher groan or squeak.",
+  fricGrip: "How hard the surfaces catch before they let go: dry wood or rubber grips hard (big ticks, a sure squeak), greased barely does.",
+  fricRough: "How uneven it is: the surface catches harder in some places than others, and the hand pushing it is not steady.",
+  fricLock: "How strongly the body rings back into the contact. High lets a fast push lock onto the body's own note and squeal; low keeps it a creak whose rate follows the push.",
+  fricSpeed: "How fast it is dragged at the start: slow is separate ticks, faster runs them together into a groan, the fastest is a squeal.",
+  fricT1: "When the speed reaches Speed 2, in seconds (0 = not used). The speed eases between its points.",
+  fricSpeed1: "The drag speed at Speed 2's time.",
+  fricT2: "When the speed reaches Speed 3, in seconds (0 = not used).",
+  fricSpeed2: "The drag speed at Speed 3's time.",
+  fricT3: "When the speed reaches Speed 4, in seconds (0 = not used).",
+  fricSpeed3: "The drag speed at Speed 4's time.",
+  fricStop: "When it stops moving, in seconds (0 = it keeps going): the creak slows into its last ticks and the body rings on.",
+  fricPress: "How hard the surfaces press together at the start: heavier is slower, bigger, louder ticks and a lower groan.",
+  fricPressT1: "When the pressure reaches Pressure 2, in seconds (0 = not used). The pressure eases between its points.",
+  fricPress1: "The pressure at Pressure 2's time.",
+  fricPressT2: "When the pressure reaches Pressure 3, in seconds (0 = not used).",
+  fricPress2: "The pressure at Pressure 3's time.",
+  fricPressT3: "When the pressure reaches Pressure 4, in seconds (0 = not used).",
+  fricPress3: "The pressure at Pressure 4's time.",
+  fricSeed: "Which take: each number is a different (but repeatable) creak with the same settings. Near the edge between a creak and a squeal, another take can be the other one.",
+  flowType: "Which water: a stream over stones (gurgles that come back), a waterfall (a roar with weight at its base), surf (waves building, breaking and drawing back) or pouring into a bottle or a glass (its pitch rising as it fills). The envelope is the stream's flow, the surf's level, the pour's jet.",
+  flowAmount: "Stream and waterfall: how much water. More is more gurgles and more rush; a waterfall goes from a cascade to a torrent. Pour: how hard the jet splashes.",
+  flowSize: "The typical bubble, in millimeters: its pitch (small bubbles plink high, big ones glug low). A waterfall's roar sits where its commonest bubble rings.",
+  flowBabble: "Stream: how regularly each pocket's gurgle comes back, the same figure at the same pitch (0 scatters them). Waterfall: how often water lands in thumps. Pour: the pouring bottle glugging.",
+  flowBody: "The low weight: a stream's gurgle, a waterfall's thunder at its base, the surf's swell and the thump of the break.",
+  flowRise: "How much each bubble's pitch rises as it rings: the 'plink' of a bubble near the surface.",
+  flowTone: "How bright it is: the stream's rush, the waterfall's spray, the surf's crash and hiss, the pour's splash.",
+  flowDistance: "How far away you are: close you hear the separate gurgles, the spray, the foam; far it is a darker, steadier wash.",
+  flowPeriod: "Surf: seconds from one wave to the next (each wave varies a little). Real surf is 6-12 s.",
+  flowWaveSize: "Surf: how big the waves are. A big wave crashes harder and foams more; a small one mostly washes up and draws back.",
+  flowDrawback: "Surf: what the water draws back over: sand (a long receding hiss) or pebbles (stones knocking as they are dragged back).",
+  flowPhase: "Surf: where in a wave the sound starts, from 0 (the swell just rising) to 1 (the next one). 0.3 is the break.",
+  flowWaves: "Surf: how many waves (0 = they keep coming). 1 is a single wave, a one-shot.",
+  flowFill: "Pour: how full the vessel is at the end. The pitch climbs faster and faster as it nears the top.",
+  flowFillStart: "Pour: how full it is at the start.",
+  flowVessel: "Pour: a narrow, tall bottle (a clear rising note) to a wide, short glass (mostly splash with a rising color).",
+  flowSeed: "Which take: each number is a different (but repeatable) pattern of gurgles, waves or pour, with the same settings.",
   addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
   addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
   addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
@@ -661,6 +1183,15 @@ const WAVE_HELP = {
   bar: "A struck bar: a bright strike that melts into a pure ring: marimbas, xylophones, glockenspiels, vibraphones.",
   piano: "A piano string: a felt hammer, a quick drop and a long ring, overtones that run a little sharp up high.",
   flute: "A blown flute: a jet of air across an open pipe, pure and round when soft, brighter blown hard.",
+  chirp: "Birdsong and insects: whistled syllables, trills and songs, cricket chirps, katydids, a chorus at night, buzzing wings.",
+  weather: "Wind, rain and thunder modeled as what they are: gusting air that whistles, separate drops on a surface, a bolt rolling in from its whole length.",
+  creature: "Animal and monster calls: a throat that wavers and breaks up, a mouth that opens and closes as the pitch rises and falls, a body from a kitten to a giant.",
+  spring: "Boings as what they are: a coil that smears each tap into a falling \"pew\", a doorstop spring's wobbling \"doinng\", a jaw harp's buzzing twang shaped by the mouth.",
+  blast: "Explosions and gunshots as what they are: a pressure wave sized by the charge, fire, debris landing, a bullet's crack and the gun's mechanism, carried by the air into a place that answers back.",
+  servo: "Electric motors, gearboxes and clockwork as what they are: a whine, a brush buzz and singing gears all locked to the shaft's speed, spinning up and down with it, a click as a servo stops, the ticks of a spring running down.",
+  motor: "Engines, rotors and steam as what they are: a train of firing pulses at the rate the revs set, through an exhaust pipe, barking when the throttle opens and popping when it shuts.",
+  flow: "Moving water as what it is: a stream's gurgles coming back from the same pockets, a waterfall's roar with weight at its base, waves building, breaking and drawing back over sand or stones, a bottle's note rising as it fills.",
+  friction: "Creaks, squeaks and squeals as what they are: a surface catching and letting go, separate ticks when it is pushed slowly, a groan faster, a squeal when it locks onto the ringing wood, iron or rubber it is part of.",
 };
 // One line per Console: what that old machine sounded like.
 const CONSOLE_HELP = {
@@ -706,6 +1237,11 @@ const PARAM_KEYS = new Set(PARAMS.map((p) => p[0]));   // applyPreset writes onl
 // layer; opening a whole sound (a link, History, Undo, a saved sound that carries `layers`) restores all of them.
 state.layers = "";
 let layerSel = 0, layerBase = null;
+// Did the PERSON build these layers (+ Layer, Remove, a layer's mix, a layer tab), or did they arrive with a loaded
+// sound? A preset button on layer 1 replaces a loaded layered sound WHOLE — else its layers 2+ kept playing under the
+// next preset clicked (AJ, 2026-11-11: "the non-layered effect played the second part of the previously selected
+// layered effect"). Layers someone built are theirs: a preset still sets only the selected layer, as 1.3 designed.
+let layersOwned = false;
 const PARAM_DEFAULTS = {};
 for (const p of PARAMS) PARAM_DEFAULTS[p[0]] = p[5];
 // ROWS ADDED AFTER THE v1.3 FIXTURES DRAW ONLY ON A SOUND THAT USES THEM. Breed, Variations, the Wizard and the
@@ -720,6 +1256,15 @@ const usesReed = (x) => Math.round(x.wave) === 23;
 const usesBar = (x) => Math.round(x.wave) === 24;
 const usesPiano = (x) => Math.round(x.wave) === 25;
 const usesFlute = (x) => Math.round(x.wave) === 26;
+const usesChirp = (x) => Math.round(x.wave) === 27;
+const usesCreature = (x) => Math.round(x.wave) === 28;
+const usesWeather = (x) => Math.round(x.wave) === 29;
+const usesMotor = (x) => Math.round(x.wave) === 30;
+const usesBlast = (x) => Math.round(x.wave) === 31;
+const usesSpring = (x) => Math.round(x.wave) === 32;
+const usesServo = (x) => Math.round(x.wave) === 33;
+const usesFriction = (x) => Math.round(x.wave) === 34;
+const usesFlow = (x) => Math.round(x.wave) === 35;
 const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
                         brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass,
                         bowSpeed: usesBow, bowPressure: usesBow, bowPos: usesBow, bowTone: usesBow, bowString: usesBow, bowTrem: usesBow, bowTremPhase: usesBow,
@@ -728,7 +1273,60 @@ const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
                         barType: usesBar, barMallet: usesBar, barRing: usesBar, barMotor: usesBar,
                         pianoHammer: usesPiano, pianoStretch: usesPiano, pianoRing: usesPiano, pianoStrings: usesPiano,
                         fluteBreath: usesFlute, fluteJet: usesFlute, fluteAim: usesFlute, fluteNoise: usesFlute,
-                        fluteTone: usesFlute, fluteVib: usesFlute, fluteBuzz: usesFlute };
+                        fluteTone: usesFlute, fluteVib: usesFlute, fluteBuzz: usesFlute,
+                        chirpMode: usesChirp, chirpPitch: usesChirp, chirpGesture: usesChirp, chirpSpan: usesChirp, chirpRate: usesChirp,
+                        chirpDuty: usesChirp, chirpCount: usesChirp, chirpGroups: usesChirp, chirpGroupGap: usesChirp, chirpAccel: usesChirp,
+                        chirpDrift: usesChirp, chirpRand: usesChirp, chirpHarm: usesChirp, chirpVoice2: usesChirp, chirpInterval: usesChirp,
+                        chirpRasp: usesChirp, chirpChorus: usesChirp, chirpSeed: usesChirp,
+                        crSize: usesCreature, crPitchStart: usesCreature, crPitchEnd: usesCreature, crPeak: usesCreature,
+                        crOpenStart: usesCreature, crOpenPeak: usesCreature, crOpenEnd: usesCreature, crVowelStart: usesCreature,
+                        crVowelEnd: usesCreature, crNasal: usesCreature, crTension: usesCreature, crJitter: usesCreature,
+                        crShimmer: usesCreature, crRough: usesCreature, crBreath: usesCreature, crFlutter: usesCreature,
+                        crFlutterRate: usesCreature,
+                        wxType: usesWeather, wxIntensity: usesWeather, wxGust: usesWeather, wxGustRate: usesWeather, wxWhistle: usesWeather,
+                        wxWhistles: usesWeather, wxWhistleQ: usesWeather, wxBody: usesWeather, wxTone: usesWeather, wxDensity: usesWeather,
+                        wxDrop: usesWeather, wxSurface: usesWeather, wxSpread: usesWeather, wxHiss: usesWeather, wxBubbles: usesWeather,
+                        wxRing: usesWeather, wxSheets: usesWeather, wxDistance: usesWeather, wxBolt: usesWeather, wxRoll: usesWeather,
+                        wxPulse: usesWeather, wxCrackle: usesWeather, wxHeight: usesWeather, wxLength: usesWeather, wxSeed: usesWeather,
+                        motorType: usesMotor, motorCyl: usesMotor, motorIdle: usesMotor, motorPeak: usesMotor, motorEnd: usesMotor,
+                        motorAt: usesMotor, motorRise: usesMotor, motorHold: usesMotor, motorFall: usesMotor, motorRevs: usesMotor,
+                        motorRevGap: usesMotor, motorIdleLoad: usesMotor, motorRevLoad: usesMotor, motorOffLoad: usesMotor, motorLope: usesMotor,
+                        motorUneven: usesMotor, motorImbalance: usesMotor, motorRough: usesMotor, motorWander: usesMotor, motorPulse: usesMotor,
+                        motorThump: usesMotor, motorBurst: usesMotor, motorBurstMs: usesMotor, motorBurstHz: usesMotor, motorPipe: usesMotor,
+                        motorPipeRing: usesMotor, motorPipeDamp: usesMotor, motorTone: usesMotor, motorRasp: usesMotor, motorRaspHz: usesMotor,
+                        motorAir: usesMotor, motorAirHz: usesMotor, motorWhine: usesMotor, motorWhineRatio: usesMotor, motorPops: usesMotor,
+                        motorTail: usesMotor, motorTailRatio: usesMotor, motorClack: usesMotor, motorClackRate: usesMotor, motorSeed: usesMotor,
+                        blastSize: usesBlast, blastDist: usesBlast, blastEnv: usesBlast, blastRoom: usesBlast, blastTail: usesBlast,
+                        blastPulse: usesBlast, blastShape: usesBlast, blastRoar: usesBlast, blastRumble: usesBlast, blastDebris: usesBlast,
+                        blastDebrisType: usesBlast, blastCrack: usesBlast, blastDownrange: usesBlast, blastSpeed: usesBlast, blastAction: usesBlast,
+                        blastActionType: usesBlast, blastCasing: usesBlast, blastPeak: usesBlast, blastSeed: usesBlast,
+                        springType: usesSpring, springLength: usesSpring, springDisp: usesSpring, springDamp: usesSpring,
+                        springSway: usesSpring, springSwayRate: usesSpring, springPluck: usesSpring, springMouth: usesSpring,
+                        springVowel: usesSpring, springSeed: usesSpring,
+                        servoType: usesServo, servoSpeed: usesServo, servoDrift: usesServo, servoStart: usesServo, servoAt: usesServo,
+                        servoRun: usesServo, servoAt2: usesServo, servoRun2: usesServo, servoSpeed2: usesServo, servoAt3: usesServo,
+                        servoRun3: usesServo, servoSpeed3: usesServo, servoLoad: usesServo, servoLoadEnd: usesServo, servoOffLoad: usesServo,
+                        servoInertia: usesServo, servoDecel: usesServo, servoCoast: usesServo, servoBrake: usesServo, servoSag: usesServo,
+                        servoSlots: usesServo, servoWhine: usesServo, servoWhineHarm: usesServo, servoWhineRoll: usesServo, servoBars: usesServo,
+                        servoComm: usesServo, servoSpark: usesServo, servoSparkHz: usesServo, servoStages: usesServo, servoPinion1: usesServo,
+                        servoGear1: usesServo, servoMesh1: usesServo, servoPinion2: usesServo, servoGear2: usesServo, servoMesh2: usesServo,
+                        servoPinion3: usesServo, servoGear3: usesServo, servoMesh3: usesServo, servoWear: usesServo, servoKnock: usesServo,
+                        servoKnockShaft: usesServo, servoKnockRate: usesServo, servoKnockHz: usesServo, servoStop: usesServo, servoHold: usesServo,
+                        servoClickHz: usesServo, servoHum: usesServo, servoHumHz: usesServo, servoPwm: usesServo, servoPwmHz: usesServo,
+                        servoBearing: usesServo, servoBearingHz: usesServo, servoRumble: usesServo, servoSize: usesServo, servoBody: usesServo,
+                        servoWander: usesServo, servoCog: usesServo, servoCogN: usesServo, servoTicks: usesServo, servoEscTeeth: usesServo,
+                        servoDrop: usesServo, servoTock: usesServo, servoPawlHz: usesServo, servoRatchet: usesServo, servoRatchetRate: usesServo,
+                        servoRatchetEnd: usesServo, servoSeed: usesServo,
+                        fricBody: usesFriction, fricTone: usesFriction, fricGrip: usesFriction, fricRough: usesFriction,
+                        fricLock: usesFriction, fricSpeed: usesFriction, fricT1: usesFriction, fricSpeed1: usesFriction,
+                        fricT2: usesFriction, fricSpeed2: usesFriction, fricT3: usesFriction, fricSpeed3: usesFriction,
+                        fricStop: usesFriction, fricPress: usesFriction, fricPressT1: usesFriction, fricPress1: usesFriction,
+                        fricPressT2: usesFriction, fricPress2: usesFriction, fricPressT3: usesFriction, fricPress3: usesFriction,
+                        fricSeed: usesFriction,
+                        flowType: usesFlow, flowAmount: usesFlow, flowSize: usesFlow, flowBabble: usesFlow, flowBody: usesFlow,
+                        flowRise: usesFlow, flowTone: usesFlow, flowDistance: usesFlow, flowPeriod: usesFlow, flowWaveSize: usesFlow,
+                        flowDrawback: usesFlow, flowPhase: usesFlow, flowWaves: usesFlow, flowFill: usesFlow, flowFillStart: usesFlow,
+                        flowVessel: usesFlow, flowSeed: usesFlow };
 const undrawn = (k, ...srcs) => k in DRAWN_IF_USED
   && srcs.every((x) => (typeof DRAWN_IF_USED[k] === "function" ? !DRAWN_IF_USED[k](x) : !x[DRAWN_IF_USED[k]]));
 
@@ -891,7 +1489,7 @@ function restoreEdit(entry) {
   restoringHistory = true;
   for (const p of PARAMS) state[p[0]] = entry.s[p[0]];
   for (const k in SFX_EXTRAS) state[k] = entry.s[k] || SFX_EXTRAS[k];
-  state.layers = entry.s.layers || ""; layerSel = 0; layerBase = null;
+  state.layers = entry.s.layers || ""; layerSel = 0; layerBase = null; layersOwned = false;
   if (entry.sel) layerShow(entry.sel);             // back on the layer the edit was made on
   sampleBuf = entry.buf; sampleName = entry.name; normalizeOut = entry.norm; seqLabel = entry.label;
   plantNameSync(); nowSync();
@@ -930,7 +1528,7 @@ function withState(snap, fn, audio) {
   const keepLayers = state.layers, keepSel = layerSel, keepBase = layerBase;
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
   for (const k in SFX_EXTRAS) state[k] = k in snap ? snap[k] : SFX_EXTRAS[k];
-  state.layers = snap.layers || ""; layerSel = 0; layerBase = null;   // a snapshot is a whole sound
+  state.layers = snap.layers || ""; layerSel = 0; layerBase = null; layersOwned = false;   // a snapshot is a whole sound
   const a = audio || {}, keepS = sampleBuf, keepIR = customIR, keepN = normalizeOut;
   if ("sample" in a) sampleBuf = a.sample;
   if ("ir" in a) customIR = a.ir;
@@ -1189,6 +1787,7 @@ function layerShow(sel) {
 function layerSelect(sel) { layerShow(sel); syncUI(); }
 function layerSet(list) { state.layers = list.length ? JSON.stringify(list) : ""; }
 function layerAdd() {
+  layersOwned = true;
   const list = soundLayers(soundSnap().layers);
   if (list.length >= LAYER_MAX - 1) return;
   const s = layerDiff(state);
@@ -1200,6 +1799,7 @@ function layerAdd() {
 }
 function layerRemove() {
   if (!layerSel) return;
+  layersOwned = true;
   const snd = soundSnap(), list = soundLayers(snd.layers), at = layerSel;
   list.splice(at - 1, 1);
   layerSel = 0; layerBase = null;
@@ -1212,6 +1812,7 @@ function layerRemove() {
 }
 function layerMix(key, value) {
   if (!layerSel) return;
+  layersOwned = true;
   const list = soundLayers(state.layers);
   if (!list[layerSel - 1]) return;
   list[layerSel - 1][key] = value;
@@ -1247,7 +1848,7 @@ function drawLayerBar() {
     b.textContent = (i + 1) + " · " + waveOf(i);
     b.setAttribute("aria-pressed", i === layerSel ? "true" : "false");
     b.title = "Edit layer " + (i + 1) + (i && list[i - 1].m ? " (muted)" : "");
-    b.addEventListener("click", () => layerSelect(i));
+    b.addEventListener("click", () => { layersOwned = true; layerSelect(i); });
     tabs.appendChild(b);
   }
   const add = document.createElement("button");
@@ -1335,7 +1936,7 @@ function loadSnapshot(snap, name, audio) {
   if (name != null) { seqLabel = name || "Sound"; plantNameSync(); nowSync(); }
   for (const p of PARAMS) state[p[0]] = (p[0] in snap) ? snap[p[0]] : p[5];
   for (const k in SFX_EXTRAS) state[k] = k in snap ? snap[k] : SFX_EXTRAS[k];   // its drawing / text came back too (bug 2)
-  state.layers = snap.layers || ""; layerSel = 0; layerBase = null;            // its layers (a whole sound)
+  state.layers = snap.layers || ""; layerSel = 0; layerBase = null; layersOwned = false;   // its layers (a whole sound)
   if (waveLocked) state.wave = keepWave;
   // Its own sample / IR / Normalize, as it was made. The sample and IR only when the sound USES them, so loading an old
   // laser never unloads the sample you have in now.
@@ -1564,24 +2165,37 @@ engineSection.innerHTML =
   '<div class="engine-grid" id="engineGrid"></div>';
 document.querySelector(".ws-editor").insertBefore(engineSection, panels);   // between Quick Shape & panels
 const engineGrid = engineSection.querySelector("#engineGrid");
-// Group the 21 engines by synthesis family (each row: label + its buttons). Indices into WAVES.
+// Group the 36 engines by synthesis family (each row: label + its buttons). Indices into WAVES.
+// "Instruments" (21-26) are the physical models CrunchyBGM built and picked by ear for its roster — a horn, a bowed
+// string, a reed, a struck bar, a piano, a flute. Their controls, panels and help text shipped with them; the picker
+// row is what was missing, so they were reachable only through a preset or a share link.
+// "Nature" (27+) is the living and elemental world modeled as it makes sound: chirp (birdsong, insects), creature
+// (animal and monster calls), weather (wind, rain, thunder) and flow (streams, waterfalls, surf, pouring).
+// "Machines" (30+) is the mechanical world modeled as it makes sound: motor (engines, rotors, steam) and servo (electric
+// motors, gearboxes, clockwork); the other machine engines join it as they land.
 const ENGINE_CATS = [
   ["Oscillators", [0, 1, 2, 3, 4, 5, 6, 7]],   // sine, square, saw, triangle, pulse, FM, organ, half-sine
-  ["Physical",    [8, 10, 14, 15]],            // pluck, modal, bubble, particle
+  ["Physical",    [8, 10, 14, 15, 32, 34]],    // pluck, modal, bubble, particle, spring, friction
+  ["Instruments", [21, 22, 23, 24, 25, 26]],   // brass, bowed, reed, bar, piano, flute
   ["Voice",       [13, 17]],                   // formant, speech
   ["Spectral",    [11, 16, 18]],               // granular, additive, FM 4op
-  ["Foley",       [19, 20]],                   // impact, whoosh
+  ["Foley",       [19, 20, 31]],               // impact, whoosh, blast
+  ["Nature",      [27, 28, 29, 35]],           // chirp, creature, weather, flow
+  ["Machines",    [30, 33]],                   // motor, servo
   ["Your own",    [9, 12]],                    // sample, custom
 ];
-// Preset color-coding: one hue per synthesis FAMILY (6 is scannable — 21 engine hues would not
+// Preset color-coding: one hue per synthesis FAMILY (9 is scannable — 36 engine hues would not
 // be, and most presets cluster in Oscillators anyway). Chosen to read on the dark theme without
 // competing with the orange accent. Used by makePresetButton + the legend + custom-category chips.
 const FAMILY_COLORS = {
   "Oscillators": "#5aa9e6", // blue
   "Physical":    "#5ec98a", // green
+  "Instruments": "#d08a5e", // copper
   "Voice":       "#b07ce8", // purple
   "Spectral":    "#e0b341", // amber
   "Foley":       "#e8657f", // pink
+  "Nature":      "#a4b240", // olive (apart from Physical's green and Spectral's amber)
+  "Machines":    "#4fc1c0", // teal (apart from Oscillators' blue and Physical's green)
   "Your own":    "#8b93a7", // slate
 };
 const WAVE_FAMILY = {};     // wave index -> family label
@@ -2081,6 +2695,15 @@ const PANEL_WAVES = {
   "Bar": [24],
   "Piano": [25],
   "Flute": [26],
+  "Chirp": [27],
+  "Creature": [28],
+  "Weather": [29],
+  "Motor": [30],
+  "Blast": [31],
+  "Spring": [32],
+  "Servo": [33],
+  "Friction": [34],
+  "Flow": [35],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
@@ -2091,11 +2714,22 @@ function updateWavePanels() {
 }
 updateWavePanels();   // set initial visibility for the startup waveform
 
+// THE LONGEST A SOUND'S DURATION MAY BE, in one place (2026-11-12). 2 s is the Duration row's max, but a chirp ambience or
+// song can run past it (Night Insects is 3), and so can a thunder roll (2.4), a train (2.2), a distant boom rolling through
+// the woods (3) and the surf's waves (12): for those engines the limit is what the sound already is. A loaded sample
+// stretches to the clip (30 s at most). The Duration slider (syncUI) and the Length macro (macroBlend) both ask here; the
+// macro used to clamp to the row's 2 s, so the smallest nudge of Length cut a 12 s surf to 2 s.
+const DUR_STRETCH = new Set([27, 29, 30, 31, 35]);
+function durationMax(st, dur) {
+  const w = Math.round(st.wave);
+  if (w === 9 && sampleBuf) return Math.min(30, Math.max(2, Math.ceil(sampleBuf.length / SR)));
+  return DUR_STRETCH.has(w) ? Math.max(2, Math.ceil(dur == null ? st.duration : dur)) : 2;
+}
 function syncUI() {
   // Stretch the Duration slider to fit a loaded sample (record/import); back to 2 s otherwise. Must
   // happen before the loop so the value below isn't clamped to the old max.
   const durEl = document.querySelector('[data-key="duration"]');
-  if (durEl) durEl.max = (Math.round(state.wave) === 9 && sampleBuf) ? Math.min(30, Math.max(2, Math.ceil(sampleBuf.length / SR))) : 2;
+  if (durEl) durEl.max = durationMax(state);
   for (const p of PARAMS) {
     const key = p[0];
     const el = document.querySelector(`[data-key="${key}"]`);
@@ -2199,7 +2833,7 @@ function applyPreset(obj, label, action) {
   for (const [k, v] of Object.entries(obj)) if (k[0] !== "_" && (PARAM_KEYS.has(k) || k in SFX_EXTRAS)) state[k] = v;
   // A WHOLE SOUND (it says what its layers are: a link, a saved sound) replaces them all; anything else (a preset,
   // Randomize, a bred child) is the selected layer's new settings, the other layers kept
-  if ("layers" in obj) { state.layers = typeof obj.layers === "string" ? obj.layers : ""; layerSel = 0; layerBase = null; }
+  if ("layers" in obj) { state.layers = typeof obj.layers === "string" ? obj.layers : ""; layerSel = 0; layerBase = null; layersOwned = false; }
   if (waveLocked) state.wave = keepWave;   // waveform lock overrides the preset
   // the sound's name follows a whole sound or a one-layer one; a preset on one LAYER of a layered sound keeps its name
   if (!(!("layers" in obj) && (layerSel || state.layers))) seqLabel = label || "Sound";   // what the editor holds (Sequence chips)
@@ -2223,14 +2857,44 @@ const presetBar = document.getElementById("presets");
 // apart ("Coin v2", "Coin v3" … — never "Coin 2", which is another preset) so History and the files tell them apart.
 let presetTake = null;            // { name, state }: what the last preset click put in the editor
 const presetTakeN = {};           // preset name → its highest variation number this session
+// ARCHETYPES (2026-11-10, the chirp engine): a preset may carry `_alts: [patch, …]`, other VERSIONS of the same sound
+// (Bird Chirp: today's sine chirp, a cheep, a two-voice tsee-wit, a chip call). The BUTTON plays the base or one of its
+// alts, uniformly at random but never the one it played last, on every click: the versions are the variety, so such a
+// preset has no "click again for a variation" step. Only this path reads `_alts`: the audio hash, Foundry, the footstep
+// set, the Wizard, Breed, search and the button's color all read the BASE patch, as before. UI-side Math.random (the
+// render never sees it: a version is a whole, seeded patch).
+const presetAltLast = {};         // preset name → the version it played last (0 = the base, k = _alts[k - 1])
+function presetVersion(name) {
+  const p = PRESETS[name], alts = (p && p._alts) || [];
+  const n = alts.length + 1, last = presetAltLast[name];
+  let k = Math.floor(Math.random() * (last == null ? n : n - 1));
+  if (last != null && k >= last) k++;
+  presetAltLast[name] = k;
+  // a preset with a LAYERED version loads every version as a whole sound (a one-layer version clears the layers), or a
+  // layered take's extra layers would stay under the next version clicked; otherwise the usual rule (a preset sets the
+  // selected layer, the others kept)
+  const v = k ? alts[k - 1] : p, whole = [p].concat(alts).some((x) => "layers" in x);
+  return { patch: whole && !("layers" in v) ? Object.assign({}, v, { layers: "" }) : v, k: k, n: n };
+}
+// A preset button on layer 1 of a LOADED layered sound loads the preset whole (layersOwned above).
+function presetAsSound(patch) {
+  return (!layerSel && state.layers && !layersOwned && !("layers" in patch)) ? Object.assign({}, patch, { layers: "" }) : patch;
+}
 function presetClick(name) {
+  if (PRESETS[name] && PRESETS[name]._alts && PRESETS[name]._alts.length) {
+    const v = presetVersion(name);
+    applyPreset(presetAsSound(v.patch), name);
+    nowSay(name + ", version " + (v.k + 1) + " of " + v.n + ": click it again for another");
+    presetTake = { name: name, state: snapshotState() };
+    return;
+  }
   const again = presetTake && presetTake.name === name && sameState(presetTake.state, snapshotState());
   if (again) {
     const n = presetTakeN[name] = (presetTakeN[name] || 1) + 1;
-    applyPreset(audiblePatch(() => varyPreset(PRESETS[name])), name + " v" + n, "Variation");
+    applyPreset(presetAsSound(audiblePatch(() => varyPreset(PRESETS[name]))), name + " v" + n, "Variation");
     nowSay(name + ", variation " + n + ": click it again for another, Undo for the one before");
   } else {
-    applyPreset(PRESETS[name], name);
+    applyPreset(presetAsSound(PRESETS[name]), name);
     nowSay(name + " preset: click it again for a variation");
   }
   presetTake = { name: name, state: snapshotState() };
@@ -2241,7 +2905,9 @@ function makePresetButton(name) {
   const fam = familyOf((PRESETS[name] || {}).wave);   // color-code by synthesis family
   b.dataset.fam = fam;
   b.style.setProperty("--fam", FAMILY_COLORS[fam]);
-  b.title = "Click: load " + name + " · click again: a fresh variation of it · " + fam;
+  const alts = ((PRESETS[name] || {})._alts || []).length;
+  b.title = alts ? "Click: one of " + (alts + 1) + " versions of " + name + " · click again: another · " + fam
+    : "Click: load " + name + " · click again: a fresh variation of it · " + fam;
   b.dataset.pb = name;   // drag source id for custom categories (desktop)
   b.addEventListener("click", () => presetClick(name));
   return b;
@@ -2852,7 +3518,9 @@ function macroBlend(k, base, end, f) {
   if (f <= 0 || typeof base !== "number" || typeof end !== "number") return f <= 0 ? base : end;
   let x = base > 0 && end > 0 && Math.max(base, end) / Math.min(base, end) >= 10
     ? base * Math.pow(end / base, f) : base + (end - base) * f;
-  if (p) { x = Math.max(p[2], Math.min(p[3], x)); x = p[4] >= 1 ? Math.round(x) : +x.toFixed(4); }
+  // Duration's ceiling is the engine's (durationMax), not the row's 2 s: a long ambience shortens smoothly from where it is.
+  const hi = !p ? 0 : k === "duration" ? durationMax(state, base) : p[3];
+  if (p) { x = Math.max(p[2], Math.min(hi, x)); x = p[4] >= 1 ? Math.round(x) : +x.toFixed(4); }
   return x;
 }
 function applyMacro(m, v) {
@@ -3285,6 +3953,17 @@ const BREED_SKIP = new Set(["wave", "duration", "gain"]);
 const BREED_AMT = 0.22;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+// The WHOLE sound as a genome: genomeFromState plus its `layers` when it has any (2026-11-12). Variations started from
+// genomeFromState, which reads `state` alone and never carries layers (genomes deliberately do not, for Breed), so varying
+// a layered sound rendered its SELECTED layer by itself: eight takes of a rooster's first syllable. One layer: exactly
+// genomeFromState, no `layers` key, so every one-layer pack is unchanged.
+function soundGenome() {
+  const s = soundSnap(), g = {};   // genomeFromState's reads, from the whole sound (not via withState: it clears layersOwned)
+  for (const p of PARAMS) g[p[0]] = s[p[0]];
+  for (const k in SFX_EXTRAS) if (s[k] && s[k] !== SFX_EXTRAS[k]) g[k] = s[k];
+  if (s.layers) g.layers = s.layers;
+  return g;
+}
 function genomeFromState() { const g = {}; for (const p of PARAMS) g[p[0]] = state[p[0]]; for (const k in SFX_EXTRAS) if (state[k] && state[k] !== SFX_EXTRAS[k]) g[k] = state[k]; return g; }
 // A child keeps its parent's SFX_EXTRAS (bug 1: they copied PARAMS only, so a bred speech sound went silent and a drawn
 // wave fell back to a sine). No extra draw from Math.random, so the PARAMS draws are the same sequence as before.
@@ -3530,7 +4209,12 @@ function renderVariation(item) {
 // gives each take room for its tail and matches its loudness to the original's.
 const VARY_FIXED = new Set(["wave", "duration", "gain", "reverse", "repeat", "limiter", "transient"]);
 const VARY_TAILS = /decay|release|Decay|reverbSize|delayFb|convSize|Damp/;
-const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10]);   // engines whose sound is not laid out over the buffer's length
+const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 31, 32]);   // engines whose sound is not laid out over the buffer's length
+// A spring (32) is plucked at the shot's start and rings out like a pluck (8), so a longer buffer only gives its ring room.
+// A blast (31) sits at fixed times in its buffer, so a longer buffer only lets its place ring out; fitTail may grow one past
+// the 2 s other sounds stop at (its Duration slider stretches). Its Size and Place length ARE its length (a bigger charge
+// rumbles and rains debris for longer), so a take only shrinks them, as a tail that cannot be given room never grows.
+const VARY_LENGTHS = /^blast(Size|Tail)$/;
 function varyStretchable(g) { return VARY_STRETCH.has(Math.round(g.wave)) || (Math.round(g.wave) === 12 && !g.morphSweep); }
 // `rand` (optional, 2026-11-01): the random source; Math.random when left out (every caller before the footstep set), so a
 // seeded caller (the Godot footstep set) makes the same takes every time.
@@ -3541,7 +4225,7 @@ function varyGenome(src, amount, rand) {
     const [k, , min, max, step, , , , kind] = p, base = src[k];
     if (VARY_FIXED.has(k) || kind || step >= 1 || !base || undrawn(k, src) || rand() >= 0.7) continue;   // only what the sound USES
     let r = (rand() * 2 - 1) * amount;
-    if (!stretch && VARY_TAILS.test(k)) r = -Math.abs(r);   // a tail that cannot be given room never grows (no new cut)
+    if ((!stretch && VARY_TAILS.test(k)) || VARY_LENGTHS.test(k)) r = -Math.abs(r);   // a tail that cannot be given room never grows (no new cut)
     let v = k === "freq" ? base * Math.pow(2, r * 10 / 12)  // pitch: ±2 semitones at the default 0.2 (was ±4.8)
                          : base * (1 + r * 0.75);           // everything else: ±15% of itself at 0.2
     v = Math.min(max, Math.max(min, v));
@@ -3583,7 +4267,7 @@ function fitTail(g, origTail) {
   };
   const env = g.attack + g.hold + g.decay + (g.sustain > 0 ? g.release : 0);
   if (env > d0 && !setDur(Math.min(2, env * 1.02))) return out;
-  const limit = Math.min(2, d0 * 2), want = Math.max(origTail * 1.4, 0.01);   // -40 dB, or no louder than the original's end
+  const limit = Math.round(g.wave) === 31 ? Math.min(Math.max(3, d0 + 1), d0 * 2) : Math.min(2, d0 * 2), want = Math.max(origTail * 1.4, 0.01);   // -40 dB, or no louder than the original's end
   for (let t = 0; t < 4; t++) {
     const r = withState(out, () => render());
     if (tailLevel(r.L) <= want || out.duration >= limit) break;
@@ -3600,12 +4284,28 @@ function matchLoudness(items) {
   items.forEach((g, i) => { const m = meas[i]; if (m.rms > 0) target = Math.min(target, VARY_CEILING * m.rms / m.pk, m.rms / g.gain); });
   return items.map((g, i) => { const m = meas[i]; return m.rms > 0 ? Object.assign({}, g, { gain: +(g.gain * target / m.rms).toFixed(4) }) : g; });
 }
+// A LAYERED sound's take (2026-11-12, AJ: "Variations on layering is a good idea"). Every layer is varied, not only layer 1,
+// with ONE pitch move shared by all of them: layer 1's `freq` change is applied to every layer's, so a syllable or a part
+// never drifts out of tune with the rest (a rooster's four calls, an owl's three hoots). Each layer's delay, volume, pitch
+// offset and mute are kept: they are the sound's arrangement (its rhythm), not its timbre. A one-layer sound never comes
+// here, so its takes are byte for byte what they were (the audio hash's vary, pack and footstep lines prove it).
+function varySound(src, amt, rand) {
+  rand = rand || Math.random;
+  const g = varyGenome(src, amt, rand), ratio = src.freq ? g.freq / src.freq : 1, fp = PARAM_BY_KEY.freq;
+  const list = soundLayers(src.layers).map((l) => {
+    const full = Object.assign({}, PARAM_DEFAULTS, l.s), v = varyGenome(full, amt, rand);
+    v.freq = Math.min(fp[3], Math.max(fp[2], Math.round(full.freq * ratio / fp[4]) * fp[4]));
+    return Object.assign({}, l, { s: layerDiff(v) });
+  });
+  g.layers = list.length ? JSON.stringify(list) : "";
+  return g;
+}
 function makeVariations(seed, n, amt, rand) {
   const r0 = withState(seed, () => render()), origTail = tailLevel(r0.L);
   const out = [seed];
   for (let i = 1; i < n; i++) {
     let g = null;
-    for (let t = 0; t < 10 && !g; t++) { const c = varyGenome(seed, amt, rand); if (patchPeak(c) > AUDIBLE_FLOOR) g = c; }
+    for (let t = 0; t < 10 && !g; t++) { const c = seed.layers ? varySound(seed, amt, rand) : varyGenome(seed, amt, rand); if (patchPeak(c) > AUDIBLE_FLOOR) g = c; }
     out.push(fitTail(g || seed, origTail));
   }
   return normalizeOut ? matchLoudness(out) : out;   // Normalize loudness off: the takes keep their own levels
@@ -3617,7 +4317,7 @@ function seedVariations() {
     varGenomes = [sequence.map((s) => s.genome)];          // #1 = the sequence exactly as built
     for (let i = 1; i < n; i++) varGenomes.push(sequence.map((s) => varyGenome(s.genome, amt)));   // rest = every step nudged
   } else {                                                 // vary the single editor sound
-    varGenomes = makeVariations(genomeFromState(), n, amt);   // #1 = the original (gain-matched with the rest)
+    varGenomes = makeVariations(soundGenome(), n, amt);       // #1 = the original (gain-matched with the rest)
   }
   varModeEl.textContent = sequence.length ? "· varying your " + sequence.length + "-step sequence (each file = the whole sequence)" : "";
   renderVarGrid();

@@ -209,6 +209,30 @@
     });
     return ok(!bad.length, bad.slice(0, 4).join(" · "));
   });
+  // 2026-11-12. The Length macro clamped Duration to its row's 2 s, so the smallest nudge cut a long sound (the 12 s surf,
+  // a 3 s distant boom, Night Insects) to 2 s. It asks durationMax now, like the Duration slider: a long sound shortens
+  // smoothly from where it is, and an ordinary one still stops at 2 s.
+  t("quick-shape/length-shortens-a-long-sound-smoothly-and-an-ordinary-one-still-stops-at-2s", function () {
+    const bad = [];
+    capture(function () {
+      const el = document.getElementById("m-length");
+      const move = (v) => { el.value = String(v); el.dispatchEvent(new Event("input")); el.dispatchEvent(new Event("change")); };
+      ["Distant Boom", "Night Insects"].forEach(function (n) {
+        if (!PRESETS[n]) { bad.push(n + " missing"); return; }
+        applyPreset(PRESETS[n], n);
+        const d0 = state.duration, v0 = +el.value;
+        if (!(d0 > 2)) bad.push(n + " is not a long sound (" + d0 + " s), so this row proves nothing");
+        move(Math.max(0, v0 - 0.02));
+        if (!(state.duration > 2 && state.duration < d0)) bad.push(n + ": a small nudge left gave " + state.duration + " s from " + d0 + " s");
+        move(v0);
+        if (state.duration !== d0) bad.push(n + ": back to the start gave " + state.duration + " s, not " + d0);
+      });
+      applyPreset(PRESETS["Laser"], "Laser");
+      move(1);
+      if (state.duration > 2) bad.push("Laser at Long went to " + state.duration + " s, past the row's 2 s");
+    });
+    return ok(!bad.length, bad.slice(0, 4).join(" · "));
+  });
   t("tools/click-hears-double-click-or-use-loads-in-breed-variations-and-foundry", function () {
     const bad = [];
     capture(function () {
@@ -277,6 +301,42 @@
     });
     varAmtEl.value = "0.2"; document.getElementById("varClose").click();
     return ok(!bad.length, bad.join(", "));
+  });
+  // 2026-11-12. Variations of a LAYERED sound: every take is the whole sound (every layer, same delays and volumes), more
+  // than layer 1 is varied, and the layers keep their pitch relation (one shared move), so a rooster's syllables stay in
+  // tune with each other. Before, the seed was genomeFromState (no layers), so every take was the first syllable alone.
+  // Also from a SELECTED layer 2: the takes are still the whole sound.
+  t("variations/a-layered-sound-varies-every-layer-and-keeps-its-arrangement-and-tuning", function () {
+    const bad = [];
+    ["Rooster Crow", "Owl Hoot"].forEach(function (n) {
+      if (!PRESETS[n] || !PRESETS[n].layers) { bad.push(n + " is not layered, so this row proves nothing"); return; }
+      [0, 1].forEach(function (sel) {
+        applyPreset(PRESETS[n], n);
+        if (sel) layerSelect(1);
+        varAmtEl.value = "0.3"; varCountEl.value = "6"; seedVariations();
+        const orig = soundLayers(PRESETS[n].layers), f0 = PRESETS[n].freq;
+        const rel = orig.map(function (l) { return (l.s.freq || PARAM_BY_KEY.freq[5]) / f0; });
+        let movedLayers = 0;
+        varGenomes.forEach(function (g, i) {
+          const L = soundLayers(g.layers || "");
+          if (L.length !== orig.length) { bad.push(n + " sel " + sel + " take " + (i + 1) + ": " + L.length + " layers, not " + orig.length); return; }
+          L.forEach(function (l, j) {
+            if (l.d !== orig[j].d || l.g !== orig[j].g || (l.p || 0) !== (orig[j].p || 0)) bad.push(n + " take " + (i + 1) + " layer " + (j + 2) + ": arrangement moved");
+            const r = (l.s.freq || PARAM_BY_KEY.freq[5]) / g.freq;
+            if (Math.abs(Math.log2(r / rel[j]) * 1200) > 8) bad.push(n + " take " + (i + 1) + " layer " + (j + 2) + ": out of tune by " + (Math.log2(r / rel[j]) * 1200).toFixed(1) + " cents");
+            if (i && JSON.stringify(l.s) !== JSON.stringify(orig[j].s)) movedLayers++;
+          });
+        });
+        if (!movedLayers) bad.push(n + " sel " + sel + ": no layer past the first was ever varied");
+        const r = renderVariation(varGenomes[0]), whole = withState(PRESETS[n], render);
+        if (r.L.length !== whole.L.length) bad.push(n + " sel " + sel + ": take 1 is not the whole sound (" + r.L.length + " vs " + whole.L.length + " samples)");
+      });
+    });
+    varAmtEl.value = "0.2"; document.getElementById("varClose").click();
+    // Leave a plain one-layer sound with layer 1 selected: a preset button on layer 2 sets only that layer (by design), so
+    // the next row's clicks would otherwise land inside Owl Hoot.
+    layerSelect(0); applyPreset(Object.assign({}, PRESETS["Hit"], { layers: "" }), "Hit");
+    return ok(!bad.length, bad.slice(0, 4).join(" · "));
   });
   t("search/word-starts-and-a-game-dev-vocabulary", function () {
     const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
@@ -604,6 +664,33 @@
       const s0 = snapshotState(); layerSelect(0); const s1 = snapshotState(); layerSelect(1); const s2 = snapshotState();
       const still = sameState(s0, s1) && sameState(s1, s2) && layerSel === 1;
       return ok(local && still, [local, still].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  // AJ, 2026-11-11: a layered preset, then a one-layer preset, played the first one's layer 2 under the second.
+  t("layers/a-preset-button-after-a-loaded-layered-sound-loads-it-whole", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      const layered = Object.keys(PRESETS).find((n) => PRESETS[n].layers && !PRESETS[n]._alts);
+      const plain = Object.keys(PRESETS).find((n) => !PRESETS[n].layers && !PRESETS[n]._alts && n !== layered);
+      applyPreset(PRESETS[layered], layered);
+      const had = soundLayers(state.layers).length > 0;
+      presetClick(plain);
+      const want = Object.assign({}, PARAM_DEFAULTS, PRESETS[plain]);
+      const clean = !state.layers && layerSel === 0 && !soundLayers(soundSnap().layers).length && state.wave === want.wave && state.freq === want.freq;
+      return ok(had && clean, [layered, plain, had, clean].join(" "));
+    } finally { applyPreset(keep, keepLabel); }
+  });
+  t("layers/layers-you-built-are-kept-when-a-preset-button-sets-layer-1", function () {
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      applyPreset(Object.assign({ layers: "" }, PRESETS["Laser"]), "Laser");
+      layerAdd();                                           // built by hand: layer 2
+      document.querySelectorAll("#layerBar .layer-tab")[0].click();   // back to layer 1 through its tab
+      const before = soundLayers(soundSnap().layers);
+      presetClick("Coin");
+      const after = soundLayers(soundSnap().layers);
+      const kept = layerSel === 0 && after.length === 1 && before.length === 1 && JSON.stringify(after[0]) === JSON.stringify(before[0]);
+      return ok(kept, [layerSel, before.length, after.length].join(" "));
     } finally { applyPreset(keep, keepLabel); }
   });
   t("layers/a-link-history-and-undo-carry-every-layer", function () {

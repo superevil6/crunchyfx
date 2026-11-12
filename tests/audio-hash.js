@@ -159,6 +159,23 @@
       let fh = null;
       fset.filter(function (f) { return /\.(gd|tscn|txt)$/.test(f.name); }).forEach(function (f) { fh = fnv(f.data, fh); });
       line("footsteps:helper", fh);
+      // ARCHETYPES (2026-11-10, appended): a preset's `_alts` are the other versions its BUTTON plays (the chirp engine's
+      // picked takes on Bird Chirp, Bird Trill, Cricket Chirp, Songbird Phrase, Night Insects; the creature engine's on Cat
+      // Meow and Monster Growl; the weather engine's on Thunder, Heavy Rain, Rain, Wind Gust and Howling Squall; the motor engine's on Car Engine,
+      // Chainsaw, Helicopter, Train and Motorcycle; the blast engine's on Distant Boom; the spring engine's on Jaw Harp; the servo engine's on Servo Motor, Robot
+      // Servo, Mechanical Whir and Conveyor Belt; the friction engine's on Trapdoor Creak; the flow engine's on Waterfall,
+      // Ocean Surf, Wave of Water and Filling a Bottle). The
+      // preset lines above hash the BASE, as every other reader of PRESETS does, so each alt is fingerprinted here,
+      // layered ones whole.
+      normalizeOut = true;
+      Object.keys(PRESETS).forEach(function (name) {
+        (PRESETS[name]._alts || []).forEach(function (a, j) { line("alt:" + name + ":" + (j + 1), pcm(withState(a, render))); });
+      });
+      // VARIATIONS OF A LAYERED SOUND (2026-11-12, appended): every layer varied, one shared pitch move, the arrangement
+      // kept (varySound). Seeded by the run's LCG like the vary lines above; last, so no earlier line's draws moved.
+      makeVariations(withState(PRESETS["Rooster Crow"], soundGenome), 4, 0.2).forEach(function (g, j) {
+        line("vary:layered:" + j, fnv(new TextEncoder().encode(JSON.stringify(g)), pcm(withState(g, render))));
+      });
     } finally {
       Math.random = keepRand; normalizeOut = keepN; sampleBuf = keepS; customIR = keepIR;
       varNameEl.value = keepName; varGenomes = keepVar; sequence = keepSeq;
