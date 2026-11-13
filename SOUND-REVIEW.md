@@ -479,6 +479,56 @@ Hoot keep their `freq` vary within a semitone (a wider one detunes the first syl
 cannot fade or change vowel; roughness doubles the period from ~0.25 up, so a rough call is heard (and pitch-tracked)
 an octave below `freq`; breath follows the voice's level, so a pure hiss needs a noise layer.
 
+## Fire redo (2026-11-12): 28 fires as layered builds
+
+AJ's to-do said "Redo some of the fire ones too"; all 28 were redesigned and heard as labeled before/after
+(`soundtests/fire-redo/`), and **all kept**: "all of the new ones sound better". The 24 Fire presets plus Campfire
+Crackle (Nature; it was a plain oscillator), Crackling Fire, Dragon Fire Breath and Fireball Cast, in place.
+
+**A fire is a stack, so each is 3-4 layers:** the ROAR is the weather engine's wind (its band brightens as the envelope
+rises, so a flare brightens as it surges, with slow random swells; as layer 1 it also lets the Duration slider stretch
+and makes Variations re-roll the fire through `wxSeed`); CRACKLE is the particle engine, sparse and **driven 0.25-0.4**
+(undriven, peak normalization leaves only the biggest pop: 0.4 audible pops a second against 6-9 driven); HISS is dense
+high-passed particles; and an EVENT layer: a blast-engine "foomp" for ignitions, whoosh for flares and passes, a friction
+scratch for the match, bubble gloops for the molten ones, a creature growl under the dragon.
+
+**The family (13)** is two tables in `tools/proto/fire-redo.mjs`, no per-name overrides: an adjective is the fire
+(Searing white-hot and hissy, Kindled small twig snaps, Smoldering smoky and guttering, Blazing big with body, Molten
+gloops and grit, Infernal huge and driven, Ashen dim and sparse) and a noun is the event (Ignite a catch then a bloom,
+Flare a surge and fall, Torch a steady burn, Blaze and Flame sustained, Scorch a sear, Whoosh a pass).
+
+**Level:** today's Fire section spanned 21.8 dB (-25.5 to -3.7 LUFS); the new ones sit on its median, -12.1, with
+deliberate offsets (Ember Crackle -8 dB; Match Strike and Fire Sparks -3; the small/smoky ones -2; the infernos +1).
+Four run past 2 s, all with weather as layer 1: Fire 2.5, Inferno Roar 3.5, Searing Blaze 2.38, Molten Flame 2.8.
+
+**Engine limits found (not fixed):** particle pops come evenly spaced with jitter and never below 5 a second, while
+real resin pops come in bursts; no engine makes a flame's irregular low throb ("puffing"); layer 1 cannot sit under the
+others in the mix; the 4-layer cap is why Scorch's sear replaces the hiss. A dedicated fire model would add the throb
+and the bursts; not built, since the existing engines carried every part.
+
+## Horror and robot redo (2026-11-12): 67 sounds onto the newer engines
+
+AJ: "What about robot and horror noises? Can we sweep those to see if our new engines suit them better?" Three designers,
+labeled before/after (`soundtests/horror-redo/`, `soundtests/robot-redo/`), and every redesign **kept**: "all the horrors
+sound quite good", "robots are all better too". This sweep, unlike the creature and fire passes, was told to KEEP where
+today's sound is already the right lever, and did.
+
+| Group | Redesigned | Kept, and why |
+|---|---|---|
+| Horror, named (29) | 27: heartbeats as impact lub-dubs at three tempos; the jump scares split into a slam, an orchestral stab (bowed strings a semitone apart) and a creature lunge; wails, moans, screams, the demon roar and the laugh on the creature engine; whispers as breath through a moving tract; Horror Drone and Tension Riser on the bowed engine; Nails on Chalkboard on friction; bells, chimes, chains and the Music Box on modal and bar | Dead Tone, Dread Pulse: abstract synthesis by nature |
+| Horror family (31) | all 31, two tables in `tools/proto/horror-redo-family.mjs`: the NOUN picks the engine (Toll one free-ringing modal strike, Knell three muffled ones; Wail/Moan/Groan/Shriek/Murmur creature voices; Rattle bones; Stinger a slam + bowed screech; Pulse an oscillator throb with thuds), the ADJECTIVE the treatment (Hollow band-passed in a big room, Rotting crushed, Dreadful slower/lower with a sub, Forsaken distant, Cursed a tritone double + ring mod, Whispering all breath, Wretched ragged) | none |
+| Robots (18) | 9: Power Up / Down as a matched servo pair (contactor, hum, gears up; coast-down and a clunk), Stomp (impact + blast weight + steel ring + a servo), Servo Twitch / Drone / Chime on the servo engine, Robot Talk as pitched chatter (it was six identical beeps, a twin of Robot Beep), Robot Yes / No with a quiet nod / shake servo under the unchanged word | the beeps and Robot Alarm (a beep IS a square wave), the three formant robot voices (synthetic voice is what formant is for), the three servo presets already picked by ear |
+
+**Level:** horror on its section median (-10.4 LUFS), robots on Machine's (-7.3), with stated offsets (whispers and
+transients under, jump scares over). Today's horror and robot oscillators were very loud (Nails on Chalkboard -0.8 LUFS),
+so many new ones are 5-10 dB quieter than before.
+
+**Engine limits found (not fixed):** the creature engine always voices, so a whisper is breath 1 plus a high-pass; a
+burst cannot go under 1 a second and a layer's delay caps at 2 s, so a slow heartbeat or a funeral knell spends layers;
+modal and bar strike identically each shot; the modal engine has no bell partial table (hum and tierce cost layers);
+bowed tremolo thumps below ~50 Hz at slow strokes (a high-pass fixes it); the Limiter puts DC into low asymmetric
+pulses; servo whine stops the instant power is cut (Power Down coasts on the geared type).
+
 ## The gap list (game sounds with no preset, 2026-10-29; a name check, so it overstates coverage)
 
 - Shooter: ~~reload, shell casing~~ (round 3); dry fire, scope, hit marker skipped (conventions).
