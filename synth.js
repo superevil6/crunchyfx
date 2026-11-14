@@ -254,6 +254,65 @@ function renderPatch(st, opts) {
   const isBlast = waveType === 31;
   let blL = null, blR = null;
   if (isBlast) { const b = makeBlast(SR, n, blastCfg(st), Math.round(st.blastSeed || 0)); blastLevel(b.L, b.R, st.blastPeak || 0); blL = b.L; blR = b.R; }
+  // Glass (wave "glass", #36): glass and ceramics breaking, clinking, tapped (dsp.js makeGlass): one strike, the body's
+  // ring, the fracture and the pieces flying, landing and bouncing, built up front into a stereo buffer like the blast's
+  // (an event list of decaying rings laid out in time) and levelled once (glassLevel, after its own Peak control, as
+  // blastLevel). The amp envelope is its plain gain. Its seed is the patch's own `glSeed` (which take), not salted per
+  // layer, like flowSeed.
+  const isGlass = waveType === 36;
+  let glL = null, glR = null;
+  if (isGlass) { const gb = makeGlass(SR, n, glassCfg(st), Math.round(st.glSeed || 0)); glassLevel(gb.L, gb.R, SR, st.glPeak || 0); glL = gb.L; glR = gb.R; }
+  // Gun (wave "gun", #38): gunshots designed for game sound (dsp.js makeGun): the snap, the body and pop, the gas, the
+  // crack, the action and the place, through its own crunch stage; a burst re-fires the WHOLE shot every round (Fire
+  // rate, Rounds), so a gun keeps Repeat at 1. Built up front into a stereo buffer like the blast's and levelled once
+  // (gunLevel, after its own Peak control, as blastLevel / glassLevel). The amp envelope is its plain gain. Its seed is
+  // the patch's own `gunSeed` (which take), not salted per layer, like glSeed.
+  const isGun = waveType === 38;
+  let gnL = null, gnR = null;
+  if (isGun) { const gg = makeGun(SR, n, gunCfg(st), Math.round(st.gunSeed || 0)); gunLevel(gg.L, gg.R, SR, st.gunPeak || 0); gnL = gg.L; gnR = gg.R; }
+  // Energy (wave "energy", #39): energy weapons, plasma, rail, pulse and ion (dsp.js makeEnergy): a charge, the discharge
+  // with its hard transient, the bolt leaving, the recoil, the afterglow, through its own 4x oversampled crunch; Rate and
+  // Rounds re-fire the WHOLE shot every round, so an energy preset keeps Repeat at 1. Built up front into a stereo buffer
+  // like the gun's and levelled once (energyLevel, after its own Peak control, as gunLevel). The amp envelope is its plain
+  // gain. Its seed is the patch's own `enSeed` (which take), not salted per layer, like gunSeed.
+  const isEnergy = waveType === 39;
+  let enL = null, enR = null;
+  if (isEnergy) { const eg = makeEnergy(SR, n, energyCfg(st), Math.round(st.enSeed || 0)); energyLevel(eg.L, eg.R, SR, st.enPeak || 0); enL = eg.L; enR = eg.R; }
+  // Chip gun (wave "chipgun", #40): the retro console gunshot (dsp.js makeChipgun): an 8-bit chip, an FM chip with its
+  // noise chip, or a 16-bit sampler, driven once a 60 Hz frame the way a game's sound driver drove them; Rate and Rounds
+  // fire on frames and every round re-triggers the same channel (cutting the last one's tail), so a chip gun keeps Repeat
+  // at 1. Built up front into a MONO buffer (the machines were mono: centered) and levelled once (chipgunLevel, after its
+  // own Peak control, as energyLevel). The amp envelope is its plain gain. Its seed is the patch's own `cgSeed` (which
+  // take), not salted per layer, like enSeed.
+  const isChipgun = waveType === 40;
+  let cgL = null, cgR = null;
+  if (isChipgun) { const cg = makeChipgun(SR, n, chipgunCfg(st), Math.round(st.cgSeed || 0)); chipgunLevel(cg.L, cg.R, SR, st.cgPeak || 0); cgL = cg.L; cgR = cg.R; }
+  // Gun foley (wave "gunfoley", #41): everything around the shot (dsp.js makeGunfoley): reloads, a bolt, a pump rack, a
+  // revolver's cylinder, dry fire, casings, ricochets and bullets passing, a mechanism's parts meeting inside its body, by
+  // a script with human timing. Built up front into a stereo buffer like the gun's and levelled once (gunfoleyLevel, after
+  // its own Peak control, as gunLevel). The amp envelope is its plain gain. Its seed is the patch's own `gfSeed` (which
+  // take), not salted per layer, like gunSeed.
+  const isGunfoley = waveType === 41;
+  let gfL = null, gfR = null;
+  if (isGunfoley) { const gf = makeGunfoley(SR, n, gunfoleyCfg(st), Math.round(st.gfSeed || 0)); gunfoleyLevel(gf.L, gf.R, SR, st.gfPeak || 0); gfL = gf.L; gfR = gf.R; }
+  // Voice (wave "voice", #42): a person's vocal effort, the game voice clip (dsp.js makeVoice): battle and sword cries,
+  // a jump's "hup", hurt grunts, death yells, falling screams, from a short script (a built-in Cry type, or the patch's
+  // own `voBody` text for "custom"). Built up front into a MONO buffer at the cry's OWN length and levelled once
+  // (voiceLevel, after its own Peak control, as gunfoleyLevel); the Duration holds it (past the cry: silence for a room's
+  // tail; short of it: cut). The amp envelope is its plain gain. Its seed is the patch's own `voSeed` (which take), not
+  // salted per layer, like gfSeed.
+  const isVoice = waveType === 42;
+  let voL = null, voR = null;
+  if (isVoice) { const vc = makeVoice(SR, voiceCfg(st)); voiceLevel(vc.L, vc.R, SR, st.voPeak || 0); voL = vc.L; voR = vc.R; }
+  // Melee (wave "melee", #43): a weapon swung and landing in something (dsp.js makeMelee): the swing, the contact into a
+  // material (flesh, leather, mail, plate, a wooden shield, stone, ground, another blade), the body's weight, through its
+  // own crunch stage. Built up front into a stereo buffer ending at the Duration (the engine's own 40 ms fade) and
+  // levelled inside makeMelee (its Peak control limits the hit alone, before the swing joins, so it cannot be a separate
+  // pass after it). The amp envelope is its plain gain. Its seed is the patch's own
+  // `meleeSeed` (which take), not salted per layer, like voSeed.
+  const isMelee = waveType === 43;
+  let mlL = null, mlR = null;
+  if (isMelee) { const mb = makeMelee(SR, meleeCfg(st), Math.round(st.meleeSeed || 0)); mlL = mb.L; mlR = mb.R; }
   // Servo (wave "servo", #33): electric motors, gearboxes and clockwork locked to one shaft (dsp.js makeServo), run
   // along the patch's own power curve (servoAt ... servoSpeed3: up to three powered moves, or one run from a shaft already
   // turning) into a mono buffer up front, like the motor's, and levelled once (servoLevel). The amp envelope is its plain
@@ -308,6 +367,40 @@ function renderPatch(st, opts) {
   // its own: the amp envelope is its DAMPER only, fading the ring over `release` when the key is let go. Mono.
   const isPiano = waveType === 25;
   let pianoV = null, pianoShot = -1, pianoStart = 0;
+  // PEAK CONTROL for the struck keys (`pianoPeak` / `barPeak`, 0-2; 2026-11-14, AJ: "the peak control for the piano and
+  // bell engines is a good idea"). A struck note is nearly all strike: its peak is the first 2-20 ms and it decays, so
+  // Normalize (which matches PEAKS) left the keys 14-17 dB under their sections, and `gain` tops out at +3.1 dB. This is
+  // gunPeak's / meleePeak's control: the app's own lookahead limiter on the ENGINE'S OUTPUT ALONE (keyPeakControl,
+  // dsp.js), before the chain, so the reverb, the master stage and `gain` after it are unchanged. Only when it is on, the
+  // note is built UP FRONT into a buffer (the gun's way) by the loop's own pitch and damper arithmetic, repeated here
+  // term for term (tests/synth-bundle.test.mjs proves a near-zero Peak renders the same note); at 0 nothing here runs and
+  // the loop below plays the engine sample by sample exactly as it always has, so every existing sound is byte-identical.
+  const keyPeak = isPiano ? (+st.pianoPeak || 0) : isBar ? (+st.barPeak || 0) : 0;
+  let keyX = null;
+  if (keyPeak > 0) {
+    keyX = new Float64Array(n);
+    let kV = null, kShot = -1, kStart = 0, kVib = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SR;
+      const shotIdx = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0;
+      const lt = t - shotIdx * slot;
+      const prog = slot > 0 ? Math.min(1, lt / slot) : 0;
+      const sweepMul = Math.pow(2, sweep * 4 * prog);
+      const vibOn = st.vibOnset > 0 ? Math.min(1, lt / st.vibOnset) : 1;
+      const vib = st.vibDepth * Math.sin(kVib) * vibOn;
+      const arpMul = st.arpStep ? Math.pow(2, st.arpStep * shotIdx / 12) : 1;
+      const f = baseFreq * sweepMul * Math.pow(2, vib * 0.5) * arpMul;
+      const fOsc = Math.min(f, 20000);
+      kVib += 2 * Math.PI * st.vibRate / SR;
+      if (shotIdx !== kShot) {
+        kShot = shotIdx; kStart = i;
+        kV = isPiano ? makePiano(SR, st, baseFreq, 0x9e37 ^ Math.round(baseFreq * 10)) : makeBar(SR, st, baseFreq, 0x6d0 ^ Math.round(baseFreq * 10));
+      }
+      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+      keyX[i] = kV.tick(fOsc, i - kStart) * damp;
+    }
+    keyPeakControl(keyX, keyPeak);
+  }
   // Flute (wave "flute", #26): an air jet driving an open pipe (dsp.js makeFlute). The amp envelope is the BREATH, as it
   // is brass's and the bow's. Tuned and levelled once for the note's pitch; vibrato and sweeps move the pipe. Mono.
   const isFlute = waveType === 26;
@@ -353,7 +446,7 @@ function renderPatch(st, opts) {
     else if (lt < atk + hold) e = 1;
     else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); e = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
     else if (lt < relStart) e = susLevel;
-    else { const r = rel > 0 ? (lt - relStart) / rel : 1; e = susLevel * Math.pow(1 - r, eexp); }
+    else { const r = rel > 0 ? (lt - relStart) / rel : 1; e = r >= 1 ? 0 : susLevel * Math.pow(1 - r, eexp); }
     return e < 0 ? 0 : e;
   };
   // Additive / spectral pad (wave "additive"): sum of `addPartials` harmonics, each with its own
@@ -502,6 +595,33 @@ function renderPatch(st, opts) {
     flowLevel(fb.L, fb.R);
     flowL = fb.L; flowR = fb.R;
   }
+  // Crowd (wave "crowd", #37): chatter, cheering, applause, an audience's reactions, a chanting stadium (dsp.js
+  // makeCrowd): the nearest people as voices and hands, the rest a statistical bed, built up front into a stereo buffer
+  // like the flow's and levelled once (crowdLevel, after its own Peak control, as blastLevel / glassLevel). THE AMP
+  // ENVELOPE STAYS ITS GAIN, applied here rather than in the gain stage (which skips it) because the crowd may stop
+  // before the sound does: it lasts the Duration less its ring-out (`cwTail`, where only the room rings), and the
+  // release lands where the CROWD stops. With no ring-out (and one shot) it is exactly the gain stage's envelope. Its seed
+  // is the patch's own `cwSeed` (which take), not salted per layer, like flowSeed.
+  const isCrowd = waveType === 37;
+  let cwL = null, cwR = null;
+  if (isCrowd) {
+    const cc = crowdCfg(st), cb = makeCrowd(SR, cc, Math.round(st.cwSeed || 0));
+    crowdLevel(cb.L, cb.R, st.cwPeak || 0);
+    const cEnd = repeat > 1 ? Math.min(slot, cc["dur"]) : cc["dur"], cRel = Math.max(atk + hold + dec, cEnd - rel);
+    cwL = new Float32Array(n); cwR = new Float32Array(n);
+    for (let i = 0, m = Math.min(n, cb.L.length); i < m; i++) {
+      const t = i / SR, k = repeat > 1 ? Math.min(repeat - 1, Math.floor(t / slot)) : 0, lt = t - k * slot;
+      let e;
+      if (lt >= cEnd) e = 0;
+      else if (lt < atk) e = atk > 0 ? lt / atk : 1;
+      else if (lt < atk + hold) e = 1;
+      else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); e = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
+      else if (lt < cRel) e = susLevel;
+      else { const r = rel > 0 ? (lt - cRel) / rel : 1; e = susLevel * Math.pow(1 - r, eexp); }
+      if (e < 0) e = 0;
+      cwL[i] = cb.L[i] * e; cwR[i] = cb.R[i] * e;
+    }
+  }
 
   // flicker's state and its own generator (seeded like the rest, so a salted layer flickers differently)
   let flSeed = sd(0x2f6b91c3), flLevel = 1, flTarget = 1, flLeft = 0;
@@ -642,6 +762,22 @@ function renderPatch(st, opts) {
       oscL = frX[i]; oscR = frX[i];                   // prebuilt creak / squeak / squeal (mono)
     } else if (isBlast) {
       oscL = blL[i]; oscR = blR[i];                   // prebuilt blast and its place (already stereo)
+    } else if (isGlass) {
+      oscL = glL[i]; oscR = glR[i];                   // prebuilt strike, break and pieces (already stereo)
+    } else if (isGun) {
+      oscL = gnL[i]; oscR = gnR[i];                   // prebuilt shot or burst and its place (already stereo)
+    } else if (isEnergy) {
+      oscL = enL[i]; oscR = enR[i];                   // prebuilt charge, shot or burst and afterglow (already stereo)
+    } else if (isChipgun) {
+      oscL = cgL[i]; oscR = cgR[i];                   // prebuilt console shot or burst (mono, centered)
+    } else if (isGunfoley) {
+      oscL = gfL[i]; oscR = gfR[i];                   // prebuilt reload, rack, casing, ricochet or pass (already stereo)
+    } else if (isVoice) {
+      if (i < voL.length) { oscL = voL[i]; oscR = voR[i]; }   // prebuilt cry (mono, centered), silence past its end
+    } else if (isMelee) {
+      if (i < mlL.length) { oscL = mlL[i]; oscR = mlR[i]; }   // prebuilt blow (already stereo), silence past its end
+    } else if (isCrowd) {
+      oscL = cwL[i]; oscR = cwR[i];                   // prebuilt crowd (already stereo, the envelope inside it)
     } else if (isWeather) {
       oscL = wxL[i]; oscR = wxR[i];                   // prebuilt weather (already stereo, the envelope inside it)
     } else if (isFlow) {
@@ -679,10 +815,13 @@ function renderPatch(st, opts) {
       const v = bowedV.tick(bowedCf.speed * ampEnvAt(lt) * dir, fOsc) * bowedG;
       oscL = v; oscR = v;
     } else if (isBar) {
-      if (shotIdx !== barShot) { barShot = shotIdx; barStart = i; barV = makeBar(SR, st, baseFreq, 0x6d0 ^ Math.round(baseFreq * 10)); }
-      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
-      const v = barV.tick(fOsc, i - barStart) * damp;
-      oscL = v; oscR = v;
+      if (keyX) { oscL = keyX[i]; oscR = oscL; }      // barPeak on: the note built and limited above
+      else {
+        if (shotIdx !== barShot) { barShot = shotIdx; barStart = i; barV = makeBar(SR, st, baseFreq, 0x6d0 ^ Math.round(baseFreq * 10)); }
+        const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+        const v = barV.tick(fOsc, i - barStart) * damp;
+        oscL = v; oscR = v;
+      }
     } else if (isFlute) {
       // a fresh pipe per shot (a burst re-tongues); the slowest pitch a sweep can reach sizes the delay lines.
       // `fluteVib` is a flute's own vibrato — the BREATH pulsing at the vibrato's rate and onset (through the jet's
@@ -692,10 +831,13 @@ function renderPatch(st, opts) {
       const v = fluteV.tick(fluteCf.blow * ampEnvAt(lt) * bv, fOsc) * fluteG;
       oscL = v; oscR = v;
     } else if (isPiano) {
-      if (shotIdx !== pianoShot) { pianoShot = shotIdx; pianoStart = i; pianoV = makePiano(SR, st, baseFreq, 0x9e37 ^ Math.round(baseFreq * 10)); }
-      const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
-      const v = pianoV.tick(fOsc, i - pianoStart) * damp;
-      oscL = v; oscR = v;
+      if (keyX) { oscL = keyX[i]; oscR = oscL; }      // pianoPeak on: the note built and limited above
+      else {
+        if (shotIdx !== pianoShot) { pianoShot = shotIdx; pianoStart = i; pianoV = makePiano(SR, st, baseFreq, 0x9e37 ^ Math.round(baseFreq * 10)); }
+        const damp = lt < relStart ? 1 : (rel > 0 ? Math.max(0, 1 - (lt - relStart) / rel) : 0);
+        const v = pianoV.tick(fOsc, i - pianoStart) * damp;
+        oscL = v; oscR = v;
+      }
     } else if (isReed) {
       if (shotIdx !== reedShot) { reedShot = shotIdx; reedV = makeReed(SR, reedCf, Math.min(baseFreq, baseFreq * Math.pow(2, -Math.abs(sweep) * 4)) * 0.8, baseFreq, reedScale, 0x5eed ^ Math.round(baseFreq * 100)); }
       // the breath rises along a RAISED COSINE through the attack, as the picked prototype's did: the reed's regime
@@ -803,9 +945,9 @@ function renderPatch(st, opts) {
     else if (lt < atk + hold) env = 1;
     else if (lt < atk + hold + dec) { const d = (lt - atk - hold) / (dec || 1e-9); env = susLevel + (1 - susLevel) * Math.pow(1 - d, eexp); }
     else if (lt < relStart) env = susLevel;
-    else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = susLevel * Math.pow(1 - r, eexp); }
+    else { const r = rel > 0 ? (lt - relStart) / rel : 1; env = r >= 1 ? 0 : susLevel * Math.pow(1 - r, eexp); }
     if (env < 0) env = 0;
-    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute && !isWeather && !isFlow) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
+    if (!isBrass && !isBowed && !isReed && !isBar && !isPiano && !isFlute && !isWeather && !isFlow && !isCrowd) { sL *= env; sR *= env; }   // the models took the envelope as their drive (or damper), above
 
     // TREMOLO and FLICKER (SFX 1.3, AJ 2026-10-28: "we're lacking ... an electrical buzzing"). Both 0 by default, so
     // every existing sound is untouched. Tremolo: the level wobbles at tremRate (up to 120 Hz: a mains hum's flutter).

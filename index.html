@@ -242,7 +242,7 @@ function setIconLabel(el, name, text) {
 
 // ---------- Parameter model ----------
 // Each param: key, label, min, max, step, default, unit, group.
-const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute", "chirp", "creature", "weather", "motor", "blast", "spring", "servo", "friction", "flow"];
+const WAVES = ["sine", "square", "saw", "triangle", "pulse", "FM", "organ", "half-sine", "pluck", "sample", "modal", "granular", "custom", "formant", "bubble", "particle", "additive", "speech", "FM 4op", "impact", "whoosh", "brass", "bowed", "reed", "bar", "piano", "flute", "chirp", "creature", "weather", "motor", "blast", "spring", "servo", "friction", "flow", "glass", "crowd", "gun", "energy", "chipgun", "gunfoley", "voice", "melee"];
 const FILTER_MODES = ["lowpass", "highpass", "bandpass", "notch", "peak"];
 
 const PARAMS = [
@@ -363,6 +363,10 @@ const PARAMS = [
   ["barMallet",   "Mallet",      0, 1, 0.01, 0.5,  "",  "Bar"],
   ["barRing",     "Ring",        0, 1, 0.01, 0.5,  "",  "Bar"],
   ["barMotor",    "Motor",       0, 1, 0.01, 0,    "",  "Bar"],
+  // Peak control to 2 (a second full pass), gunPeak's / meleePeak's (2026-11-14, AJ: "the peak control for the piano and
+  // bell engines is a good idea"): the app's limiter on the struck note alone, before the chain. 0 (off) is the bar as it
+  // always rang, byte for byte; the glockenspiels' "meet in between" level pass uses it instead of the Limiter.
+  ["barPeak",     "Peak control", 0, 2, 0.05, 0,   "",  "Bar"],
   // Piano (wave 25): stretched partials on two detuned strings (dsp.js makePiano). In DRAWN_IF_USED (wave 25 only). 0.5 is
   // the upright CrunchyBGM fitted it to on every knob but Strings (0.4 = 1.2 cents, the fit). Hammer = dark to bright;
   // Stretch = how sharp the partials run (the treble's bell-like edge); Ring = how long; Strings = the detune (shimmer).
@@ -370,6 +374,9 @@ const PARAMS = [
   ["pianoStretch","Stretch",     0, 1, 0.01, 0.5,  "",  "Piano"],
   ["pianoRing",   "Ring",        0, 1, 0.01, 0.5,  "",  "Piano"],
   ["pianoStrings","Strings",     0, 1, 0.01, 0.4,  "",  "Piano"],
+  // Peak control to 2, barPeak's: the limiter on the struck note alone, before the chain; 0 (off) is byte-identical. The
+  // pianos' "meet in between" level pass (2026-11-14) uses it instead of the Limiter.
+  ["pianoPeak",   "Peak control", 0, 2, 0.05, 0,   "",  "Piano"],
   // Flute (wave 26): an air jet driving an open pipe (dsp.js makeFlute). In DRAWN_IF_USED (wave 26 only). The defaults
   // are the flute CrunchyBGM picked by ear (§804). Breath = how hard it is blown (soft is purer; CrunchyBGM sets it from
   // velocity); Embouchure = the jet's travel time (low overblows to the octave, high is hollower); Aim = the jet off the
@@ -670,6 +677,229 @@ const PARAMS = [
   ["flowFillStart",  "Fills from",      0, 1, 0.01, 0.05, "",    "Flow"],
   ["flowVessel",     "Bottle / glass",  0, 1, 0.01, 0.2,  "",    "Flow"],
   ["flowSeed",       "Variation",       0, 999, 1, 0,     "",    "Flow"],
+  // Glass (wave 36): glass and ceramics breaking, clinking, tapped (dsp.js makeGlass). In DRAWN_IF_USED (wave 36 only),
+  // so no other sound draws them; the defaults are a plain drinking glass knocked off a table. One strike: Frequency is
+  // the intact object's lowest mode (a glass's ring, a pane's whump), Stereo width the spread of the pieces, the amp
+  // envelope a plain gain. Break 0 rings intact (a clink, a tap). Peak control is blastPeak's (the app's limiter on the
+  // glass alone, before the chain; the presets use it instead of the master Limiter). Variation is the seed: which take,
+  // so a preset names exactly the one picked by ear. Material and Shape are stored as indices: append-only.
+  ["glBreak",        "Break",           0, 1, 0.01, 1,    "",    "Glass"],
+  ["glMaterial",     "Material",        0, 4, 1, 0,       "",    "Glass", "enum", ["Glass", "Crystal", "Porcelain", "Clay", "Ice"]],
+  ["glShape",        "Shape",           0, 2, 1, 0,       "",    "Glass", "enum", ["Vessel", "Pane", "Solid"]],
+  ["glThick",        "Thickness",       0, 1, 0.01, 0.3,  "",    "Glass"],
+  ["glStriker",      "Striker",         0, 1, 0.01, 0.6,  "",    "Glass"],
+  ["glThump",        "Blow",            0, 1, 0.01, 0.2,  "",    "Glass"],
+  ["glCrack",        "Crack",           0, 1, 0.01, 0.5,  "",    "Glass"],
+  ["glPieces",       "Pieces",          0, 1, 0.01, 0.5,  "",    "Glass"],
+  ["glShard",        "Piece size",      0, 1, 0.01, 0.4,  "",    "Glass"],
+  ["glHeight",       "Fall height",     0, 1, 0.01, 0,    "",    "Glass"],
+  ["glThrow",        "Throw",           0, 1, 0.01, 0.35, "",    "Glass"],
+  ["glBounce",       "Bounce",          0, 1, 0.01, 0.5,  "",    "Glass"],
+  ["glFloor",        "Floor",           0, 1, 0.01, 0.7,  "",    "Glass"],
+  ["glSettle",       "Settle",          0, 1, 0.01, 0.3,  "",    "Glass"],
+  ["glRing",         "Ring",            0, 1, 0.01, 0.5,  "",    "Glass"],
+  ["glBeat",         "Warble",          0, 1, 0.01, 0.3,  "",    "Glass"],
+  ["glPair",         "Second glass",    0, 1, 0.01, 0,    "",    "Glass"],
+  ["glPairTune",     "Second tuning",   -4, 4, 0.01, 0,   "st",  "Glass"],
+  ["glPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Glass"],
+  ["glSeed",         "Variation",       0, 999, 1, 0,     "",    "Glass"],
+  // Crowd (wave 37): chatter, cheering, applause, an audience's ooh / aww / gasp, a chanting stadium (dsp.js makeCrowd).
+  // In DRAWN_IF_USED (wave 37 only), so no other sound draws them; the defaults are the prototype's: a small room of
+  // people talking quietly, no swell. The crowd is laid out over the Duration less its Ring-out (where only the room
+  // rings), Stereo width is how far round you the people stand, the amp envelope a plain gain that ends where the crowd
+  // does. Peak control is blastPeak's / glPeak's (the app's limiter on the crowd alone, before the chain; the presets use
+  // it instead of the master Limiter). Variation is the seed: which take, so a preset names exactly the one picked by
+  // ear. Call and Chant are stored as indices: append-only.
+  ["cwSize",         "Crowd size",      0, 1, 0.01, 0.4,  "",    "Crowd"],
+  ["cwVoices",       "Voices",          0, 1, 0.01, 1,    "",    "Crowd"],
+  ["cwMood",         "Excitement",      0, 1, 0.01, 0.3,  "",    "Crowd"],
+  ["cwCalls",        "Calling out",     0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwCall",         "Call",            0, 7, 1, 0,       "",    "Crowd", "enum", ["cheer", "aah", "ooh", "aww", "boo", "gasp", "laugh", "aww (sweet)"]],
+  ["cwGroup",        "Group size",      0, 1, 0.01, 0.4,  "",    "Crowd"],
+  ["cwFemale",       "Women",           0, 1, 0.01, 0.5,  "",    "Crowd"],
+  ["cwChildren",     "Children",        0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwSync",         "Together",        0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwTempo",        "Chant tempo",     50, 200, 1, 120,  "BPM", "Crowd"],
+  ["cwChant",        "Chant",           0, 3, 1, 0,       "",    "Crowd", "enum", ["hey", "da-DUM", "da-da-DUM", "clap-clap-hey"]],
+  ["cwClap",         "Clapping",        0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwClapRate",     "Clap rate",       1, 7, 0.1, 4,     "Hz",  "Crowd"],
+  ["cwWhistle",      "Whistles",        0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwStart",        "Swell start",     0, 1, 0.01, 1,    "",    "Crowd"],
+  ["cwPeakAt",       "Swell peak at",   0, 1, 0.01, 0.3,  "",    "Crowd"],
+  ["cwEnd",          "Swell end",       0, 1, 0.01, 1,    "",    "Crowd"],
+  ["cwTail",         "Ring-out",        0, 2, 0.01, 0,    "s",   "Crowd"],
+  ["cwDistance",     "Distance",        0, 1, 0.01, 0,    "",    "Crowd"],
+  ["cwPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Crowd"],
+  ["cwSeed",         "Variation",       0, 999, 1, 0,     "",    "Crowd"],
+  // Gun (wave 38): gunshots DESIGNED for game sound (dsp.js makeGun): a clipped snap, a pitch-dropping body and the muzzle
+  // pop, the gas roar, a saturated crack, the action's mechanism, the place; then a gun-tuned crunch stage (saturation, a
+  // compressor on the shot, a soft clip, optional bits and rate cut). In DRAWN_IF_USED (wave 38 only), so no other sound
+  // draws them; the defaults are a 9 mm pistol fired once outdoors, lightly crunched. Fire rate and Rounds make a burst
+  // that re-fires the WHOLE shot every round (its own noise, pitch, level and cycle time, the mechanism cycling, the
+  // tails building), so a gun preset keeps Repeat at 1. Casings default to 0 (AJ: no after-sound layered on a shot; a
+  // pump or bolt racks AFTER the shot, so their presets carry Mechanism 0). Stereo width is the patch's own, the amp
+  // envelope a plain gain; Peak control is blastPeak's / glPeak's (the app's limiter on the gun alone, before the chain).
+  // Variation is the seed: which take, never Math.random.
+  ["gunCaliber",     "Caliber",         0, 1, 0.01, 0.32, "",    "Gun"],
+  ["gunBarrel",      "Barrel",          0, 1, 0.01, 0.3,  "",    "Gun"],
+  ["gunAction",      "Action",          0, 6, 1, 1,       "",    "Gun", "enum", ["None", "Slide", "Revolver", "Pump", "Bolt", "Rifle auto", "Belt-fed"]],
+  ["gunSnap",        "Snap",            0, 1, 0.01, 0.6,  "",    "Gun"],
+  ["gunPunch",       "Punch",           0, 1, 0.01, 0.7,  "",    "Gun"],
+  ["gunCrack",       "Crack",           0, 1, 0.01, 0.5,  "",    "Gun"],
+  ["gunMech",        "Mechanism",       0, 1, 0.01, 0.4,  "",    "Gun"],
+  ["gunCasing",      "Casings",         0, 1, 0.01, 0,    "",    "Gun"],
+  ["gunPlace",       "Place",           0, 5, 1, 1,       "",    "Gun", "enum", ["Dry", "Outdoors", "Street", "Room", "Warehouse", "Canyon"]],
+  ["gunTail",        "Tail",            0, 1, 0.01, 0.5,  "",    "Gun"],
+  ["gunSuppress",    "Suppressor",      0, 1, 0.01, 0,    "",    "Gun"],
+  ["gunCrunch",      "Crunch",          0, 1, 0.01, 0.3,  "",    "Gun"],
+  ["gunComp",        "Compression",     0, 1, 0.01, 0.5,  "",    "Gun"],
+  ["gunBits",        "Bits",            0, 1, 0.01, 0,    "",    "Gun"],
+  ["gunRateCut",     "Rate cut",        0, 1, 0.01, 0,    "",    "Gun"],
+  ["gunRPM",         "Fire rate",       60, 1500, 1, 700, "rpm", "Gun"],
+  ["gunRounds",      "Rounds",          1, 60, 1, 1,      "",    "Gun"],
+  ["gunJitter",      "Shot to shot",    0, 1, 0.01, 0.4,  "",    "Gun"],
+  ["gunBoltLock",    "Empty click",     0, 1, 0.01, 0,    "",    "Gun"],
+  ["gunPeak",        "Peak control",    0, 2, 0.01, 0,    "",    "Gun"],
+  ["gunSeed",        "Variation",       0, 999, 1, 0,     "",    "Gun"],
+  // Energy (wave 39): energy weapons, plasma, rail, pulse and ion (dsp.js makeEnergy): an optional charge, the discharge
+  // (one model per Type) with its hard transient, the bolt leaving (a doppler whine, or a railgun's air tear), the
+  // recoil's kick, the afterglow (sizzle, coils cooling, a vent), and its own 4x oversampled crunch on the gun alone.
+  // In DRAWN_IF_USED (wave 39 only), so no other sound draws them; the defaults are the prototype's, a mid-sized plasma
+  // rifle fired once. Frequency is the discharge's starting pitch (a railgun's rails' lowest mode). Rate and Rounds make
+  // automatic fire that re-fires the WHOLE shot every round (its own noise and its own small variation, Heat sagging the
+  // pitch and growing the afterglow), so an energy preset keeps Repeat at 1. Stereo width is the patch's own, the amp
+  // envelope a plain gain; Peak control is gunPeak's (the app's limiter on the weapon alone, before the chain). Variation
+  // is the seed: which take, never Math.random. Type is stored as an index: append-only.
+  ["enType",         "Type",            0, 3, 1, 0,       "",    "Energy", "enum", ["Plasma", "Rail", "Pulse", "Ion"]],
+  ["enPower",        "Power",           0, 1, 0.01, 0.5,  "",    "Energy"],
+  ["enCharge",       "Charge time",     0, 2.5, 0.01, 0,  "s",   "Energy"],
+  ["enPunch",        "Punch",           0, 1, 0.01, 0.6,  "",    "Energy"],
+  ["enCrunch",       "Crunch",          0, 1, 0.01, 0.4,  "",    "Energy"],
+  ["enBolt",         "Bolt",            0, 1, 0.01, 0.5,  "",    "Energy"],
+  ["enTail",         "Tail",            0, 1, 0.01, 0.4,  "",    "Energy"],
+  ["enVent",         "Vent",            0, 1, 0.01, 0.3,  "",    "Energy"],
+  ["enStages",       "Coil stages",     1, 8, 1, 1,       "",    "Energy"],
+  ["enRate",         "Rate",            1, 25, 0.1, 10,   "/s",  "Energy"],
+  ["enRounds",       "Rounds",          1, 60, 1, 1,      "",    "Energy"],
+  ["enVary",         "Shot variation",  0, 1, 0.01, 0.3,  "",    "Energy"],
+  ["enHeat",         "Heat",            0, 1, 0.01, 0.3,  "",    "Energy"],
+  ["enPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Energy"],
+  ["enSeed",         "Variation",       0, 999, 1, 0,     "",    "Energy"],
+  // Chip gun (wave 40): the retro console gunshot, pistols, shotguns, full auto and blasters (dsp.js makeChipgun): three
+  // old machines (an 8-bit console's pulse, triangle and noise channels; an FM console with its noise chip; a 16-bit
+  // sampler playing a crushed recording) driven once a 60 Hz frame the way a game's sound driver drove them. In
+  // DRAWN_IF_USED (wave 40 only), so no other sound draws them; the defaults are the prototype's, one 8-bit pistol round.
+  // Rate and Rounds fire ON FRAMES and every round re-triggers the same channels, cutting the last one's tail (Channels
+  // lets tails ring under the next), so a chip gun preset keeps Repeat at 1. MONO (the machines were): Stereo width does
+  // nothing to it, the amp envelope is a plain gain; Peak control is enPeak's (the app's limiter on the gun alone, before
+  // the chain). Variation is the seed: which take, never Math.random. Machine is stored as an index: append-only. Every
+  // label and help line describes a machine by its SOUND, never by a console's or a chip's name (the web suite holds it).
+  ["cgConsole",      "Machine",         0, 2, 1, 0,       "",    "Chip gun", "enum", ["8-bit console (pulse + noise)", "FM console (+ noise chip)", "16-bit sampler"]],
+  ["cgCaliber",      "Caliber",         0, 1, 0.01, 0.35, "",    "Chip gun"],
+  ["cgSnap",         "Snap",            0, 1, 0.01, 0.6,  "",    "Chip gun"],
+  ["cgThump",        "Thump",           0, 1, 0.01, 0.6,  "",    "Chip gun"],
+  ["cgSweep",        "Noise sweep",     0, 1, 0.01, 0.5,  "",    "Chip gun"],
+  ["cgLength",       "Length",          0, 1, 0.01, 0.5,  "",    "Chip gun"],
+  ["cgMetal",        "Metal",           0, 1, 0.01, 0,    "",    "Chip gun"],
+  ["cgZap",          "Zap",             0, 1, 0.01, 0,    "",    "Chip gun"],
+  ["cgEcho",         "Echo",            0, 1, 0.01, 0,    "",    "Chip gun"],
+  ["cgCrunch",       "Crunch",          0, 1, 0.01, 0.25, "",    "Chip gun"],
+  ["cgRate",         "Rate",            2, 30, 0.1, 12,   "/s",  "Chip gun"],
+  ["cgRounds",       "Rounds",          1, 40, 1, 1,      "",    "Chip gun"],
+  ["cgVary",         "Shot variation",  0, 1, 0.01, 0.3,  "",    "Chip gun"],
+  ["cgVoices",       "Channels",        1, 4, 1, 1,       "",    "Chip gun"],
+  ["cgPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Chip gun"],
+  ["cgSeed",         "Variation",       0, 999, 1, 0,     "",    "Chip gun"],
+  // Gun foley (wave 41): everything AROUND the shot (dsp.js makeGunfoley): reloads, a bolt worked, a pump racked, a
+  // revolver's cylinder, dry fire, casings landing, ricochets and bullets passing; a gun's mechanism as small steel and
+  // polymer parts meeting inside a body, by a script with human timing. These are what a user layers after a gun-engine
+  // shot (the gun presets carry no after-sound). In DRAWN_IF_USED (wave 41 only), so no other sound draws them; the
+  // defaults are the prototype's, a polymer pistol reloaded. Stereo width is the patch's own, the amp envelope a plain
+  // gain; Peak control is gunPeak's (the app's limiter on the foley alone, before the chain). Variation is the seed: which
+  // take, never Math.random. Action, Frame, Case, Surface and Load are stored as indices: append-only.
+  ["gfAction",       "Action",          0, 9, 1, 0,       "",    "Gun foley", "enum", ["Pistol reload", "Rifle reload", "Bolt cycle", "Pump rack", "Revolver spin", "Dry fire", "Casing", "Ricochet", "Bullet pass", "Bolt reload"]],
+  ["gfFrame",        "Frame",           0, 2, 1, 0,       "",    "Gun foley", "enum", ["Polymer", "Steel", "Wood and steel"]],
+  ["gfWeight",       "Weight",          0, 1, 0.01, 0.4,  "",    "Gun foley"],
+  ["gfTempo",        "Tempo",           0, 1, 0.01, 0.5,  "",    "Gun foley"],
+  ["gfCrisp",        "Crispness",       0, 1, 0.01, 0.5,  "",    "Gun foley"],
+  ["gfSpring",       "Springs",         0, 1, 0.01, 0.5,  "",    "Gun foley"],
+  ["gfHandling",     "Handling",        0, 1, 0.01, 0.3,  "",    "Gun foley"],
+  ["gfRack",         "Slide",           0, 1, 1, 0,       "",    "Gun foley", "enum", ["Release lever", "Rack it"]],
+  ["gfCock",         "Hammer",          0, 1, 1, 0,       "",    "Gun foley", "enum", ["Left down", "Cocked after"]],
+  ["gfMagDrop",      "Mag drop",        0, 1, 0.01, 0,    "",    "Gun foley"],
+  ["gfCasing",       "Ejected case",    0, 1, 0.01, 0,    "",    "Gun foley"],
+  ["gfCase",         "Case",            0, 2, 1, 0,       "",    "Gun foley", "enum", ["Pistol brass", "Rifle brass", "Shotgun hull"]],
+  ["gfSurface",      "Surface",         0, 3, 1, 0,       "",    "Gun foley", "enum", ["Concrete", "Wood", "Dirt", "Metal"]],
+  ["gfDrop",         "Drop height",     0, 1, 0.01, 0.6,  "",    "Gun foley"],
+  ["gfDist",         "Distance",        0, 1, 0.01, 0.2,  "",    "Gun foley"],
+  ["gfSpeed",        "Bullet speed",    0, 1, 0.01, 0.75, "",    "Gun foley"],
+  ["gfPast",         "Bullet path",     0, 1, 1, 1,       "",    "Gun foley", "enum", ["Flies away", "Flies past you"]],
+  ["gfLoad",         "Load",            0, 2, 1, 0,       "",    "Gun foley", "enum", ["Thumbed in", "Stripper clip", "Single round"]],
+  ["gfRounds",       "Rounds",          1, 5, 1, 5,       "",    "Gun foley"],
+  ["gfPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Gun foley"],
+  ["gfSeed",         "Variation",       0, 999, 1, 0,     "",    "Gun foley"],
+  // Voice (wave 42): a person's vocal effort, the game voice clip (dsp.js makeVoice): battle and sword cries, a jump's
+  // "hup", hurt grunts, death yells, falling screams, as a short script (onset, vowels and consonants, coda) with a pitch
+  // gesture made with effort, roughness and breath, then a character stage (clean, a hot close mic, or the 16-bit
+  // sampler). In DRAWN_IF_USED (wave 42 only), so no other sound draws them. Effort, Roughness and Breath are CENTERED:
+  // 0.5 is the cry as scripted. The "custom" Cry type reads Onset, Coda, Rise, Fall, Peak at and the Body text (the
+  // patch's `voBody`, an SFX_EXTRAS field, typed in the panel). Mono; the amp envelope a plain gain; Peak control is
+  // gfPeak's (the app's limiter on the voice alone, before the chain). Variation is the seed: which take, never
+  // Math.random. Cry type, Voice, Onset and Coda are stored as indices: append-only. The group is "Vocal": "Voice" is
+  // the engine picker's family (formant, speech, crowd and this).
+  ["voCry",          "Cry type",        0, 10, 1, 2,      "",    "Vocal", "enum", ["Grunt", "Hup (a jump)", "Battle cry", "Sword cry", "Hurt", "Big hurt", "Death cry", "Fall scream", "Fear scream", "Laugh", "Custom"]],
+  ["voVoice",        "Voice",           0, 2, 1, 0,       "",    "Vocal", "enum", ["Man", "Woman", "Kid"]],
+  ["voAge",          "Age",             0, 1, 0.01, 0.5,  "",    "Vocal"],
+  ["voSize",         "Size",            0.7, 1.5, 0.01, 1, "x",  "Vocal"],
+  ["voPitch",        "Pitch",           -12, 12, 0.1, 0,  "st",  "Vocal"],
+  ["voEffort",       "Effort",          0, 1, 0.01, 0.5,  "",    "Vocal"],
+  ["voLength",       "Length",          0.5, 2, 0.01, 1,  "x",   "Vocal"],
+  ["voRough",        "Roughness",       0, 1, 0.01, 0.5,  "",    "Vocal"],
+  ["voBreath",       "Breath",          0, 1, 0.01, 0.5,  "",    "Vocal"],
+  ["voExpress",      "Expression",      0, 2, 0.01, 1,    "x",   "Vocal"],
+  ["voAway",         "Fall away",       0, 1, 0.01, 0,    "",    "Vocal"],
+  ["voLofi",         "Lo-fi",           0, 1, 0.01, 0,    "",    "Vocal"],
+  ["voEcho",         "Echo",            0, 1, 0.01, 0,    "",    "Vocal"],
+  ["voStoreFollow",  "Store follows pitch", 0, 1, 0.01, 0, "",   "Vocal"],
+  ["voOnset",        "Onset",           0, 16, 1, 1,      "",    "Vocal", "enum", ["None", "Hard attack", "h", "t", "k", "p", "b", "d", "g", "r", "y", "w", "m", "n", "hy", "f", "s"]],
+  ["voCoda",         "Coda",            0, 8, 1, 0,       "",    "Vocal", "enum", ["Open", "Glottal stop", "Breath out (h)", "Creak (gh)", "t", "k", "p", "f", "Trail off"]],
+  ["voRise",         "Rise",            -12, 24, 0.1, 4,  "st",  "Vocal"],
+  ["voFall",         "Fall",            -24, 12, 0.1, -4, "st",  "Vocal"],
+  ["voPeakAt",       "Peak at",         0, 1, 0.01, 0.3,  "",    "Vocal"],
+  ["voPeak",         "Peak control",    0, 2, 0.01, 0,    "",    "Vocal"],
+  ["voSeed",         "Variation",       0, 999, 1, 41,    "",    "Vocal"],
+  // Melee (wave 43): a weapon swung and LANDING in something (dsp.js makeMelee): the swing (air past the weapon, by its
+  // shape and speed), the contact into a material (Target x Hit: a recipe of physical components), the body's weight, a
+  // designed Thump and Bone crunch, a Snap on the contact, Exaggerate toward the fighting-game end; then its own crunch
+  // stage (saturation, a compressor, bits, a rate cut) and the place. In DRAWN_IF_USED (wave 43 only), so no other sound
+  // draws them. Stereo; the amp envelope a plain gain; Peak control is gunPeak's (the app's limiter on the HIT alone,
+  // before the swing joins). Variation is the seed: which take, never Math.random. Weapon, Target, Hit and Place are
+  // stored as indices: append-only.
+  ["meleeWeapon",    "Weapon",          0, 11, 1, 2,      "",    "Melee", "enum", ["Fist", "Dagger", "Sword", "Katana", "Axe", "Hammer / mace", "Spear", "Whip", "Staff", "Kick", "Flail", "Rapier"]],
+  ["meleeTarget",    "Target",          0, 8, 1, 1,       "",    "Melee", "enum", ["Air (a miss)", "Flesh", "Cloth / leather", "Mail", "Plate armor", "Wooden shield", "Stone", "Ground", "Steel blade (a clash)"]],
+  ["meleeHit",       "Hit",             0, 3, 1, 0,       "",    "Melee", "enum", ["Auto (the weapon's own)", "Edge", "Blunt", "Point"]],
+  ["meleeWeight",    "Weight",          0, 1, 0.01, 0.5,  "",    "Melee"],
+  ["meleeSpeed",     "Speed",           0, 1, 0.01, 0.5,  "",    "Melee"],
+  ["meleeSwing",     "Swing",           0, 1, 0.01, 0.5,  "",    "Melee"],
+  ["meleeContact",   "Contact",         0, 1, 0.01, 0.8,  "",    "Melee"],
+  ["meleeBody",      "Body",            0, 1, 0.01, 0.6,  "",    "Melee"],
+  ["meleeRing",      "Ring",            0, 1, 0.01, 0.4,  "",    "Melee"],
+  ["meleeScrape",    "Scrape",          0, 1, 0.01, 0.3,  "",    "Melee"],
+  ["meleeSnap",      "Snap",            0, 1, 0.01, 0.4,  "",    "Melee"],
+  ["meleeHype",      "Exaggerate",      0, 1, 0.01, 0,    "",    "Melee"],
+  ["meleeThump",     "Thump",           0, 1, 0.01, 0,    "",    "Melee"],
+  ["meleeBone",      "Bone crunch",     0, 1, 0.01, 0,    "",    "Melee"],
+  ["meleeSpins",     "Spins",           1, 4, 1, 1,       "",    "Melee"],
+  ["meleeCrunch",    "Crunch",          0, 1, 0.01, 0.3,  "",    "Melee"],
+  ["meleeComp",      "Compression",     0, 1, 0.01, 0.5,  "",    "Melee"],
+  ["meleeBits",      "Bits",            0, 1, 0.01, 0,    "",    "Melee"],
+  ["meleeRateCut",   "Rate cut",        0, 1, 0.01, 0,    "",    "Melee"],
+  ["meleePlace",     "Place",           0, 4, 1, 0,       "",    "Melee", "enum", ["Dry", "Room", "Stone hall", "Outdoors", "Cave"]],
+  ["meleeTail",      "Tail",            0, 1, 0.01, 0.3,  "",    "Melee"],
+  // Peak control to 2 (a second full pass), like gunPeak's row: 2026-11-14, AJ's "meet in between" loudness pass lifts
+  // the high-crest melee presets halfway to the level of the ones they replaced (SOUND-REVIEW.md).
+  ["meleePeak",      "Peak control",    0, 2, 0.05, 0,    "",    "Melee"],
+  ["meleeSeed",      "Variation",       0, 999, 1, 0,     "",    "Melee"],
   // Additive / spectral pad (wave "additive"): a stack of harmonics, each with its own slowly
   // drifting amplitude → evolving pads / drones / choirs. Ignored unless wave is "additive".
   ["addPartials", "Partials",   1, 48, 1, 12, "",     "Additive"],
@@ -838,10 +1068,12 @@ const PARAM_HELP = {
   barMallet: "How hard the mallet is: soft yarn is round and mellow, hard plastic or brass is bright with a click.",
   barRing: "How long the bar rings after the strike: short and dry to long and singing.",
   barMotor: "A vibraphone's spinning-fan tremolo: the ring pulses in and out.",
+  barPeak: "Tames the very first instant of the strike so the whole note can be louder: a struck bar is almost all strike, then a ring. Up to 1 squeezes it once; past 1 squeezes it again. It works on the bar alone, before the effects. The glockenspiel presets use this instead of the Limiter.",
   pianoHammer: "How hard the hammer's felt is: soft is warm and round, hard is bright and ringing.",
   pianoStretch: "How far the overtones run sharp: none is pure, more gives the high notes a glassy, bell-like edge.",
   pianoRing: "How long the strings ring: short and dry to long and singing.",
   pianoStrings: "How far apart each note's strings are tuned: in tune is pure, apart shimmers like an old upright.",
+  pianoPeak: "Tames the very first instant of the hammer so the whole note can be louder: a piano note is almost all strike, then a ring. Up to 1 squeezes it once; past 1 squeezes it again. It works on the piano alone, before the effects. The piano presets use this instead of the Limiter.",
   fluteBreath: "How hard it's blown: soft is round and pure, full is brighter.",
   fluteJet: "The lips' distance to the edge: low jumps up to the octave, the middle is a flute, high turns hollow.",
   fluteAim: "Where the air hits the edge: dead center is hollow like a clarinet, a little off is a flute's fuller tone.",
@@ -1083,6 +1315,164 @@ const PARAM_HELP = {
   flowFillStart: "Pour: how full it is at the start.",
   flowVessel: "Pour: a narrow, tall bottle (a clear rising note) to a wide, short glass (mostly splash with a rising color).",
   flowSeed: "Which take: each number is a different (but repeatable) pattern of gurgles, waves or pour, with the same settings.",
+  glBreak: "How badly it breaks: 0 rings whole (a clink, a tap), a little is a crack and a few chips, 1 is smashed to pieces. The object's own ring is cut short the moment it goes.",
+  glMaterial: "What it is made of: glass, crystal (rings far longer), porcelain (stiff but lossier), clay (dull, gritty, quick to stop) or ice (dull, crackly, slides).",
+  glShape: "What shape it is: a vessel (a glass, a bottle, a vase: its ring warbles), a pane (a window, a plate: a low whump, the pieces dropping out of the frame) or a solid lump (an ice cube, a chunk).",
+  glThick: "How thick it is, from a thin wine glass to a bottle or a plate: thicker pieces ring higher and land heavier.",
+  glStriker: "What hits it: soft (a fingertip, a fist, a table edge: a dull knock) to hard (a spoon, a stone, the floor: a bright tick that rings every mode).",
+  glThump: "The low thud of what hit it: a stone, a fist, the floor.",
+  glCrack: "The fracture itself: the sharp snaps of the crack running and the fizz of tiny cracks around it.",
+  glPieces: "How many pieces, from a few to hundreds. This sets how dense the falling debris is, not how loud.",
+  glShard: "How big the pieces are: tiny slivers that tinkle high to chunks that clunk lower.",
+  glHeight: "How far the pieces fall, up to 3 m: farther lands later and harder. A pane's pieces fall from anywhere up its height.",
+  glThrow: "How hard the pieces are thrown up and out: thrown pieces are in the air a moment before they land.",
+  glBounce: "How lively each piece is when it lands: from one dead landing to several bounces, the gaps getting shorter.",
+  glFloor: "What the pieces land on: soft (wood, carpet: dull landings and the floor knocking) to hard (tile, stone: bright).",
+  glSettle: "The big pieces rocking to rest (a quickening run of ticks, like a coin settling) and sliding.",
+  glRing: "How long it rings: damped (held in the hand, full of drink) to ringing free.",
+  glBeat: "How much a vessel's ring warbles: each tone is a close pair that beats, slowly to quickly.",
+  glPair: "A second glass, for a toast: how loudly the other glass rings with this one (0 = just one).",
+  glPairTune: "How far the second glass is tuned from the first, in semitones.",
+  glPeak: "Tames the very first instant so the whole break can be louder: a break is almost all crack. Up to 1 squeezes it once; past 1 squeezes it again. The glass presets use this instead of the Limiter.",
+  glSeed: "Which take: each number is a different (but repeatable) break, the pieces and where they land, with the same settings.",
+  cwSize: "How many people, from a handful (every one a voice you can pick out) to 3000 (the nearest few distinct, the rest a roar). A bigger crowd is only a little louder, but much thicker.",
+  cwVoices: "How many of them use their voice. 0 is a silent hall where people only clap.",
+  cwMood: "How worked up they are: hushed (soft, dark, breathy, slow) to shouting (higher, brighter, louder, quicker).",
+  cwCalls: "How many call out (the Call below) instead of talking.",
+  cwCall: "What the callers shout: a cheer (aah, yeah, woo and hey mixed), aah, ooh (impressed), aww (let down), boo, a gasp, a laugh, or aww (at something sweet). Ooh, aww and the gasp are said once by each person as they react.",
+  cwGroup: "How many talk together in each conversation: everyone on their own, pairs and threes, or tables of eight where one speaks and the rest listen and say \"mm\".",
+  cwFemale: "How many of the grown-ups are women (the rest men).",
+  cwChildren: "How many are children: higher, smaller voices.",
+  cwSync: "How together they are: everyone in their own time, or chanting and clapping on one beat (the far side of a stadium still a moment late).",
+  cwTempo: "The beat they chant and clap together on, when Together is up.",
+  cwChant: "What a crowd chants together: HEY on every beat, da-DUM (\"de-FENSE\"), da-da-DUM, or clap, clap, HEY.",
+  cwClap: "How many clap. Each person claps at their own pace with their own hands: flat palms ring bright, cupped hands pop low.",
+  cwClapRate: "How fast each person claps, in claps a second (everyone a little faster or slower than this).",
+  cwWhistle: "Two-finger whistles from people here and there.",
+  cwStart: "How many have joined in at the start (the swell: 0 = nobody yet, 1 = everyone).",
+  cwPeakAt: "When everyone has joined, as a share of the sound.",
+  cwEnd: "How many are still going at the end.",
+  cwTail: "Seconds at the end with the crowd stopped and only the room (the reverb) ringing on. The crowd lasts the Duration less this.",
+  cwDistance: "How far away the crowd is: among them, or out across a square (the air takes the top off, the near voices go, the crowd narrows).",
+  cwPeak: "Tames the sharpest instants (a clap's slap) so the whole crowd can be louder. Up to 1 squeezes it once; past 1 squeezes it again. The crowd presets use this instead of the Limiter.",
+  cwSeed: "Which take: each number is a different (but repeatable) crowd, who stands where and what they say, with the same settings.",
+  gunCaliber: "How big the round is, from a small pistol to a heavy machine gun: bigger is a deeper, longer thump and more gas roar.",
+  gunBarrel: "Short and boxy (a handgun's hollow bark) to long and cracking (a rifle: a higher, sharper crack with the bullet's supersonic snap).",
+  gunAction: "How the gun works, heard with the shot: a pistol's slide, a revolver's hammer, an assault rifle's bolt cycling every round, a belt-fed's heavy open bolt. A pump or a bolt is racked AFTER the shot (turn Mechanism up to hear it).",
+  gunSnap: "The hard, clipped click of the very first instant: what makes a shot feel instant.",
+  gunPunch: "The weight: a low thump that drops in pitch, and the muzzle's pop.",
+  gunCrack: "The bright, saturated crack on top of the shot (the gas roar under it follows the caliber).",
+  gunMech: "How loud the gun's own metal is: the slide, hammer or bolt.",
+  gunCasing: "Spent casings thrown out, landing and bouncing about half a second later (in a burst, a rain of brass).",
+  gunPlace: "Where it is fired: dry, outdoors (a slap-back off a building and a rolling tail), a street (the facades' flutter), a room, a warehouse (a long metal tail) or a canyon (echoes off the rock).",
+  gunTail: "How much of the place you hear, and how long it rings.",
+  gunSuppress: "A suppressor: the crack and the snap go, the shot becomes a short, tight \"pfft\" with weight, and the gun's metal comes forward.",
+  gunCrunch: "How hard the shot is driven: clean, to saturated, to a clipped, crunchy arcade blast.",
+  gunComp: "How hard the shot is squeezed: more lets the first instant through and pulls the body up behind it, so it hits harder.",
+  gunBits: "The retro end: fewer bits, a grainier, crunchier shot (0 is clean).",
+  gunRateCut: "The retro end: a lower sample rate, a gritty, aliased shot like an old console (0 is the full rate).",
+  gunRPM: "How fast it fires, in rounds a minute, when Rounds is more than 1.",
+  gunRounds: "How many shots one press fires: 1 is a single shot, 3 a burst, more is automatic fire. Every round is a whole new shot.",
+  gunJitter: "How much each round differs from the last in a burst: its pitch, its level, its crack and its timing.",
+  gunBoltLock: "The empty click after the last round: an assault rifle's bolt locking back on an empty magazine, or a belt-fed's bolt slamming home harder.",
+  gunPeak: "Tames the very first instant so the whole shot can be louder: a gunshot is almost all spike. Up to 1 squeezes it once; past 1 squeezes it again. The gun presets use this instead of the Limiter.",
+  gunSeed: "Which take: each number is a different (but repeatable) shot or burst, with the same settings.",
+  enType: "What kind of energy weapon: plasma (a dense, hot burst dropping in pitch), rail (a slug thrown by magnets: a metal slam, a supersonic crack, the rails ringing and an electric zap), pulse (a clean, tight packet) or ion (a crackling arc).",
+  enPower: "How big the weapon is, from a sidearm to a cannon: more is lower, longer and heavier, with a deeper kick and a slower bolt.",
+  enCharge: "How long it charges before it fires: a whine climbing as it fills, over a coil hum. 0 fires at once.",
+  enPunch: "The kick in the shooter's hands: a low thump that drops in pitch. The weight under the shot.",
+  enCrunch: "How hard the weapon is driven: clean, to saturated, to clipped with grit. The shot and its kick clip into each other; the very first instant stays sharp.",
+  enBolt: "The bolt leaving: a glowing whine that falls in pitch and fades as it flies away from you. On a railgun, the slug tearing the air.",
+  enTail: "What it leaves behind after the last shot: a sizzle, the coils cooling down.",
+  enVent: "A hiss of pressure let out just after the shot, with a low chuff.",
+  enStages: "Rail only: more than 1 makes it a coilgun, the coils firing one after another as the slug speeds up, each a little higher.",
+  enRate: "How fast it fires, in shots a second, when Rounds is more than 1.",
+  enRounds: "How many shots one press fires: 1 is a single shot, more is automatic fire. Every round is a whole new shot.",
+  enVary: "How much each round differs from the last in a burst: its pitch, its level and its timing.",
+  enHeat: "How much a burst heats the weapon: the pitch sags round by round, the noise thickens and the afterglow grows.",
+  enPeak: "Tames the very first instant so the whole shot can be louder: a weapon is almost all spike. Up to 1 squeezes it once; past 1 squeezes it again. The energy presets use this instead of the Limiter.",
+  enSeed: "Which take: each number is a different (but repeatable) shot or burst, with the same settings.",
+  cgConsole: "Which old machine fires it: an 8-bit console (two pulse channels, a triangle and a 4-bit noise channel: a clean hiss that steps darker and a triangle thunk), an FM console (tones fed back on themselves into grit, a square-wave noise chip swept beside them: the crunchiest), or a 16-bit sampler (a recorded shot stored small and played back at the wrong pitch: a darker, gritty boom with a hardware echo).",
+  cgCaliber: "How big the gun is, from a small pistol to a cannon: bigger is darker and longer, with a lower kick (on the sampler, the same recording played lower).",
+  cgSnap: "The very first frame: the brightest burst of noise and a falling pop. What makes the shot snap instead of just starting.",
+  cgThump: "The kick under the shot: a triangle stepping down in pitch, an FM sine, or the recording's boom.",
+  cgSweep: "How far the hiss falls through the shot, a frame at a time: the \"pshhh\". On a blaster, how far the zap falls in pitch.",
+  cgLength: "How long the shot lasts: from half to twice the caliber's own length.",
+  cgMetal: "A metallic ring: the noise switched to its buzzing mode for the first frames, clanging FM, or a ring in the recording.",
+  cgZap: "Gunpowder to blaster: a falling tone takes over from the noise (the shooter's \"pew\").",
+  cgEcho: "An echo: the game replaying the shot quieter just after it ends, or the sampler's own hardware echo.",
+  cgCrunch: "How crushed the output is: a lower sample rate (with real aliasing) and fewer bits. On the sampler, the shot is stored smaller and played back without smoothing.",
+  cgRate: "How fast it fires, in rounds a second, when Rounds is more than 1. Rounds fire on the machine's 60 frames a second, so the rate snaps to a whole number of frames, exactly as steady as the old games.",
+  cgRounds: "How many shots one press fires: 1 is a single shot, more is automatic fire. Each round restarts the same channels, cutting the last one off.",
+  cgVary: "How much each round differs in a burst, the way old games varied it: the hiss a step brighter or darker, the volume a step down, the pitch a few percent.",
+  cgVoices: "How many channels the rounds take turns on: 1 cuts every round's tail with the next (the old one-channel feel); more lets each tail ring under the next. The noise is always one channel.",
+  cgPeak: "Tames the very first instant so the whole shot can be louder. Up to 1 squeezes it once; past 1 squeezes it again. The chip gun presets use this instead of the Limiter.",
+  cgSeed: "Which take: each number is a different (but repeatable) shot or burst, with the same settings.",
+  gfAction: "What happens: a pistol or rifle magazine reload, a bolt worked between shots, a pump racked, a revolver's cylinder opened, spun and flicked shut, dry fire (the trigger on an empty gun), a spent case landing, a ricochet, a bullet passing you, or a bolt-action reload (the rounds loaded).",
+  gfFrame: "What the gun is made of: a polymer frame (a dull, short \"tok\" under the steel parts), an all-steel frame (it rings), or a steel action in a wooden stock (the stock's low hollow knock under the steel).",
+  gfWeight: "How big and heavy the gun is: heavier parts ring lower and the whole weapon thumps more in the hand.",
+  gfTempo: "How fast the hands are: deliberate on the left, a fast practiced reload on the right.",
+  gfCrisp: "Natural foley on the left (softer contacts, more slide and handling noise, human timing) to exaggerated game foley on the right (harder, brighter contacts, longer rings on the big hits, more thump and spring, tighter timing).",
+  gfSpring: "The springs: the \"ting\" of a recoil or magazine spring and the \"sproing\" of a buffer or hammer spring.",
+  gfHandling: "Hands on the gun: the rustle of a grip and a palm. Natural foley has it; game foley cleans it out (Crispness turns it down too).",
+  gfRack: "A pistol reload ends with the slide-release lever (the slide flies home on its own) or with the slide racked by hand (pulled back and let go).",
+  gfCock: "A revolver: leave the hammer down after closing the cylinder, or cock it (the first click, the cylinder turning, the full-cock click).",
+  gfMagDrop: "A pistol reload: how loud the empty magazine is as it lands on the Surface. 0 leaves it out.",
+  gfCasing: "An action that throws out a case (a bolt, a pump): how loud the case is as it lands on the Surface. 0 leaves it out.",
+  gfCase: "What lands: a small pistol case (a high tinkle), a longer rifle case, or a shotgun hull (a dull plastic tock with a brass head).",
+  gfSurface: "What it lands on (or what a ricochet hits): concrete (bright, bouncy, a grit tick and a roll), wood (the boards knock under it), dirt (a soft thud, no bounce), or metal (a steel deck that rings).",
+  gfDrop: "How far the case falls: higher is a harder first landing and more bounces.",
+  gfDist: "A ricochet or a passing bullet: how far away it passes, from half a meter to 30 meters. Farther is quieter, duller and slower to change pitch.",
+  gfSpeed: "How fast the bullet flies. Below the speed of sound it only whizzes past; above it, it cracks (a sharp double snap from the bullet and its echo off the ground) and hisses away.",
+  gfPast: "A ricochet: the slug flies past you (its whine falls in pitch as it goes by) or away from you (only the falling half).",
+  gfLoad: "A bolt-action reload: rounds thumbed in one at a time, a whole clip stripped in with one push, or a single round dropped in.",
+  gfRounds: "A bolt-action reload with rounds thumbed in: how many go in.",
+  gfPeak: "Tames the very first instant so the whole sound can be louder: a gun's parts meet in a few thousandths of a second. Up to 1 squeezes it once; past 1 squeezes it again. The gun foley presets use this instead of the Limiter.",
+  gfSeed: "Which take: each number is a different (but repeatable) performance of the same action, with the same settings.",
+  voCry: "What the person does: a grunt of effort, a jump's \"hup\", a battle cry (\"toriya!\"), a sword cry (\"hyaat!\"), a hurt \"nngh\", a big hurt \"aaagh\", a death cry (\"uwaaagh\"), a scream falling away, a fear scream, a laugh, or Custom: your own, built from Onset, Body, Coda and the pitch rows.",
+  voVoice: "Whose voice: a man, a woman or a kid. Age, Size and Pitch move it from there.",
+  voAge: "Young on the left (a teenager: a little higher, a shorter throat), an adult in the middle, old on the right (shaky and breathy).",
+  voSize: "The throat and mouth: bigger on the right is a darker, bigger person (a brute), smaller on the left is lighter. Changes the vowels' color more than the pitch.",
+  voPitch: "Raises or lowers the voice's pitch in semitones, with the throat left as it is.",
+  voEffort: "How hard they push. The middle is the cry as written; left is sighed and breathy, right is pushed to a yell (pressed, brighter, higher).",
+  voLength: "Stretches the whole cry: the vowels most, the consonants a little.",
+  voRough: "The rasp. The middle is the cry as written; left is a clean voice, right is a growl, a voice cracking, then a scream's rasp.",
+  voBreath: "Air in the voice. The middle is the cry as written; left is clean, right is breathy.",
+  voExpress: "How far the pitch moves: 0 is flat, 1 as written, 2 a cartoonish swoop.",
+  voAway: "The voice recedes as it goes (falling down a pit): quieter, duller and a little lower toward the end. A fall scream does this by itself.",
+  voLofi: "The recording. Clean on the left; the middle is a hot, close microphone (warm saturation); past the middle it goes through an old 16-bit sampler: stored at a low rate in 4-bit blocks, gritty and aliased, the way old game voice clips sounded.",
+  voEcho: "The old sampler's hardware echo (only when Lo-fi is past the middle): a short, filtered repeat.",
+  voStoreFollow: "The old sampler stores a higher voice at a higher rate, so a woman's or a kid's cry keeps its words through it. At 0 every voice is stored at the same low rate (which roughens a high voice most).",
+  voOnset: "Custom cries: how the cry starts. None, a hard glottal attack, a breath (h), or a consonant.",
+  voCoda: "Custom cries: how it ends. Open, a glottal stop (cut off hard), a breath out, a creaky \"gh\", a consonant, or trailing off.",
+  voRise: "Custom cries: how far the pitch climbs to its peak, in semitones.",
+  voFall: "Custom cries: how far the pitch falls from its peak to the end, in semitones.",
+  voPeakAt: "Custom cries: where the pitch (and the effort) peaks, from the start (0) to the end (1).",
+  voPeak: "Tames the very first instant so the whole cry can be louder: a hard attack or a stop's burst. Up to 1 squeezes it once; past 1 squeezes it again. The voice presets use this instead of the Limiter.",
+  voSeed: "Which take: each number is a different (but repeatable) performance of the same cry, with the same settings.",
+  meleeWeapon: "What is swung: a fist, a dagger, a sword, a katana, an axe, a hammer or mace, a spear, a whip, a staff, a kick, a flail or a rapier. It sets the swing's sound (a thin edge whistles, a broad head whumps), its speed and length, and what rings.",
+  meleeTarget: "What it lands in: flesh, cloth or leather, mail, plate armor, a wooden shield, stone, the ground, or another blade (a clash). Air is a miss: the swing alone.",
+  meleeHit: "How it lands: an edge cuts, blunt thuds, a point stabs. Auto uses the weapon's own (a sword cuts, a hammer thuds, a dagger stabs).",
+  meleeWeight: "How heavy the blow is, from a light flick to the heaviest swing: a deeper, longer body, more tearing, and bone cracking under a heavy blow.",
+  meleeSpeed: "How fast the swing is: a faster swing is higher and shorter, and gets to the hit sooner.",
+  meleeSwing: "How loud the air before the hit is, against the hit (0 is the hit alone).",
+  meleeContact: "How loud the material itself is: the cut, the thud, the clang, the rip.",
+  meleeBody: "The weight under the hit: a low thump whose pitch drops, as much as the target lets through (flesh gives it all, plate half, a blade little).",
+  meleeRing: "How long metal rings: the weapon, plate, a shield's rim, two blades in a clash.",
+  meleeScrape: "Edges sliding: two blades grinding along each other after a clash, an edge or a point skidding off plate or stone.",
+  meleeSnap: "The hard, clipped click on the contact: what makes a hit land at once.",
+  meleeHype: "Physical on the left; toward the right, the fighting-game hit: the swing swelling right into it, a longer, deeper body with a sub boom under it, and a bright saturated crack on the contact.",
+  meleeThump: "The designed weight a game puts under a hit: a deep thump that drops like a kick drum and a meaty mid whump, whatever the target. A punch's power.",
+  meleeBone: "A short, dry crackle of bones giving way on the contact.",
+  meleeSpins: "Whirling: how many revolutions of the swing before the one that lands.",
+  meleeCrunch: "How hard the hit is driven: clean, to saturated, to a clipped, crunchy arcade hit.",
+  meleeComp: "How hard the hit is squeezed: more lets the contact through and pulls the weight up behind it, so it hits harder.",
+  meleeBits: "The retro end: fewer bits, a grainier, crunchier hit (0 is clean).",
+  meleeRateCut: "The retro end: a lower sample rate, a gritty, aliased hit like an old console (0 is the full rate).",
+  meleePlace: "Where it happens: dry, a room, a stone hall, outdoors, or a cave.",
+  meleeTail: "How much of the place you hear, and how long it rings.",
+  meleePeak: "Tames the very first instant of the hit so the whole sound can be louder: a hit is almost all spike. Up to 1 squeezes it once; past 1 squeezes it again. It works on the hit alone, so the swing keeps its place before it. The melee presets use this instead of the Limiter.",
+  meleeSeed: "Which take: each number is a different (but repeatable) blow, with the same settings.",
   addPartials: "How many tones are stacked to build the sound. More = richer and brighter.",
   addTilt: "How strong the high tones are: dark and soft to bright and buzzy.",
   addDrift: "How much each stacked tone swells and fades by itself: makes pads move and breathe.",
@@ -1191,6 +1581,14 @@ const WAVE_HELP = {
   servo: "Electric motors, gearboxes and clockwork as what they are: a whine, a brush buzz and singing gears all locked to the shaft's speed, spinning up and down with it, a click as a servo stops, the ticks of a spring running down.",
   motor: "Engines, rotors and steam as what they are: a train of firing pulses at the rate the revs set, through an exhaust pipe, barking when the throttle opens and popping when it shuts.",
   flow: "Moving water as what it is: a stream's gurgles coming back from the same pockets, a waterfall's roar with weight at its base, waves building, breaking and drawing back over sand or stones, a bottle's note rising as it fills.",
+  gun: "Gunshots built for games: a hard snap, a thump with weight, the gas roar and a saturated crack, the gun's own mechanism and the place it is fired in, through a crunch stage that makes it hit hard. Bursts fire a whole new shot every round.",
+  melee: "A weapon swung and landing in something: swords, axes, hammers, daggers, spears, whips, fists and kicks. The swing (the air past the weapon: a thin edge whistles, a broad head whumps), the contact into what it hits (flesh, leather, mail, plate armor, a wooden shield, stone, the ground, or another blade in a clash: each with its own cut, thud, clang or rip), and the weight behind it, through a crunch stage from physical to a fighting-game hit. Air is a miss: the swing alone.",
+  energy: "Energy weapons: plasma, rail, pulse and ion. An optional charge, the discharge with a hard snap, the bolt flying away, the kick, then the sizzle, the coils cooling and the vent, through a crunch stage that clips the shot and its kick together. Automatic fire fires a whole new shot every round.",
+  voice: "A person's cries and yells, the way game voice clips sounded: battle and sword cries, a jump's \"hup\", hurt grunts, death yells, a scream falling away. A voice (a man, a woman or a kid) performs a short script: a start, vowels and consonants, an ending (a glottal stop, a breath out, a creaky \"gh\"), with a pitch gesture made with effort, rasp and breath. Then a recording: clean, a hot close mic, or an old 16-bit sampler's crunch. Pick a Cry type, or Custom to type your own (\"t oh r EE y AH:5\": CAPITALS are stressed, :n holds a sound longer).",
+  gunfoley: "Everything around the shot: reloads, a bolt worked, a pump racked, a revolver's cylinder spun, dry fire, a spent case landing, a ricochet, a bullet passing. A gun's own parts meeting inside its body (steel, polymer, wood), by a pair of hands with human timing. Layer it after a gunshot.",
+  chipgun: "Retro console gunshots: pistols, shotguns, full auto and blasters, fired by three old machines (an 8-bit console, an FM console, a 16-bit sampler) the way a game drove them, a frame at a time: a hiss that steps darker, a volume that stairs down, a kick rewritten every frame. Automatic fire cuts its own tail every round.",
+  crowd: "Crowds as what they are: many people each doing their own thing, the nearest ones voices you can pick out (talking in turns, calling out, chanting on a beat, clapping with their own hands), the rest a roar, swelling as they join.",
+  glass: "Glass and ceramics as what they are: the strike, the object's own ring, the crack and the fizz of the fracture, and the pieces, each ringing at its own pitch, flying, landing, bouncing and settling.",
   friction: "Creaks, squeaks and squeals as what they are: a surface catching and letting go, separate ticks when it is pushed slowly, a groan faster, a squeal when it locks onto the ringing wood, iron or rubber it is part of.",
 };
 // One line per Console: what that old machine sounded like.
@@ -1222,6 +1620,8 @@ const SFX_EXTRAS = {
   customWaveB: "",
   // Text for the "speech" waveform (and the formant engine's Say box).
   speechText: "",
+  // The voice engine's typed Body (wave "voice", Cry type "custom"): vowels and consonants, "t oh r EE y AH:5" ("" = "AH").
+  voBody: "",
 };
 const state = {};
 for (const p of PARAMS) state[p[0]] = p[5];
@@ -1265,13 +1665,21 @@ const usesSpring = (x) => Math.round(x.wave) === 32;
 const usesServo = (x) => Math.round(x.wave) === 33;
 const usesFriction = (x) => Math.round(x.wave) === 34;
 const usesFlow = (x) => Math.round(x.wave) === 35;
+const usesGlass = (x) => Math.round(x.wave) === 36;
+const usesCrowd = (x) => Math.round(x.wave) === 37;
+const usesGun = (x) => Math.round(x.wave) === 38;
+const usesEnergy = (x) => Math.round(x.wave) === 39;
+const usesChipgun = (x) => Math.round(x.wave) === 40;
+const usesGunfoley = (x) => Math.round(x.wave) === 41;
+const usesVoice = (x) => Math.round(x.wave) === 42;
+const usesMelee = (x) => Math.round(x.wave) === 43;
 const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
                         brassBreath: usesBrass, brassLips: usesBrass, brassBell: usesBrass, brassTube: usesBrass,
                         bowSpeed: usesBow, bowPressure: usesBow, bowPos: usesBow, bowTone: usesBow, bowString: usesBow, bowTrem: usesBow, bowTremPhase: usesBow,
                         reedBore: usesReed, reedBreath: usesReed, reedTongue: usesReed, reedBell: usesReed,
                         reedWobble: usesReed, reedTone: usesReed,
-                        barType: usesBar, barMallet: usesBar, barRing: usesBar, barMotor: usesBar,
-                        pianoHammer: usesPiano, pianoStretch: usesPiano, pianoRing: usesPiano, pianoStrings: usesPiano,
+                        barType: usesBar, barMallet: usesBar, barRing: usesBar, barMotor: usesBar, barPeak: usesBar,
+                        pianoHammer: usesPiano, pianoStretch: usesPiano, pianoRing: usesPiano, pianoStrings: usesPiano, pianoPeak: usesPiano,
                         fluteBreath: usesFlute, fluteJet: usesFlute, fluteAim: usesFlute, fluteNoise: usesFlute,
                         fluteTone: usesFlute, fluteVib: usesFlute, fluteBuzz: usesFlute,
                         chirpMode: usesChirp, chirpPitch: usesChirp, chirpGesture: usesChirp, chirpSpan: usesChirp, chirpRate: usesChirp,
@@ -1326,7 +1734,45 @@ const DRAWN_IF_USED = { fmEnv: "fmEnv", fmEnvTime: "fmEnv",
                         flowType: usesFlow, flowAmount: usesFlow, flowSize: usesFlow, flowBabble: usesFlow, flowBody: usesFlow,
                         flowRise: usesFlow, flowTone: usesFlow, flowDistance: usesFlow, flowPeriod: usesFlow, flowWaveSize: usesFlow,
                         flowDrawback: usesFlow, flowPhase: usesFlow, flowWaves: usesFlow, flowFill: usesFlow, flowFillStart: usesFlow,
-                        flowVessel: usesFlow, flowSeed: usesFlow };
+                        flowVessel: usesFlow, flowSeed: usesFlow,
+                        glBreak: usesGlass, glMaterial: usesGlass, glShape: usesGlass, glThick: usesGlass, glStriker: usesGlass,
+                        glThump: usesGlass, glCrack: usesGlass, glPieces: usesGlass, glShard: usesGlass, glHeight: usesGlass,
+                        glThrow: usesGlass, glBounce: usesGlass, glFloor: usesGlass, glSettle: usesGlass, glRing: usesGlass,
+                        glBeat: usesGlass, glPair: usesGlass, glPairTune: usesGlass, glPeak: usesGlass, glSeed: usesGlass,
+                        cwSize: usesCrowd, cwVoices: usesCrowd, cwMood: usesCrowd, cwCalls: usesCrowd, cwCall: usesCrowd,
+                        cwGroup: usesCrowd, cwFemale: usesCrowd, cwChildren: usesCrowd, cwSync: usesCrowd, cwTempo: usesCrowd,
+                        cwChant: usesCrowd, cwClap: usesCrowd, cwClapRate: usesCrowd, cwWhistle: usesCrowd, cwStart: usesCrowd,
+                        cwPeakAt: usesCrowd, cwEnd: usesCrowd, cwTail: usesCrowd, cwDistance: usesCrowd, cwPeak: usesCrowd,
+                        cwSeed: usesCrowd,
+                        gunCaliber: usesGun, gunBarrel: usesGun, gunAction: usesGun, gunSnap: usesGun, gunPunch: usesGun,
+                        gunCrack: usesGun, gunMech: usesGun, gunCasing: usesGun, gunPlace: usesGun, gunTail: usesGun,
+                        gunSuppress: usesGun, gunCrunch: usesGun, gunComp: usesGun, gunBits: usesGun, gunRateCut: usesGun,
+                        gunRPM: usesGun, gunRounds: usesGun, gunJitter: usesGun, gunBoltLock: usesGun, gunPeak: usesGun,
+                        gunSeed: usesGun,
+                        enType: usesEnergy, enPower: usesEnergy, enCharge: usesEnergy, enPunch: usesEnergy, enCrunch: usesEnergy,
+                        enBolt: usesEnergy, enTail: usesEnergy, enVent: usesEnergy, enStages: usesEnergy, enRate: usesEnergy,
+                        enRounds: usesEnergy, enVary: usesEnergy, enHeat: usesEnergy, enPeak: usesEnergy, enSeed: usesEnergy,
+                        cgConsole: usesChipgun, cgCaliber: usesChipgun, cgSnap: usesChipgun, cgThump: usesChipgun, cgSweep: usesChipgun,
+                        cgLength: usesChipgun, cgMetal: usesChipgun, cgZap: usesChipgun, cgEcho: usesChipgun, cgCrunch: usesChipgun,
+                        cgRate: usesChipgun, cgRounds: usesChipgun, cgVary: usesChipgun, cgVoices: usesChipgun, cgPeak: usesChipgun,
+                        cgSeed: usesChipgun,
+                        gfAction: usesGunfoley, gfFrame: usesGunfoley, gfWeight: usesGunfoley, gfTempo: usesGunfoley,
+                        gfCrisp: usesGunfoley, gfSpring: usesGunfoley, gfHandling: usesGunfoley, gfRack: usesGunfoley,
+                        gfCock: usesGunfoley, gfMagDrop: usesGunfoley, gfCasing: usesGunfoley, gfCase: usesGunfoley,
+                        gfSurface: usesGunfoley, gfDrop: usesGunfoley, gfDist: usesGunfoley, gfSpeed: usesGunfoley,
+                        gfPast: usesGunfoley, gfLoad: usesGunfoley, gfRounds: usesGunfoley, gfPeak: usesGunfoley,
+                        gfSeed: usesGunfoley,
+                        voCry: usesVoice, voVoice: usesVoice, voAge: usesVoice, voSize: usesVoice, voPitch: usesVoice,
+                        voEffort: usesVoice, voLength: usesVoice, voRough: usesVoice, voBreath: usesVoice, voExpress: usesVoice,
+                        voAway: usesVoice, voLofi: usesVoice, voEcho: usesVoice, voStoreFollow: usesVoice, voOnset: usesVoice,
+                        voCoda: usesVoice, voRise: usesVoice, voFall: usesVoice, voPeakAt: usesVoice, voPeak: usesVoice,
+                        voSeed: usesVoice,
+                        meleeWeapon: usesMelee, meleeTarget: usesMelee, meleeHit: usesMelee, meleeWeight: usesMelee,
+                        meleeSpeed: usesMelee, meleeSwing: usesMelee, meleeContact: usesMelee, meleeBody: usesMelee,
+                        meleeRing: usesMelee, meleeScrape: usesMelee, meleeSnap: usesMelee, meleeHype: usesMelee,
+                        meleeThump: usesMelee, meleeBone: usesMelee, meleeSpins: usesMelee, meleeCrunch: usesMelee,
+                        meleeComp: usesMelee, meleeBits: usesMelee, meleeRateCut: usesMelee, meleePlace: usesMelee,
+                        meleeTail: usesMelee, meleePeak: usesMelee, meleeSeed: usesMelee };
 const undrawn = (k, ...srcs) => k in DRAWN_IF_USED
   && srcs.every((x) => (typeof DRAWN_IF_USED[k] === "function" ? !DRAWN_IF_USED[k](x) : !x[DRAWN_IF_USED[k]]));
 
@@ -2165,7 +2611,7 @@ engineSection.innerHTML =
   '<div class="engine-grid" id="engineGrid"></div>';
 document.querySelector(".ws-editor").insertBefore(engineSection, panels);   // between Quick Shape & panels
 const engineGrid = engineSection.querySelector("#engineGrid");
-// Group the 36 engines by synthesis family (each row: label + its buttons). Indices into WAVES.
+// Group the 44 engines by synthesis family (each row: label + its buttons). Indices into WAVES.
 // "Instruments" (21-26) are the physical models CrunchyBGM built and picked by ear for its roster — a horn, a bowed
 // string, a reed, a struck bar, a piano, a flute. Their controls, panels and help text shipped with them; the picker
 // row is what was missing, so they were reachable only through a preset or a share link.
@@ -2173,18 +2619,21 @@ const engineGrid = engineSection.querySelector("#engineGrid");
 // (animal and monster calls), weather (wind, rain, thunder) and flow (streams, waterfalls, surf, pouring).
 // "Machines" (30+) is the mechanical world modeled as it makes sound: motor (engines, rotors, steam) and servo (electric
 // motors, gearboxes, clockwork); the other machine engines join it as they land.
+// "Voice" holds the crowd (37) beside formant and speech: what a crowd is made of is people's voices (and their hands).
+// The voice engine (42, a person's cries and yells) joins them. The melee engine (43, a weapon landing in something)
+// sits in Foley beside the gun: the other half of a fight's sound.
 const ENGINE_CATS = [
   ["Oscillators", [0, 1, 2, 3, 4, 5, 6, 7]],   // sine, square, saw, triangle, pulse, FM, organ, half-sine
   ["Physical",    [8, 10, 14, 15, 32, 34]],    // pluck, modal, bubble, particle, spring, friction
   ["Instruments", [21, 22, 23, 24, 25, 26]],   // brass, bowed, reed, bar, piano, flute
-  ["Voice",       [13, 17]],                   // formant, speech
+  ["Voice",       [13, 17, 37, 42]],           // formant, speech, crowd, voice
   ["Spectral",    [11, 16, 18]],               // granular, additive, FM 4op
-  ["Foley",       [19, 20, 31]],               // impact, whoosh, blast
+  ["Foley",       [19, 20, 31, 38, 43, 40, 39, 41, 36]],   // impact, whoosh, blast, gun, melee, chipgun, energy, gunfoley, glass
   ["Nature",      [27, 28, 29, 35]],           // chirp, creature, weather, flow
   ["Machines",    [30, 33]],                   // motor, servo
   ["Your own",    [9, 12]],                    // sample, custom
 ];
-// Preset color-coding: one hue per synthesis FAMILY (9 is scannable — 36 engine hues would not
+// Preset color-coding: one hue per synthesis FAMILY (9 is scannable — 44 engine hues would not
 // be, and most presets cluster in Oscillators anyway). Chosen to read on the dark theme without
 // competing with the orange accent. Used by makePresetButton + the legend + custom-category chips.
 const FAMILY_COLORS = {
@@ -2614,6 +3063,40 @@ if (formantPanel) {
 }
 function syncFormantSay() { if (formantSay) formantSay.value = state.speechText; }
 
+// ---------- Voice "Body" text box (wave "voice", Cry type "custom") ----------
+// The voice engine's own script: vowels (CAPITALS stressed, ":n" held longer) and the consonants between them. Lives in
+// state.voBody (an SFX_EXTRAS field, so it travels with presets, share links, history, undo, Breed and Variations).
+// Typing a body makes the cry Custom (the only Cry type that reads it) and, if the cry now runs past the Duration,
+// lengthens the Duration to hold it (a shorter cry keeps the Duration it had: a room's tail may be living there).
+const vocalPanel = panels.querySelector('[data-group="Vocal"]');
+const VOICE_CUSTOM = 10;   // the Cry type that reads Onset, Body, Coda and the pitch rows
+let voBodyInput = null;
+if (vocalPanel) {
+  voBodyInput = document.createElement("input");
+  voBodyInput.id = "voBodyInput"; voBodyInput.className = "speech-input";
+  voBodyInput.placeholder = "Custom cry… (h y AH:4, t oh r EE y AH:5)"; voBodyInput.spellcheck = false;
+  voBodyInput.value = state.voBody;
+  vocalPanel.querySelector("h2").insertAdjacentElement("afterend", voBodyInput);
+  const vhint = document.createElement("div");
+  vhint.className = "hint";
+  vhint.textContent = "Type a cry's sounds: vowels (ah ee oh oo uh ae aw ih eh er), CAPITALS stressed, :n holds one longer (AH:5, n:9); consonants between them (t k p b d g r y w m n h f s). Onset and Coda add the start and the end. Typing makes the Cry type Custom.";
+  vocalPanel.appendChild(vhint);
+  const commitBody = () => {
+    state.voBody = voBodyInput.value.slice(0, VO_MAX_BODY);
+    state.wave = 42;                                  // the voice engine, its custom cry
+    state.voCry = VOICE_CUSTOM;
+    syncWaveButtons();
+    updateWavePanels();
+    const cry = makeVoice(SR, voiceCfg(state)).info.len;
+    if (cry > state.duration) state.duration = Math.min(VO_MAX_SEC, Math.ceil(cry * 100) / 100);
+    syncUI();
+    play("Edit");
+  };
+  voBodyInput.addEventListener("change", commitBody);
+  voBodyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") voBodyInput.blur(); });
+}
+function syncVoBody() { if (voBodyInput) voBodyInput.value = state.voBody; }
+
 // ---------- Load-your-own-IR (the "Custom IR" convolution space) ----------
 // The convolution engine convolves the sound with an impulse response; "Custom IR" swaps the
 // synthesized space (Room/Hall/Plate/Spring) for a real .wav you load — a recorded room, a spring
@@ -2700,10 +3183,18 @@ const PANEL_WAVES = {
   "Weather": [29],
   "Motor": [30],
   "Blast": [31],
+  "Gun": [38],
+  "Energy": [39],
+  "Chip gun": [40],
+  "Gun foley": [41],
+  "Vocal": [42],
+  "Melee": [43],
   "Spring": [32],
   "Servo": [33],
   "Friction": [34],
   "Flow": [35],
+  "Glass": [36],
+  "Crowd": [37],
 };
 function updateWavePanels() {
   const w = Math.round(state.wave);
@@ -2719,7 +3210,7 @@ updateWavePanels();   // set initial visibility for the startup waveform
 // the woods (3) and the surf's waves (12): for those engines the limit is what the sound already is. A loaded sample
 // stretches to the clip (30 s at most). The Duration slider (syncUI) and the Length macro (macroBlend) both ask here; the
 // macro used to clamp to the row's 2 s, so the smallest nudge of Length cut a 12 s surf to 2 s.
-const DUR_STRETCH = new Set([27, 29, 30, 31, 35]);
+const DUR_STRETCH = new Set([27, 29, 30, 31, 35, 37, 38, 39, 40, 41, 42, 43]);
 function durationMax(st, dur) {
   const w = Math.round(st.wave);
   if (w === 9 && sampleBuf) return Math.min(30, Math.max(2, Math.ceil(sampleBuf.length / SR)));
@@ -2739,6 +3230,7 @@ function syncUI() {
   if (typeof syncCustomCanvas === "function") syncCustomCanvas();   // redraw the drawn-wave editor
   if (typeof syncSpeechInput === "function") syncSpeechInput();     // restore the speech text box
   if (typeof syncFormantSay === "function") syncFormantSay();       // restore the formant "Say" box
+  if (typeof syncVoBody === "function") syncVoBody();               // restore the voice engine's Body box
   if (typeof syncWaveButtons === "function") syncWaveButtons();     // light the active engine button
   if (typeof highlightConsole === "function") highlightConsole(null); // deselect console skin on load (applyConsole re-lights after)
   updateWavePanels();                                               // show only the current wave's panels
@@ -2791,6 +3283,12 @@ for (const p of PARAMS) PARAM_BY_KEY[p[0]] = p;
 
 // Nudge one param around `base` by fraction `amount`. Pitch snaps to semitones so
 // the variations sound musical rather than detuned; everything else clamps to range.
+// A PRESET MAY HOLD A VALUE PAST ITS SLIDER (2026-11-12): an open filter at 18 kHz on a 12 kHz row, a bell's 3.85 s
+// decay on a 1 s row, a creak's 1.7 s hold. They render as written, and 410 such values ship. Breed, Variations and the
+// Quick shape macros used to clamp to the row, so the smallest nudge cut a Temple Bell's ring to 1 s, a creature's top
+// end at 12 kHz and Heavy Gate's push at 1 s. Each clamp now widens the row to include the sound's own value: a change
+// can still move it either way, but never past the row AND past where the sound already was. A sound whose values all
+// sit inside their rows is clamped exactly as before.
 function jitter(key, base, amount) {
   const p = PARAM_BY_KEY[key];
   if (!p) return base;
@@ -2805,7 +3303,7 @@ function jitter(key, base, amount) {
   } else {
     v = base + r * (max - min);                 // bipolar / zero-based (sweep, filter env)
   }
-  v = Math.min(max, Math.max(min, v));
+  v = Math.min(Math.max(max, base), Math.max(Math.min(min, base), v));   // never past the row, nor tighter than the sound itself
   return Math.round(v / step) * step;
 }
 
@@ -2958,20 +3456,40 @@ const presetCount = document.getElementById("presetCount");
 // (the name itself, then an alias of it), above the sections. Keys are compact (no spaces): "levelup", "gameover".
 const SEARCH_ALIASES = {
   back: ["cancel", "close", "return"], menu: ["ui", "cursor", "select", "confirm", "cancel", "click", "blip"],
-  ui: ["click", "blip", "cursor", "menu", "select", "confirm", "cancel"], click: ["blip", "cursor", "tick", "select"],
+  ui: ["click", "blip", "cursor", "menu", "select", "confirm", "cancel"], click: ["blip", "cursor", "tick", "select", "dry fire"],
   select: ["confirm", "cursor", "click"], ok: ["confirm", "accept"], accept: ["confirm"], deny: ["error", "cancel", "buzz"],
-  hurt: ["hit", "damage", "pain", "ouch", "oof", "impact", "punch"], damage: ["hit", "hurt", "impact", "punch"],
-  pain: ["hurt", "ouch", "hit"], ouch: ["hit", "hurt", "pain"], oof: ["hit", "hurt", "thud"],
+  hurt: ["hit", "damage", "pain", "ouch", "oof", "impact", "punch", "hurt grunt", "woman hurt cry"], damage: ["hit", "hurt", "impact", "punch"],
+  pain: ["hurt", "ouch", "hit", "hurt grunt", "woman hurt cry"], ouch: ["hit", "hurt", "pain", "hurt grunt", "woman hurt cry"],
+  oof: ["hit", "hurt", "thud", "hurt grunt", "woman hurt cry"],
   pickup: ["coin", "collect", "item", "gem"], collect: ["coin", "pickup", "gem"], item: ["pickup", "coin"], gem: ["pickup", "coin", "sparkle"],
   death: ["die", "dead", "game over"], die: ["death", "dead", "game over"], shoot: ["laser", "gun", "shot", "blaster", "pistol", "zap"],
   gun: ["shot", "pistol", "rifle", "blaster", "shotgun"], attack: ["hit", "slash", "swing", "sword", "punch"],
   explode: ["explosion", "boom", "blast", "kaboom"], explosion: ["boom", "blast", "kaboom"], boom: ["explosion", "blast", "kaboom"],
   powerup: ["power up", "upgrade", "level up", "extra life"], levelup: ["level up", "fanfare", "victory"],
   oneup: ["extra life"], "1up": ["extra life"], extralife: ["extra life"], heal: ["healing", "restore", "regen", "extra life", "chime", "sparkle"],
-  win: ["victory", "fanfare", "success", "level up"], lose: ["fail", "game over", "death"], gameover: ["game over", "mission failed"],
+  win: ["victory", "fanfare", "success", "level up"], lose: ["fail", "game over", "death", "defeat"], gameover: ["game over", "mission failed"],
   error: ["wrong", "buzz", "deny"], walk: ["footstep", "step"], step: ["footstep"], land: ["thud", "impact", "landing"],
-  jump: ["hop", "boing"], bounce: ["spring", "boing"], hover: ["cursor", "tick"], open: ["door", "chest"],
+  jump: ["hop", "boing", "jump hup"], bounce: ["spring", "boing"], hover: ["cursor", "tick"], open: ["door", "chest"],
   swing: ["whoosh", "swoosh"], dash: ["whoosh", "swoosh"], laser: ["zap", "blaster"], zap: ["laser"], block: ["shield"],
+  // SFX 1.3's glass engine (2026-11-13): its three breaks don't say "glass", and the words people type for them
+  // (vase, potion, jar) are in no name. The aliases are whole names, so "shatter" finds Window Smash but not Hammer Smash.
+  glass: ["window smash", "bottle break", "pot smash"], shatter: ["window smash", "bottle break", "pot smash"],
+  smash: ["glass shatter", "bottle break"], break: ["glass shatter", "window smash", "pot smash"],
+  vase: ["pot smash"], ceramic: ["pot smash"], pottery: ["pot smash"], jar: ["pot smash", "bottle break"], potion: ["bottle break"],
+  // The gun foley engine (2026-11-13): AJ picked today's Quick Reload as the pump-shotgun rack too (no duplicate preset),
+  // and an empty gun's click is "Dry Fire". `click` keeps its UI meanings first; Dry Fire is its last alias.
+  pump: ["quick reload"], rack: ["quick reload"], empty: ["dry fire"], revolver: ["revolver spin"], cylinder: ["revolver spin"],
+  // The voice engine (2026-11-13): the cries people type by their sound ("toriya", "hiyah", "hup", "ugh") or by what
+  // they are. Whole names, so "yell" finds Battle Cry and not a Yellow anything; `hurt` / `pain` / `ouch` / `oof` / `jump`
+  // keep their old aliases first and gain the cries last.
+  toriya: ["battle cry"], kiai: ["battle cry"], yell: ["battle cry"], shout: ["battle cry"],
+  hyah: ["sword cry"], hiyah: ["sword cry"], slash: ["sword cry"],
+  hup: ["jump hup"], ugh: ["hurt grunt", "woman hurt cry"],
+  scream: ["falling scream"], fall: ["falling scream"],
+  // The jingles (2026-11-14): five game-state cues named Victory, Achievement, Defeat, Success and Fail. A query that IS a
+  // name already finds it, so only the other words need entries: `win` already had "victory" and "success", `lose` already
+  // had "fail" and gains "defeat" last; "trophy" and "unlock" are what a dev types for a victory or an achievement.
+  trophy: ["victory", "achievement"], unlock: ["achievement"],
 };
 const searchWords = (t) => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 const compactWord = (t) => searchWords(t).join("");
@@ -3519,8 +4037,9 @@ function macroBlend(k, base, end, f) {
   let x = base > 0 && end > 0 && Math.max(base, end) / Math.min(base, end) >= 10
     ? base * Math.pow(end / base, f) : base + (end - base) * f;
   // Duration's ceiling is the engine's (durationMax), not the row's 2 s: a long ambience shortens smoothly from where it is.
-  const hi = !p ? 0 : k === "duration" ? durationMax(state, base) : p[3];
-  if (p) { x = Math.max(p[2], Math.min(hi, x)); x = p[4] >= 1 ? Math.round(x) : +x.toFixed(4); }
+  // …and every key's range includes the sound's own value (2026-11-12), the same rule as Breed and Variations.
+  const hi = !p ? 0 : Math.max(k === "duration" ? durationMax(state, base) : p[3], base), lo = !p ? 0 : Math.min(p[2], base);
+  if (p) { x = Math.max(lo, Math.min(hi, x)); x = p[4] >= 1 ? Math.round(x) : +x.toFixed(4); }
   return x;
 }
 function applyMacro(m, v) {
@@ -4209,7 +4728,9 @@ function renderVariation(item) {
 // gives each take room for its tail and matches its loudness to the original's.
 const VARY_FIXED = new Set(["wave", "duration", "gain", "reverse", "repeat", "limiter", "transient"]);
 const VARY_TAILS = /decay|release|Decay|reverbSize|delayFb|convSize|Damp/;
-const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 31, 32]);   // engines whose sound is not laid out over the buffer's length
+const VARY_STRETCH = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 31, 32, 42, 43]);   // engines whose sound is not laid out over the buffer's length
+// A voice (42) is a cry at its own length, so a longer buffer only gives it (and its room) room to end; so is a melee
+// blow (43): another take's swing or ring may run a little longer, and a longer buffer only gives it room.
 // A spring (32) is plucked at the shot's start and rings out like a pluck (8), so a longer buffer only gives its ring room.
 // A blast (31) sits at fixed times in its buffer, so a longer buffer only lets its place ring out; fitTail may grow one past
 // the 2 s other sounds stop at (its Duration slider stretches). Its Size and Place length ARE its length (a bigger charge
@@ -4228,7 +4749,7 @@ function varyGenome(src, amount, rand) {
     if ((!stretch && VARY_TAILS.test(k)) || VARY_LENGTHS.test(k)) r = -Math.abs(r);   // a tail that cannot be given room never grows (no new cut)
     let v = k === "freq" ? base * Math.pow(2, r * 10 / 12)  // pitch: ±2 semitones at the default 0.2 (was ±4.8)
                          : base * (1 + r * 0.75);           // everything else: ±15% of itself at 0.2
-    v = Math.min(max, Math.max(min, v));
+    v = Math.min(Math.max(max, base), Math.max(Math.min(min, base), v));   // the sound's own value is always in range (see jitter)
     g[k] = Math.round(v / step) * step;
   }
   return g;

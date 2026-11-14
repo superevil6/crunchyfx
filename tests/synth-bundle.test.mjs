@@ -114,6 +114,65 @@ ok(!same(S.render(patch({ wave: 0, noise: 0.4, duration: 0.25 })), S.render(patc
   ok(typeof S.renderLayers === "function", "the bundle publishes renderLayers");
 }
 
+// 6c. A BURST WITH AN ENVELOPE CURVE (2026-11-14, SOUND-REVIEW "Mechanical fixes from the audit"): with `repeat` > 1
+// the LAST shot runs to the end of the buffer, so when Duration outlasts its release the release fraction `r` passes 1
+// and `Math.pow(1 - r, 1 + 3·envCurve)` was NaN (a non-integer exponent: the NaN ran into the filter state and the rest
+// of the sound, in a layer the rest of the MIX, was NaN) or, at an even exponent (`envCurve` exactly 1/3 or 1), POSITIVE
+// — the note swelled back to full level after its release. Both copies are guarded: the gain stage (square) and
+// `ampEnvAt`, the breath of the modelled engines (blown brass), plus the same burst as a layer under a plain base.
+// `sustain` 0.6 so the swell has a level to come back to; 0.4-0.5 s is after the last shot's release has ended.
+// Against the pre-fix bundle 9 of these 11 rows fail; 2/3 (exponent 3, odd) went NEGATIVE and the `< 0` clamp caught
+// it, so those two rows passed before too and are the control.
+{
+  const tail = (r) => { let nan = 0, t = 0; const t0 = Math.floor(0.4 * S.SR);
+    for (let i = 0; i < r.L.length; i++) { const a = r.L[i], b = r.R[i];
+      if (Number.isNaN(a) || Number.isNaN(b)) { nan++; continue; } if (i >= t0) t = Math.max(t, Math.abs(a), Math.abs(b)); }
+    return { nan, t }; };
+  const burst = (over, c) => Object.assign({ repeat: 3, rate: 10, envCurve: c, sustain: 0.6, release: 0.04, duration: 0.5, reverb: 0, delay: 0 }, over);
+  // The square's tail is the filter settling (~2e-6); the brass tube rings down on its own after the breath stops
+  // (~0.025, -28 dB), so its bound is the swell's 0.63 rather than silence.
+  for (const [lbl, over, bound] of [["square", { wave: 1 }, 1e-3], ["blown brass", { wave: 21, freq: 220 }, 0.1]]) {
+    for (const c of [1 / 3, 0.5, 2 / 3, 1]) {
+      const { nan, t } = tail(S.render(patch(burst(over, c))));
+      ok(nan === 0 && t < bound, lbl + " burst, envCurve " + c.toFixed(3) + ": no NaN, and silent after its last release (" + nan + " NaN, tail " + t.toExponential(1) + ")");
+    }
+  }
+  for (const c of [1 / 3, 0.5, 1]) {
+    const mix = patch({ wave: 0, freq: 330, duration: 0.5, sustain: 0, layers: JSON.stringify([{ s: burst({ wave: 1, freq: 220 }, c), d: 0, g: 1, p: 0 }]) });
+    const { nan, t } = tail(S.render(mix));
+    ok(nan === 0 && t < 1e-3, "a burst LAYER, envCurve " + c.toFixed(3) + ": the mix has no NaN and the layer does not swell back (" + nan + " NaN, tail " + t.toExponential(1) + ")");
+  }
+}
+
+// 6d. THE STRUCK KEYS' PEAK CONTROL (2026-11-14, `pianoPeak` / `barPeak`, SOUND-REVIEW "The keys' Peak control"). Off
+// (0, the default) the engine runs sample by sample in the loop as it always has; on, synth.js builds the note UP FRONT
+// by REPEATING the loop's pitch and damper arithmetic. So: (a) 0 is byte-identical to the key absent; (b) a Peak too
+// small for the limiter to touch renders the same note as 0 to float rounding, on the cases where that repeated
+// arithmetic could drift (a sweep, a vibrato with an onset, an arpeggiated burst, a release inside the buffer), which a
+// typo in the repeat would fail by orders of magnitude; (c) a real Peak lifts the ring under the strike (Normalize on:
+// more loudness at the same peak) and the result is finite and under full scale; (d) another engine ignores the keys.
+{
+  const gr = (r) => { let s = 0; for (let i = 0; i < r.L.length; i++) s += r.L[i] * r.L[i] + r.R[i] * r.R[i]; return Math.sqrt(s / (2 * r.L.length)); };
+  const maxDiff = (a, b) => { let m = 0; for (let i = 0; i < a.L.length; i++) m = Math.max(m, Math.abs(a.L[i] - b.L[i]), Math.abs(a.R[i] - b.R[i])); return m; };
+  const CASES = [["plain", {}], ["sweep", { sweep: -0.3 }], ["vibrato", { vibDepth: 0.4, vibRate: 6, vibOnset: 0.1 }],
+    ["burst + arp", { repeat: 3, rate: 6, arpStep: 4 }], ["early release", { release: 0.3, duration: 0.8 }]];
+  for (const [wave, key, extra] of [[25, "pianoPeak", { freq: 262 }], [24, "barPeak", { freq: 523, barType: 2 }]]) {
+    for (const [lbl, over] of CASES) {
+      const base = patch(Object.assign({ wave, duration: 0.6, reverb: 0.2 }, extra, over));
+      const off = S.render(base), zero = S.render(Object.assign({}, base, { [key]: 0 })), tiny = S.render(Object.assign({}, base, { [key]: 1e-7 }));
+      ok(same(off, zero) && maxDiff(off, tiny) < 2e-6, key + " " + lbl + ": 0 is byte-identical, and a Peak the limiter cannot touch renders the loop's own note (max diff " + maxDiff(off, tiny).toExponential(1) + ")");
+    }
+    const base = patch(Object.assign({ wave, duration: 1.2 }, extra)), r0 = S.render(base);
+    for (const v of [0.5, 1, 2]) {
+      const r = S.render(Object.assign({}, base, { [key]: v })), pk = peak(r);
+      let fin = true; for (let i = 0; i < r.L.length; i++) if (!Number.isFinite(r.L[i]) || !Number.isFinite(r.R[i])) { fin = false; break; }
+      ok(fin && pk < 0.98 && gr(r) > 1.25 * gr(r0), key + " " + v + " lifts the ring at the same peak (RMS x" + (gr(r) / gr(r0)).toFixed(2) + ", peak " + pk.toFixed(3) + ")");
+    }
+  }
+  const sq = patch({ wave: 1, duration: 0.3 });
+  ok(same(S.render(sq), S.render(Object.assign({}, sq, { pianoPeak: 1.5, barPeak: 1.5 }))), "negative: another engine ignores pianoPeak / barPeak");
+}
+
 // 6. The exporter's guards still catch their negatives (an app-global read, a `state.` read).
 import { execFileSync } from "node:child_process";
 let selfTest = "";

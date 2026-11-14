@@ -233,6 +233,31 @@
     });
     return ok(!bad.length, bad.slice(0, 4).join(" · "));
   });
+  // 2026-11-12. A preset may hold a value past its slider (Temple Bell's decay 3.85 on a 1 s row, a creature's cutoff
+  // 18000 on a 12000 row). Variations, Breed and the macros never clamp such a value below where the sound already is.
+  t("ranges/a-value-past-its-slider-survives-variations-breed-and-the-macros", function () {
+    const bad = [];
+    capture(function () {
+      const rnd = Math.random; let rs = 7; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+      try {
+        const src = Object.assign(withState(PRESETS["Temple Bell"], genomeFromState), { cutoff: 18000 });
+        if (!(src.decay > 1)) bad.push("Temple Bell's decay is not past its row, so this row proves nothing");
+        for (let i = 0; i < 40; i++) {
+          const v = varyGenome(src, 0.2), b = mutateGenome(src, 0.22);
+          [["varied", v], ["bred", b]].forEach(function (x) {
+            if (x[1].decay <= 1 || x[1].cutoff <= 12000) bad.push(x[0] + " decay " + x[1].decay + " cutoff " + x[1].cutoff);
+          });
+        }
+        applyPreset(PRESETS["Temple Bell"], "Temple Bell");
+        const d0 = state.decay, el = document.getElementById("m-length"), v0 = +el.value;
+        el.value = String(Math.max(0, v0 - 0.01)); el.dispatchEvent(new Event("input"));
+        if (!(state.decay > 1)) bad.push("a small Length nudge cut the decay from " + d0 + " to " + state.decay);
+        el.value = String(v0); el.dispatchEvent(new Event("input"));
+        if (state.decay !== d0) bad.push("Length back to the start gave decay " + state.decay + ", not " + d0);
+      } finally { Math.random = rnd; }
+    });
+    return ok(!bad.length, bad.slice(0, 4).join(" · "));
+  });
   t("tools/click-hears-double-click-or-use-loads-in-breed-variations-and-foundry", function () {
     const bad = [];
     capture(function () {
@@ -302,6 +327,558 @@
     varAmtEl.value = "0.2"; document.getElementById("varClose").click();
     return ok(!bad.length, bad.join(", "));
   });
+  // 2026-11-13. THE GLASS ENGINE (wave 36): its rows are drawn only by a glass sound (and its panel shown only for it);
+  // every glass preset and alt renders audible, stereo, finite, under full scale and seeded (the same take twice is the
+  // same bytes, another Variation is another take); Glass Clink's base is still today's modal patch; and a Variations
+  // pack of a break is levelled like any other (glPeak is the engine's, so `gain` stays a plain level: blast's lesson).
+  t("glass/drawn-only-when-used-presets-audible-and-variations-levelled", function () {
+    const bad = [], glKeys = PARAMS.filter(function (p) { return p[7] === "Glass"; }).map(function (p) { return p[0]; });
+    if (glKeys.length !== 20 || WAVES[36] !== "glass") bad.push("rows " + glKeys.length + ", wave 36 " + WAVES[36]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), shat = withState(PRESETS["Glass Shatter"], genomeFromState);
+    glKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, shat)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(36) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Glass"]');
+    if (!panel || !panel.hidden) bad.push("Glass panel shown for a Coin");
+    applyPreset(PRESETS["Glass Shatter"], "Glass Shatter");
+    if (!panel || panel.hidden) bad.push("Glass panel hidden for Glass Shatter");
+    if (PRESETS["Glass Clink"].wave !== 10 || PRESETS["Glass Clink"].freq !== 2093) bad.push("Glass Clink's base moved");
+    ["Glass Shatter", "Window Smash", "Bottle Break", "Pot Smash", "Glass Clink"].forEach(function (n) {
+      const list = (n === "Glass Clink" ? [] : [PRESETS[n]]).concat(PRESETS[n]._alts || []);
+      if (list.length < 2) bad.push(n + ": " + list.length + " versions");
+      list.forEach(function (p, j) {
+        if (Math.round(p.wave) !== 36) bad.push(n + " #" + j + " not glass");
+        const r = withState(p, render); let pk = 0, side = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95 || !(side > 0)) bad.push(n + " #" + j + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan);
+      });
+    });
+    const p0 = PRESETS["Window Smash"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { glSeed: p0.glSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("glSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    const rnd = Math.random; let rs = 36; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Glass Shatter", "Window Smash", "Pot Smash"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)), end: Math.max(-60, 20 * Math.log10(tailLevel(r.L) + 1e-12)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+        m.slice(1).forEach(function (x, i) { if (x.end > Math.max(-40, m[0].end + 3)) bad.push(n + " #" + (i + 2) + " ends at " + x.end.toFixed(0) + " dB"); });
+      });
+    } finally { Math.random = rnd; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE CROWD ENGINE (wave 37): its rows are drawn only by a crowd sound (and its panel shown only for it);
+  // every crowd preset and alt renders audible, stereo, finite, under full scale and seeded (the same take twice is the
+  // same bytes, another Variation is another take); the crowd stops at the Duration less its Ring-out (cwTail), so with
+  // no room the last stretch is silent and with one only the reverb rings there; and a Variations pack of a crowd is
+  // levelled like any other (cwPeak is the engine's, so `gain` stays a plain level: blast's lesson).
+  t("crowd/drawn-only-when-used-presets-audible-ring-out-and-variations-levelled", function () {
+    const bad = [], cwKeys = PARAMS.filter(function (p) { return p[7] === "Crowd"; }).map(function (p) { return p[0]; });
+    if (cwKeys.length !== 21 || WAVES[37] !== "crowd") bad.push("rows " + cwKeys.length + ", wave 37 " + WAVES[37]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), cheer = withState(PRESETS["Crowd Cheer"], genomeFromState);
+    cwKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, cheer)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(37) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Crowd"]');
+    if (!panel || !panel.hidden) bad.push("Crowd panel shown for a Coin");
+    applyPreset(PRESETS["Crowd Cheer"], "Crowd Cheer");
+    if (!panel || panel.hidden) bad.push("Crowd panel hidden for Crowd Cheer");
+    if (durationMax(state) < 4.4) bad.push("Duration slider stops at " + durationMax(state) + " s on a 4.4 s crowd");
+    ["Crowd Cheer", "Crowd Applause", "Stadium Chant", "Audience Ooh", "Audience Aww", "Audience Gasp", "Crowd Chatter"].forEach(function (n) {
+      [PRESETS[n]].concat(PRESETS[n]._alts || []).forEach(function (p, j) {
+        if (Math.round(p.wave) !== 37) bad.push(n + " #" + j + " not crowd");
+        const r = withState(p, render); let pk = 0, side = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95 || !(side > 0)) bad.push(n + " #" + j + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan);
+      });
+    });
+    const p0 = PRESETS["Audience Gasp"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { cwSeed: p0.cwSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("cwSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    // the ring-out: Crowd Chatter talks to the end of its crowd; dry, its last 0.9 s (the ring-out) is silent, with no
+    // ring-out the talk runs on into it, and with its room the reverb rings there
+    const pc = PRESETS["Crowd Chatter"], cut = pc.duration - pc.cwTail;
+    const tailRms = function (r) { let s = 0, m = 0; for (let i = Math.floor((cut + 0.01) * SR); i < r.L.length; i++) { s += r.L[i] * r.L[i] + r.R[i] * r.R[i]; m++; } return Math.sqrt(s / Math.max(1, m)); };
+    const dry = tailRms(withState(Object.assign({}, pc, { reverb: 0 }), render)), noTail = tailRms(withState(Object.assign({}, pc, { reverb: 0, cwTail: 0 }), render));
+    const wet = tailRms(withState(pc, render));
+    if (!(dry < 1e-4) || !(noTail > 1e-2) || !(wet > 1e-3)) bad.push("ring-out: dry " + dry.toExponential(1) + ", no ring-out " + noTail.toExponential(1) + ", wet " + wet.toExponential(1));
+    const rnd = Math.random; let rs = 37; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Audience Gasp"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "6"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE GUN ENGINE (wave 38): its rows are drawn only by a gun sound (and its panel shown only for it); every
+  // gun preset and alt (AJ's eight blind picks and the ten redo picks) renders audible, stereo, finite, under full scale and seeded; a BURST really re-fires: every
+  // round of Full Auto, 3-Round Burst and Machine Gun is a peak at its own time and a new shot (consecutive rounds are
+  // not the same samples), where Repeat re-gated one envelope; AJ's rule holds (no gun preset lands a casing or racks a
+  // pump after the shot); and a Variations pack of a gun is levelled like any other (gunPeak is the engine's).
+  t("gun/drawn-only-when-used-presets-audible-bursts-refire-and-variations-levelled", function () {
+    const bad = [], gunKeys = PARAMS.filter(function (p) { return p[7] === "Gun"; }).map(function (p) { return p[0]; });
+    if (gunKeys.length !== 21 || WAVES[38] !== "gun") bad.push("rows " + gunKeys.length + ", wave 38 " + WAVES[38]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), shot = withState(PRESETS["Gunshot"], genomeFromState);
+    gunKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, shot)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(38) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Gun"]');
+    if (!panel || !panel.hidden) bad.push("Gun panel shown for a Coin");
+    applyPreset(PRESETS["Gunshot"], "Gunshot");
+    if (!panel || panel.hidden) bad.push("Gun panel hidden for Gunshot");
+    if (durationMax(state) < 2) bad.push("Duration slider stops at " + durationMax(state) + " s on a gun");
+    applyPreset(PRESETS["Full Auto"], "Full Auto");
+    if (durationMax(state) < PRESETS["Full Auto"].duration) bad.push("Duration slider stops at " + durationMax(state) + " s on a " + PRESETS["Full Auto"].duration + " s Full Auto");
+    const names = ["Gunshot", "Shotgun", "Rifle Crack", "Magnum Shot", "Suppressed", "Full Auto", "3-Round Burst", "Machine Gun",
+      "Compact Fire", "Gunshot 2", "Heavy Discharge", "Heavy Round", "Magnum Fire", "Shotgun 2", "Snub Discharge", "Snub Report",
+      "Suppressed Crack", "Suppressed Fire"];
+    names.forEach(function (n) {
+      [PRESETS[n]].concat(PRESETS[n]._alts || []).forEach(function (p, j) {
+        if (Math.round(p.wave) !== 38) bad.push(n + " #" + j + " not gun");
+        if ((p.gunCasing || 0) > 0 || (Math.round(p.gunAction) === 3 || Math.round(p.gunAction) === 4) && (p.gunMech || 0) > 0) bad.push(n + " #" + j + " has an after-sound");
+        if (Math.round(p.repeat || 1) !== 1) bad.push(n + " #" + j + " uses Repeat");
+        const r = withState(p, render); let pk = 0, side = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95 || !(side > 0)) bad.push(n + " #" + j + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan);
+      });
+    });
+    // a burst: Rounds shots at the engine's own times, each a peak, each a NEW shot
+    [["Full Auto", 18], ["3-Round Burst", 3], ["Machine Gun", 8]].forEach(function (e) {
+      const p = PRESETS[e[0]], st = Object.assign({}, PARAM_DEFAULTS, p), g = makeGun(SR, Math.floor(st.duration * SR), gunCfg(st), Math.round(st.gunSeed));
+      const r = withState(p, render), m = Float64Array.from(r.L, function (x, i) { return x + r.R[i]; }), times = g.info.times;
+      if (times.length !== e[1] || Math.round(p.gunRounds) !== e[1]) bad.push(e[0] + ": " + times.length + " rounds");
+      let all = 0; for (let i = 0; i < m.length; i++) all = Math.max(all, Math.abs(m[i]));
+      const at = times.map(function (t) { return Math.round(t * SR); });
+      at.forEach(function (a, k) { let p0 = 0; for (let i = a; i < a + 220; i++) p0 = Math.max(p0, Math.abs(m[i])); if (p0 < 0.25 * all) bad.push(e[0] + " round " + (k + 1) + " missing"); });
+      let same = 0;
+      for (let k = 0; k + 1 < at.length; k++) { let ab = 0, aa = 0, bb = 0; for (let i = 0; i < 882; i++) { const x = m[at[k] + i], y = m[at[k + 1] + i]; ab += x * y; aa += x * x; bb += y * y; } if (ab / Math.sqrt(aa * bb) > 0.95) same++; }
+      if (same) bad.push(e[0] + ": " + same + " rounds a copy of the one before");
+    });
+    const p0 = PRESETS["Gunshot"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { gunSeed: p0.gunSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("gunSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    const rnd = Math.random; let rs = 38; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Gunshot", "Rifle Crack", "Full Auto"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE ENERGY ENGINE (wave 39): its rows are drawn only by an energy sound (and its panel shown only for it);
+  // every energy preset (AJ's five blind picks: Plasma Rifle, Plasma Shot, Plasma Discharge, Rail Fire and the new Pulse
+  // Rifle) renders audible, stereo, finite, under full scale, seeded and without Repeat; Pulse Rifle's FULL AUTO really
+  // re-fires: every round is a peak at the engine's own time and a new shot (consecutive rounds are not the same
+  // samples); and a Variations pack of an energy sound is levelled like any other (enPeak is the engine's).
+  t("energy/drawn-only-when-used-presets-audible-pulse-rifle-refires-and-variations-levelled", function () {
+    const bad = [], enKeys = PARAMS.filter(function (p) { return p[7] === "Energy"; }).map(function (p) { return p[0]; });
+    if (enKeys.length !== 15 || WAVES[39] !== "energy") bad.push("rows " + enKeys.length + ", wave 39 " + WAVES[39]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), shot = withState(PRESETS["Plasma Rifle"], genomeFromState);
+    enKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, shot)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(39) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Energy"]');
+    if (!panel || !panel.hidden) bad.push("Energy panel shown for a Coin");
+    applyPreset(PRESETS["Rail Fire"], "Rail Fire");
+    if (!panel || panel.hidden) bad.push("Energy panel hidden for Rail Fire");
+    if (durationMax(state) < PRESETS["Rail Fire"].duration) bad.push("Duration slider stops at " + durationMax(state) + " s on a " + PRESETS["Rail Fire"].duration + " s Rail Fire");
+    const names = ["Plasma Rifle", "Plasma Shot", "Plasma Discharge", "Rail Fire", "Pulse Rifle"];
+    if (!PRESET_CATEGORIES.some(function (c) { return c[0] === "Guns" && c[1].indexOf("Pulse Rifle") >= 0; })) bad.push("Pulse Rifle not in Guns");
+    names.forEach(function (n) {
+      [PRESETS[n]].concat(PRESETS[n]._alts || []).forEach(function (p, j) {
+        if (Math.round(p.wave) !== 39) bad.push(n + " #" + j + " not energy");
+        if (Math.round(p.repeat || 1) !== 1) bad.push(n + " #" + j + " uses Repeat");
+        if ((p.limiter || 0) > 0) bad.push(n + " #" + j + " uses the master Limiter");
+        const r = withState(p, render); let pk = 0, side = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95 || !(side > 0)) bad.push(n + " #" + j + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan);
+      });
+    });
+    // full auto: Rounds shots at the engine's own times, each a peak, each a NEW shot
+    [["Pulse Rifle", 14]].forEach(function (e) {
+      const p = PRESETS[e[0]], st = Object.assign({}, PARAM_DEFAULTS, p), g = makeEnergy(SR, Math.floor(st.duration * SR), energyCfg(st), Math.round(st.enSeed));
+      const r = withState(p, render), m = Float64Array.from(r.L, function (x, i) { return x + r.R[i]; }), times = g.info.shots;
+      if (times.length !== e[1] || Math.round(p.enRounds) !== e[1]) bad.push(e[0] + ": " + times.length + " rounds");
+      let all = 0; for (let i = 0; i < m.length; i++) all = Math.max(all, Math.abs(m[i]));
+      const at = times.map(function (t) { return Math.round(t * SR); });
+      at.forEach(function (a, k) { let p0 = 0; for (let i = a; i < a + 220; i++) p0 = Math.max(p0, Math.abs(m[i])); if (p0 < 0.25 * all) bad.push(e[0] + " round " + (k + 1) + " missing"); });
+      let same = 0;
+      for (let k = 0; k + 1 < at.length; k++) { let ab = 0, aa = 0, bb = 0; for (let i = 0; i < 882; i++) { const x = m[at[k] + i], y = m[at[k + 1] + i]; ab += x * y; aa += x * x; bb += y * y; } if (ab / Math.sqrt(aa * bb) > 0.95) same++; }
+      if (same) bad.push(e[0] + ": " + same + " rounds a copy of the one before");
+    });
+    const p0 = PRESETS["Plasma Shot"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { enSeed: p0.enSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("enSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    const rnd = Math.random; let rs = 39; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Plasma Rifle", "Rail Fire", "Pulse Rifle"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE CHIP GUN ENGINE (wave 40): its rows are drawn only by a chip gun sound (and its panel shown only for
+  // it); every chip gun preset and its alt (AJ's four blind picks: Woodgrain Shot, Mega Shot and 8-Bit Laser, each with
+  // today's sound kept as its alt, and the new Chip Machine Gun) renders audible, finite, under full scale, seeded,
+  // without Repeat or the master Limiter, and CENTERED (the machines were mono); a base and its alt sit within 2 dB of
+  // each other (BS.1770, as the levels were set), so a repeat click does not jump; Chip Machine Gun really re-fires ON
+  // FRAMES: every round a peak at a whole number of 60 Hz frames, each a new shot (consecutive rounds are not the same
+  // samples); a Variations pack is levelled like any other (cgPeak is the engine's); and no chip gun label, enum or help
+  // line names a console or a chip (the machines are described by their sound).
+  t("chipgun/drawn-only-when-used-presets-centered-and-levelled-machine-gun-refires-on-frames-no-brand-names", function () {
+    const bad = [], cgKeys = PARAMS.filter(function (p) { return p[7] === "Chip gun"; }).map(function (p) { return p[0]; });
+    if (cgKeys.length !== 16 || WAVES[40] !== "chipgun") bad.push("rows " + cgKeys.length + ", wave 40 " + WAVES[40]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), shot = withState(PRESETS["Woodgrain Shot"], genomeFromState);
+    cgKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, shot)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(40) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Chip gun"]');
+    if (!panel || !panel.hidden) bad.push("Chip gun panel shown for a Coin");
+    applyPreset(PRESETS["Chip Machine Gun"], "Chip Machine Gun");
+    if (!panel || panel.hidden) bad.push("Chip gun panel hidden for Chip Machine Gun");
+    const sec = PRESET_CATEGORIES.find(function (c) { return c[0] === "Consoles / Chiptune"; });
+    if (!sec || sec[1].indexOf("Chip Machine Gun") !== sec[1].indexOf("Woodgrain Shot") + 1) bad.push("Chip Machine Gun not right after Woodgrain Shot");
+    // integrated loudness (BS.1770: K-weighted, 400 ms blocks, gated), the measure the levels were set on
+    const lufs = function (L, R) {
+      const bq = function (x, b0, b1, b2, a0, a1, a2) { const y = new Float64Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0; for (let i = 0; i < x.length; i++) { const v = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v; } return y; };
+      const kw = function (x) {
+        const A = Math.pow(10, 4 / 40), w = 2 * Math.PI * 1500 / SR, c = Math.cos(w), al = Math.sin(w) * 0.7071067811865476, sa = 2 * Math.sqrt(A) * al;
+        const s = bq(x, A * ((A + 1) + (A - 1) * c + sa), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - sa), (A + 1) - (A - 1) * c + sa, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - sa);
+        const w2 = 2 * Math.PI * 38 / SR, c2 = Math.cos(w2), al2 = Math.sin(w2);
+        return bq(s, (1 + c2) / 2, -(1 + c2), (1 + c2) / 2, 1 + al2, -2 * c2, 1 - al2);
+      };
+      const kl = kw(L), kr = kw(R), B = Math.round(0.4 * SR), H = Math.round(0.1 * SR), ms = [];
+      const block = function (a, b) { let s = 0; for (let i = a; i < b; i++) s += kl[i] * kl[i] + kr[i] * kr[i]; return s / (b - a); };
+      if (L.length <= B) ms.push(block(0, L.length)); else for (let a = 0; a + B <= L.length; a += H) ms.push(block(a, a + B));
+      const l = function (m) { return -0.691 + 10 * Math.log10(m || 1e-12); };
+      let g = ms.filter(function (m) { return l(m) > -70; }); if (!g.length) return -70;
+      const rel = l(g.reduce(function (t, m) { return t + m; }, 0) / g.length) - 10; g = g.filter(function (m) { return l(m) > rel; });
+      return l(g.reduce(function (t, m) { return t + m; }, 0) / g.length);
+    };
+    ["Woodgrain Shot", "Mega Shot", "8-Bit Laser", "Chip Machine Gun"].forEach(function (n) {
+      const lv = [];
+      [PRESETS[n]].concat(PRESETS[n]._alts || []).forEach(function (p, j) {
+        if (j === 0 && Math.round(p.wave) !== 40) bad.push(n + " base not chipgun");
+        if (Math.round(p.repeat || 1) !== 1) bad.push(n + " #" + j + " uses Repeat");
+        if ((p.limiter || 0) > 0) bad.push(n + " #" + j + " uses the master Limiter");
+        if ((p.gain == null ? 0.7 : p.gain) > 1) bad.push(n + " #" + j + " gain over 1");
+        const r = withState(p, render); let pk = 0, side = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95) bad.push(n + " #" + j + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan);
+        if (Math.round(p.wave) === 40 && side !== 0) bad.push(n + " #" + j + " not centered");
+        lv.push(lufs(r.L, r.R));
+      });
+      if (lv.length < 2) bad.push(n + " has no alt");
+      else if (Math.abs(lv[0] - lv[1]) > 2) bad.push(n + " base " + lv[0].toFixed(1) + " vs alt " + lv[1].toFixed(1) + " LUFS");
+    });
+    // full auto, base (8-bit) and alt (FM): Rounds shots on whole frames, each a peak, each a NEW shot
+    [[PRESETS["Chip Machine Gun"], 14, 4], [PRESETS["Chip Machine Gun"]._alts[0], 12, 5]].forEach(function (e, j) {
+      const p = e[0], st = Object.assign({}, PARAM_DEFAULTS, p), g = makeChipgun(SR, Math.floor(st.duration * SR), chipgunCfg(st), Math.round(st.cgSeed));
+      const r = withState(p, render), m = Float64Array.from(r.L, function (x, i) { return x + r.R[i]; }), times = g.info.shots, who = "Chip Machine Gun #" + j;
+      if (times.length !== e[1] || Math.round(p.cgRounds) !== e[1]) bad.push(who + ": " + times.length + " rounds");
+      times.forEach(function (tm, k) { if (k && Math.abs((tm - times[k - 1]) * 60 - e[2]) > 1e-9) bad.push(who + " round " + (k + 1) + " off its frame"); });
+      let all = 0; for (let i = 0; i < m.length; i++) all = Math.max(all, Math.abs(m[i]));
+      const at = times.map(function (tm) { return Math.round(tm * SR); });
+      at.forEach(function (a, k) { let p0 = 0; for (let i = a; i < a + 220; i++) p0 = Math.max(p0, Math.abs(m[i])); if (p0 < 0.25 * all) bad.push(who + " round " + (k + 1) + " missing"); });
+      let copies = 0;
+      for (let k = 0; k + 1 < at.length; k++) { let ab = 0, aa = 0, bb = 0; for (let i = 0; i < 882; i++) { const x = m[at[k] + i], y = m[at[k + 1] + i]; ab += x * y; aa += x * x; bb += y * y; } if (ab / Math.sqrt(aa * bb) > 0.95) copies++; }
+      if (copies) bad.push(who + ": " + copies + " rounds a copy of the one before");
+    });
+    const p0 = PRESETS["Woodgrain Shot"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { cgSeed: p0.cgSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("cgSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    // no console or chip names anywhere a user reads about this engine (CONSOLE_HELP may: it is the Consoles strip's)
+    const BRAND = /\b(NES|SNES|Famicom|Nintendo|Sega|Genesis|Mega ?Drive|Game ?Boy|Atari|Commodore|C64|SID|Neo ?Geo|PC ?Engine|TurboGrafx|Amiga|Yamaha|YM ?\d+|2A03|SN76489|SPC ?700|S-DSP|Sony|PlayStation|Master System)\b/i;
+    const prose = [WAVES[40], WAVE_HELP.chipgun || "", panel ? words(panel) : ""];
+    PARAMS.filter(function (p) { return p[7] === "Chip gun"; }).forEach(function (p) { prose.push(p[1], PARAM_HELP[p[0]] || "", (p[9] || []).join(" ")); if (!PARAM_HELP[p[0]]) bad.push(p[0] + " has no help"); });
+    if (!WAVE_HELP.chipgun) bad.push("no WAVE_HELP for chipgun");
+    prose.forEach(function (x) { const m = BRAND.exec(x); if (m) bad.push("names \"" + m[0] + "\""); });
+    const rnd = Math.random; let rs = 40; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Woodgrain Shot", "Mega Shot", "Chip Machine Gun"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE GUN FOLEY ENGINE (wave 41): everything around the shot. Its rows are drawn only by a gun foley sound
+  // (and its panel shown only for it); every gun foley preset (AJ's blind picks: Shell Casing, Ricochet Zing, Bullet Whiz
+  // and Bolt-Action Reload replaced in place, Revolver Spin and Dry Fire new, in Guns beside Shell Casing and the reloads)
+  // is the action it names, renders audible, stereo, finite, under full scale, seeded, without Repeat, the master Limiter
+  // or a gain over 1, and is never cut (the action ends inside its Duration); a Variations pack is levelled like any other
+  // (gfPeak is the engine's); and no gun foley label, enum or help line names a real firearm.
+  t("gunfoley/drawn-only-when-used-presets-audible-and-whole-variations-levelled-no-firearm-names", function () {
+    const bad = [], gfKeys = PARAMS.filter(function (p) { return p[7] === "Gun foley"; }).map(function (p) { return p[0]; });
+    if (gfKeys.length !== 21 || WAVES[41] !== "gunfoley") bad.push("rows " + gfKeys.length + ", wave 41 " + WAVES[41]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), spin = withState(PRESETS["Revolver Spin"], genomeFromState);
+    gfKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, spin)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[1].indexOf(41) >= 0; })) bad.push("not in the engine picker");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Gun foley"]');
+    if (!panel || !panel.hidden) bad.push("Gun foley panel shown for a Coin");
+    applyPreset(PRESETS["Revolver Spin"], "Revolver Spin");
+    if (!panel || panel.hidden) bad.push("Gun foley panel hidden for Revolver Spin");
+    if (durationMax(state) < 2) bad.push("Duration slider stops at " + durationMax(state) + " s on a gun foley sound");
+    const guns = (PRESET_CATEGORIES.find(function (c) { return c[0] === "Guns"; }) || [0, []])[1];
+    ["Revolver Spin", "Dry Fire"].forEach(function (n) { if (guns.indexOf(n) < 0 || guns.indexOf(n) > guns.indexOf("Bolt-Action Reload") + 2) bad.push(n + " not beside the reloads in Guns"); });
+    const want = { "Shell Casing": "casing", "Ricochet Zing": "ricochet", "Bullet Whiz": "bullet pass", "Bolt-Action Reload": "bolt reload", "Revolver Spin": "revolver spin", "Dry Fire": "dry fire" };
+    Object.keys(want).forEach(function (n) {
+      const p = PRESETS[n];
+      if (!p || Math.round(p.wave) !== 41) { bad.push(n + " not gun foley"); return; }
+      if (Math.round(p.repeat || 1) !== 1) bad.push(n + " uses Repeat");
+      if ((p.limiter || 0) > 0) bad.push(n + " uses the master Limiter");
+      if ((p.gain == null ? 0.7 : p.gain) > 1) bad.push(n + " gain over 1");
+      const st = Object.assign({}, PARAM_DEFAULTS, p), g = makeGunfoley(SR, Math.floor(st.duration * SR), gunfoleyCfg(st), Math.round(st.gfSeed));
+      if (g.info.action !== want[n]) bad.push(n + " is a " + g.info.action);
+      if (g.info.end > st.duration + 0.001) bad.push(n + " cut: the action runs " + g.info.end.toFixed(3) + " s in a " + st.duration + " s sound");
+      const r = withState(p, render); let pk = 0, side = 0, nan = 0, dc = 0;
+      for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); dc += r.L[i] + r.R[i]; }
+      if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.95 || !(side > 0) || Math.abs(dc / (2 * r.L.length)) > 1e-4) bad.push(n + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan + " dc " + (dc / (2 * r.L.length)).toExponential(1));
+    });
+    if (Math.round(PRESETS["Bolt-Action Reload"].gfLoad) !== 2) bad.push("Bolt-Action Reload is not the single round AJ picked");
+    if (PRESETS["Bullet Whiz"] && 220 + 730 * PRESETS["Bullet Whiz"].gfSpeed >= 343) bad.push("Bullet Whiz is not the subsonic whiz AJ picked");
+    const p0 = PRESETS["Dry Fire"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { gfSeed: p0.gfSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("gfSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    // no real firearm's maker or model anywhere a user reads about this engine
+    const BRAND = /\b(Glock|Colt|Beretta|Remington|Winchester|Mossberg|Wesson|Ruger|SIG|Sauer|Kalashnikov|AK-?\d+|AR-?1[05]|M16|M4|M1911|1911|Mauser|Enfield|Springfield|Desert Eagle|Uzi|Thompson|Walther|Luger|Browning|Benelli|Heckler|Koch|MP5|Garand|Mosin|Nagant|SKS|Tavor|FN|SCAR|Henry|Marlin|Savage|Taurus|Kimber)\b/i;
+    const prose = [WAVES[41], WAVE_HELP.gunfoley || "", panel ? words(panel) : ""];
+    PARAMS.filter(function (p) { return p[7] === "Gun foley"; }).forEach(function (p) { prose.push(p[1], PARAM_HELP[p[0]] || "", (p[9] || []).join(" ")); if (!PARAM_HELP[p[0]]) bad.push(p[0] + " has no help"); });
+    if (!WAVE_HELP.gunfoley) bad.push("no WAVE_HELP for gunfoley");
+    prose.forEach(function (x) { const m = BRAND.exec(x); if (m) bad.push("names \"" + m[0] + "\""); });
+    const rnd = Math.random; let rs = 41; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Revolver Spin", "Bolt-Action Reload", "Ricochet Zing"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-13. THE VOICE ENGINE (wave 42): a person's cries, the game voice clip. Its rows are drawn only by a voice
+  // sound (and its panel, with the Body box, shown only for one); every voice preset (AJ's picks: Battle Cry, Sword Cry,
+  // Jump Hup, Falling Scream, Hurt Grunt and Woman Hurt Cry new in Voice / Vocal; Enemy Death replaced in place in Hits /
+  // Melee, its thud a layer and today's formant yell kept as an alt) is the cry it names, renders audible, finite, mono,
+  // under 0.98, without DC, Repeat, the master Limiter or a gain over 1, and is never cut (the cry ends inside its
+  // Duration); a base and its alts play within 2.5 dB of each other (gated RMS; LUFS within 2 dB in SOUND-REVIEW.md);
+  // the seed is the take; a Variations pack is levelled like any other; a CUSTOM cry's typed Body (voBody, an SFX_EXTRAS
+  // field) survives a share link and is what it plays; and no label, enum or help line names a game, a character or a
+  // company.
+  t("voice/drawn-only-when-used-presets-audible-whole-and-level-custom-body-round-trips-no-names", function () {
+    const bad = [], voKeys = PARAMS.filter(function (p) { return p[7] === "Vocal"; }).map(function (p) { return p[0]; });
+    if (voKeys.length !== 21 || WAVES[42] !== "voice") bad.push("rows " + voKeys.length + ", wave 42 " + WAVES[42]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), cry = withState(PRESETS["Battle Cry"], genomeFromState);
+    voKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, cry)) bad.push(k + " drawn wrong"); });
+    if (!ENGINE_CATS.some(function (c) { return c[0] === "Voice" && c[1].indexOf(42) >= 0; })) bad.push("not in the engine picker's Voice family");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Vocal"]');
+    if (!panel || !panel.hidden) bad.push("Vocal panel shown for a Coin");
+    applyPreset(PRESETS["Battle Cry"], "Battle Cry");
+    if (!panel || panel.hidden) bad.push("Vocal panel hidden for Battle Cry");
+    if (!panel || !panel.querySelector("#voBodyInput")) bad.push("no Body box in the Vocal panel");
+    if (durationMax(state) < 2) bad.push("Duration slider stops at " + durationMax(state) + " s on a voice");
+    const vocal = (PRESET_CATEGORIES.find(function (c) { return c[0] === "Voice / Vocal"; }) || [0, []])[1];
+    const melee = (PRESET_CATEGORIES.find(function (c) { return c[0] === "Hits / Melee"; }) || [0, []])[1];
+    ["Battle Cry", "Sword Cry", "Jump Hup", "Falling Scream", "Hurt Grunt", "Woman Hurt Cry"].forEach(function (n) { if (vocal.indexOf(n) < 0) bad.push(n + " not in Voice / Vocal"); });
+    if (melee.indexOf("Enemy Death") < 0) bad.push("Enemy Death left Hits / Melee");
+    const want = { "Battle Cry": "battle cry", "Sword Cry": "sword cry", "Jump Hup": "hup", "Falling Scream": "fall scream", "Hurt Grunt": "hurt", "Woman Hurt Cry": "big hurt", "Enemy Death": "death cry" };
+    const SR_ = SR, cut = function (p) { const st = Object.assign({}, PARAM_DEFAULTS, p); return makeVoice(SR_, voiceCfg(st)).info.len - st.duration; };
+    Object.keys(want).forEach(function (n) {
+      const p = PRESETS[n];
+      if (!p || Math.round(p.wave) !== 42) { bad.push(n + " not a voice"); return; }
+      const takes = [p].concat(p._alts || []), levels = [];
+      takes.forEach(function (a, j) {
+        const nm = n + (j ? " alt " + j : "");
+        if (Math.round(a.wave) !== 42) { if (n === "Enemy Death" && j === takes.length - 1 && Math.round(a.wave) === 13) { levels.push(null); return; } bad.push(nm + " not a voice"); return; }
+        if (!j && makeVoice(SR_, voiceCfg(Object.assign({}, PARAM_DEFAULTS, a))).info.cry !== want[n]) bad.push(nm + " is not a " + want[n]);
+        if (Math.round(a.repeat || 1) !== 1) bad.push(nm + " uses Repeat");
+        if ((a.limiter || 0) > 0) bad.push(nm + " uses the master Limiter");
+        if ((a.gain == null ? 0.7 : a.gain) > 1) bad.push(nm + " gain over 1");
+        if (cut(a) > 0.0005) bad.push(nm + " cut: the cry runs " + cut(a).toFixed(3) + " s past its Duration");
+        const r = withState(a, render); let pk = 0, side = 0, nan = 0, dc = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); dc += r.L[i] + r.R[i]; }
+        if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.98 || (side > 1e-3 && !a.reverb) || Math.abs(dc / (2 * r.L.length)) > 1e-4) bad.push(nm + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan + " side " + side.toFixed(4) + " dc " + (dc / (2 * r.L.length)).toExponential(1));
+        levels.push(20 * Math.log10(gatedRms(r.L, r.R)));
+      });
+      const lv = levels.filter(function (x) { return x != null; });
+      if (Math.max.apply(null, lv) - Math.min.apply(null, lv) > 2.5) bad.push(n + " base and alts span " + (Math.max.apply(null, lv) - Math.min.apply(null, lv)).toFixed(2) + " dB");
+    });
+    const ed = PRESETS["Enemy Death"];
+    if (!ed || !ed.layers || JSON.parse(ed.layers).length !== 1 || JSON.parse(ed.layers)[0].s.cutoff !== 400) bad.push("Enemy Death lost its thud layer");
+    const p0 = PRESETS["Jump Hup"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { voSeed: p0.voSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("voSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    // a CUSTOM cry's typed Body travels with the sound: a share link carries it, applying the link plays the same audio,
+    // and the Body is what it plays (NEGATIVES: another Body, and no Body, each sound different)
+    const keep = snapshotState(), keepLabel = seqLabel;
+    try {
+      const hiyah = (PRESETS["Sword Cry"]._alts || []).find(function (a) { return a.voBody; });
+      if (!hiyah || Math.round(hiyah.voCry) !== 10) bad.push("no custom take among Sword Cry's alts");
+      else {
+        applyPreset(hiyah, "Probe");
+        const heard = audio(render()), link = decodePatch(encodePatch()).s;
+        if (link.voBody !== hiyah.voBody) bad.push("the link dropped the Body: " + JSON.stringify(link.voBody));
+        applyPreset(PRESETS["Coin"], "Coin"); applyPreset(link, "Shared");
+        if (state.voBody !== hiyah.voBody || audio(render()) !== heard) bad.push("the link did not play the same cry back");
+        if (audio(withState(Object.assign({}, hiyah, { voBody: "oo AE:4" }), render)) === heard) bad.push("another Body plays the same");
+        if (audio(withState(Object.assign({}, hiyah, { voBody: "" }), render)) === heard) bad.push("no Body plays the same");
+        // a typed body far too long or too held is bounded, never a huge buffer or a NaN
+        const big = withState(Object.assign({}, hiyah, { voBody: new Array(200).join("n:1000 AH:0 "), duration: 2 }), function () { return makeVoice(SR_, voiceCfg(state)); });
+        if (!(big.info.len <= 8.01) || big.L.some(function (x) { return x !== x; })) bad.push("a long typed body: " + big.info.len + " s");
+      }
+    } finally { applyPreset(keep, keepLabel); }
+    // no game, character or company names anywhere a user reads about this engine
+    const NAMES = /\b(Nintendo|Sega|Capcom|Konami|Namco|Taito|SNK|Sony|Atari|SNES|Famicom|Genesis|Mega ?Drive|Street Fighter|Final Fight|Streets of Rage|Double Dragon|Golden Axe|Mortal Kombat|Tekken|Zelda|Mario|Sonic|Mega ?Man|Castlevania|Ryu|Chun-?Li|Wilhelm|Howie|S-DSP|SPC ?700)\b/i;
+    const prose = [WAVES[42], WAVE_HELP.voice || "", panel ? words(panel) : ""];
+    PARAMS.filter(function (p) { return p[7] === "Vocal"; }).forEach(function (p) { prose.push(p[1], PARAM_HELP[p[0]] || "", (p[9] || []).join(" ")); if (!PARAM_HELP[p[0]]) bad.push(p[0] + " has no help"); });
+    if (!WAVE_HELP.voice) bad.push("no WAVE_HELP for voice");
+    prose.forEach(function (x) { const m = NAMES.exec(x); if (m) bad.push("names \"" + m[0] + "\""); });
+    const rnd = Math.random; let rs = 42; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Battle Cry", "Jump Hup", "Falling Scream"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  // 2026-11-14. THE MELEE ENGINE (wave 43): a weapon swung and landing in something. Its rows are drawn only by a melee
+  // sound (and its panel shown only for one), in the Foley family beside the gun; every melee preset (AJ's picks, each
+  // replacing today's in place in Hits / Melee: Katana Slice, Axe Chop, Sword Clash, Hammer Smash, Dagger Stab, Shield
+  // Block, Critical Slash, and Punch / Kick with three alts) is the weapon and target it names, renders audible, finite,
+  // stereo, under 0.98, without DC, Repeat, the master Limiter, a gain over 1 or a Peak past 2, and is never cut (the
+  // blow ends inside its Duration); Punch / Kick and its alts play within 2.5 dB of each other (gated RMS; LUFS within 2
+  // dB in SOUND-REVIEW.md); the seed is the take; Peak control lifts the hit; a Variations pack is levelled like any
+  // other; and no label, enum or help line names a game, a film or a company. The MELEE REDO (2026-11-14, AJ: "all of
+  // the melee redos are actually very good") holds to the same: the rest of the section's blows, 34 replaced in place and
+  // four (Visor Clank, Sword Ting, Hit, Crossbow Bolt) joining today's base as an alt, each a melee take in Hits / Melee.
+  t("melee/drawn-only-when-used-presets-audible-whole-and-level-variations-levelled-no-names", function () {
+    const bad = [], mlKeys = PARAMS.filter(function (p) { return p[7] === "Melee"; }).map(function (p) { return p[0]; });
+    if (mlKeys.length !== 23 || WAVES[43] !== "melee") bad.push("rows " + mlKeys.length + ", wave 43 " + WAVES[43]);
+    const coin = withState(PRESETS["Coin"], genomeFromState), cut0 = withState(PRESETS["Katana Slice"], genomeFromState);
+    mlKeys.forEach(function (k) { if (!undrawn(k, coin) || undrawn(k, cut0)) bad.push(k + " drawn wrong"); });
+    const foley = ENGINE_CATS.find(function (c) { return c[0] === "Foley"; });
+    if (!foley || foley[1].indexOf(43) !== foley[1].indexOf(38) + 1) bad.push("not in the engine picker's Foley family beside the gun");
+    applyPreset(PRESETS["Coin"], "Coin");
+    const panel = document.querySelector('#panels [data-group="Melee"]');
+    if (!panel || !panel.hidden) bad.push("Melee panel shown for a Coin");
+    applyPreset(PRESETS["Katana Slice"], "Katana Slice");
+    if (!panel || panel.hidden) bad.push("Melee panel hidden for Katana Slice");
+    if (durationMax(state) < 2) bad.push("Duration slider stops at " + durationMax(state) + " s on a melee sound");
+    const melee = (PRESET_CATEGORIES.find(function (c) { return c[0] === "Hits / Melee"; }) || [0, []])[1];
+    // [weapon, target, hit] each names (hit 0 = the weapon's own); the kick is Punch / Kick's last alt
+    const want = { "Katana Slice": [3, 1, 1], "Axe Chop": [4, 2, 1], "Sword Clash": [2, 8, 1], "Hammer Smash": [5, 4, 2], "Dagger Stab": [1, 1, 3],
+      "Shield Block": [2, 5, 1], "Critical Slash": [2, 3, 1], "Punch / Kick": [0, 1, 2] };
+    // the blow's own end as AJ heard it (Peak control off, trimmed where it falls 60 dB under its peak: the take's length)
+    // against its Duration; the engine ends a blow at its Duration, so measuring the render itself could never fail
+    const SR_ = SR, cut = function (p) { const st = Object.assign({}, PARAM_DEFAULTS, p); return makeMelee(SR_, meleeCfg(Object.assign({}, st, { duration: 0, meleePeak: 0 })), Math.round(st.meleeSeed)).info.len - st.duration; };
+    // one melee take, whole and levelled: no Repeat, master Limiter, gain over 1 or Peak past 2; never cut; audible,
+    // finite, stereo, under 0.98, no DC. Returns its gated RMS (dB). PEAK PAST 2, NOT 1.2: the row stopped at 1.2 (the
+    // gun's ceiling) until AJ chose to "meet in between" (2026-11-14, SOUND-REVIEW.md): a high-crest blow short of the
+    // level of the preset it replaced is lifted half the gap, and the second full pass up to 2 is how; the engine clamps
+    // at 2, so this holds the presets to the engine's own range rather than to a number.
+    const whole = function (nm, a) {
+      if (Math.round(a.repeat || 1) !== 1) bad.push(nm + " uses Repeat");
+      if ((a.limiter || 0) > 0) bad.push(nm + " uses the master Limiter");
+      if ((a.gain == null ? 0.7 : a.gain) > 1) bad.push(nm + " gain over 1");
+      if ((a.meleePeak || 0) > 2) bad.push(nm + " Peak past 2");
+      if (cut(a) > 0.0005) bad.push(nm + " cut: the blow runs " + cut(a).toFixed(3) + " s past its Duration");
+      const r = withState(a, render); let pk = 0, side = 0, nan = 0, dc = 0;
+      for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); side += Math.abs(r.L[i] - r.R[i]); dc += r.L[i] + r.R[i]; }
+      if (nan || !(r.rawPeak > AUDIBLE_FLOOR) || pk > 0.98 || !(side > 0) || Math.abs(dc / (2 * r.L.length)) > 1e-4) bad.push(nm + " peak " + pk.toFixed(3) + " raw " + r.rawPeak + " nan " + nan + " side " + side.toFixed(4) + " dc " + (dc / (2 * r.L.length)).toExponential(1));
+      return 20 * Math.log10(gatedRms(r.L, r.R));
+    };
+    Object.keys(want).forEach(function (n) {
+      const p = PRESETS[n];
+      if (melee.indexOf(n) < 0) bad.push(n + " left Hits / Melee");
+      if (!p || Math.round(p.wave) !== 43) { bad.push(n + " not melee"); return; }
+      const takes = [p].concat(p._alts || []), levels = [];
+      if (n === "Punch / Kick" ? takes.length !== 4 : takes.length !== 1) bad.push(n + " has " + takes.length + " takes");
+      takes.forEach(function (a, j) {
+        const nm = n + (j ? " alt " + j : "");
+        if (Math.round(a.wave) !== 43) { bad.push(nm + " not melee"); return; }
+        const w = n === "Punch / Kick" && j === 3 ? [9, 1, 2] : want[n];
+        if (Math.round(a.meleeWeapon) !== w[0] || Math.round(a.meleeTarget) !== w[1] || Math.round(a.meleeHit) !== w[2]) bad.push(nm + " is weapon " + a.meleeWeapon + " on target " + a.meleeTarget + ", hit " + a.meleeHit);
+        levels.push(whole(nm, a));
+      });
+      if (levels.length > 1 && Math.max.apply(null, levels) - Math.min.apply(null, levels) > 2.5) bad.push(n + " base and alts span " + (Math.max.apply(null, levels) - Math.min.apply(null, levels)).toFixed(2) + " dB");
+    });
+    // THE MELEE REDO: 34 blows replaced in place, and four joining today's base as its last alt (today's stays the base,
+    // on its own engine). Each is in Hits / Melee, a melee take, whole and levelled as above.
+    const redoAlt = ["Visor Clank", "Sword Ting", "Hit", "Crossbow Bolt"];
+    const redo = ["Sword Swing", "Heavy Cleave", "War Hammer Crush", "Ground Slam", "Spear Thrust", "Whip Crack", "Rapier Lunge",
+      "Flail Swing", "Sword Clash 2", "Hammer Smash 2", "Katana Slice 2", "Reckless Chop", "Heavy Thrust", "Whirling Riposte",
+      "Iron Slice", "Heavy Chop", "Reckless Slice", "Grim Cleave", "Swift Cleave", "Keen Cleave", "Swift Thrust",
+      "Reckless Thrust", "Brutal Bash", "Grim Chop", "Reckless Clash", "Keen Swing", "Whirling Swing", "Swift Riposte",
+      "Iron Clash", "Razor Cleave", "Iron Cleave", "Heavy Slice", "Swift Chop", "Whirling Chop"];
+    if (redo.length + redoAlt.length !== 38) bad.push("the redo is " + (redo.length + redoAlt.length) + " sounds");
+    redo.concat(redoAlt).forEach(function (n) {
+      const p = PRESETS[n];
+      if (melee.indexOf(n) < 0) bad.push(n + " left Hits / Melee");
+      if (!p) { bad.push(n + " missing"); return; }
+      const alt = redoAlt.indexOf(n) >= 0, alts = p._alts || [], a = alt ? alts[alts.length - 1] : p;
+      if (alt ? Math.round(p.wave) === 43 || alts.length !== 1 : alts.length) bad.push(n + ": base wave " + p.wave + ", " + alts.length + " alts");
+      if (!a || Math.round(a.wave) !== 43) { bad.push(n + " has no melee take"); return; }
+      whole(n + (alt ? " alt" : ""), a);
+    });
+    const ed = PRESETS["Enemy Death"];
+    if (!ed || Math.round(ed.wave) !== 42) bad.push("Enemy Death is no longer the voice engine's");
+    const p0 = PRESETS["Dagger Stab"], again = audio(withState(p0, render)), other = audio(withState(Object.assign({}, p0, { meleeSeed: p0.meleeSeed + 1 }), render));
+    if (again !== audio(withState(p0, render)) || other === again) bad.push("meleeSeed: same " + (again === audio(withState(p0, render))) + ", another differs " + (other !== again));
+    // Peak control squeezes the hit, so the blow sits louder at the same peak (Normalize on)
+    const hs = Object.assign({}, PRESETS["Sword Clash"], { gain: 1 }), soft = withState(Object.assign({}, hs, { meleePeak: 0 }), render), hard = withState(Object.assign({}, hs, { meleePeak: 1.2 }), render);
+    if (!(gatedRms(hard.L, hard.R) > 1.2 * gatedRms(soft.L, soft.R))) bad.push("Peak control does not lift the hit: " + gatedRms(soft.L, soft.R).toFixed(4) + " -> " + gatedRms(hard.L, hard.R).toFixed(4));
+    // a miss (target Air) is the swing alone, and it is audible
+    const miss = withState(Object.assign({}, PRESETS["Katana Slice"], { meleeTarget: 0 }), render);
+    if (!(miss.rawPeak > AUDIBLE_FLOOR)) bad.push("a miss is silent");
+    // no game, film or company names anywhere a user reads about this engine
+    const NAMES = /\b(Nintendo|Sega|Capcom|Konami|Namco|Taito|SNK|Sony|Atari|Street Fighter|Final Fight|Streets of Rage|Double Dragon|Golden Axe|Mortal Kombat|Tekken|Soul ?Calibur|Zelda|Mario|Sonic|Castlevania|Dark Souls|Elden Ring|Kill Bill|Star Wars|Lightsaber|Bruce Lee|Kurosawa|Samurai Jack|Ryu)\b/i;
+    const prose = [WAVES[43], WAVE_HELP.melee || "", panel ? words(panel) : ""];
+    PARAMS.filter(function (p) { return p[7] === "Melee"; }).forEach(function (p) { prose.push(p[1], PARAM_HELP[p[0]] || "", (p[9] || []).join(" ")); if (!PARAM_HELP[p[0]]) bad.push(p[0] + " has no help"); });
+    if (!WAVE_HELP.melee) bad.push("no WAVE_HELP for melee");
+    prose.forEach(function (x) { const m = NAMES.exec(x); if (m) bad.push("names \"" + m[0] + "\""); });
+    const rnd = Math.random; let rs = 43; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      // the redo's too: a whiff, a blow at Peak 2 and a clash (a Variations pack levels Peak-controlled takes alike)
+      ["Katana Slice", "Hammer Smash", "Punch / Kick", "Sword Swing", "Rapier Lunge", "Iron Clash"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "8"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
+  t("search/the-voice-words-toriya-kiai-hyah-hup-ugh-scream", function () {
+    // 2026-11-13: the voice engine's cries are found by the sound people type ("toriya", "hiyah", "hup", "ugh") and by
+    // what they are; "hurt", "pain", "ouch", "oof" and "jump" keep their old aliases first and gain the cries.
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
+    const want = { toriya: ["Battle Cry"], kiai: ["Battle Cry"], yell: ["Battle Cry"], shout: ["Battle Cry"], hyah: ["Sword Cry"], hiyah: ["Sword Cry"],
+      slash: ["Sword Cry", "Critical Slash"], hup: ["Jump Hup"], jump: ["Jump Hup"], hurt: ["Hurt Grunt", "Woman Hurt Cry"], pain: ["Hurt Grunt", "Woman Hurt Cry"],
+      ugh: ["Hurt Grunt", "Woman Hurt Cry"], ouch: ["Hurt Grunt", "Woman Hurt Cry"], oof: ["Hurt Grunt", "Woman Hurt Cry"], scream: ["Falling Scream"], fall: ["Falling Scream"] };
+    const bad = [];
+    Object.keys(want).forEach(function (q) { const got = find(q); want[q].forEach(function (n) { if (got.indexOf(n) < 0) bad.push(q + " ✗ " + n); }); });
+    presetSearch.value = ""; filterPresets();
+    return ok(!bad.length, bad.join(" · "));
+  });
   // 2026-11-12. Variations of a LAYERED sound: every take is the whole sound (every layer, same delays and volumes), more
   // than layer 1 is varied, and the layers keep their pitch relation (one shared move), so a rooster's syllables stay in
   // tune with each other. Before, the seed was genomeFromState (no layers), so every take was the first syllable alone.
@@ -345,6 +922,39 @@
     return ok(back.indexOf("Cancel") >= 0 && menu.indexOf("Cursor Move") >= 0 && hit.indexOf("Chittering Chirp") < 0 && hit.indexOf("8-Bit Hit") >= 0 && coin.indexOf("Coin") >= 0,
               [back.length, menu.length, hit.length, hit.indexOf("Chittering Chirp")].join(","));
   });
+  t("search/the-glass-breaks-answer-glass-vase-potion-and-break", function () {
+    // SFX 1.3 (2026-11-13): Window Smash, Bottle Break and Pot Smash don't say "glass"; the aliases must find them, and
+    // "break" must not lose Wood Break (a name match always outranks an alias).
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
+    const want = { glass: ["Glass Shatter", "Glass Clink", "Window Smash", "Bottle Break", "Pot Smash"], vase: ["Pot Smash"], potion: ["Bottle Break"],
+      jar: ["Pot Smash", "Bottle Break"], "break": ["Wood Break", "Bottle Break", "Glass Shatter", "Window Smash"], shatter: ["Glass Shatter", "Window Smash"] };
+    const bad = [];
+    Object.keys(want).forEach(function (q) { const got = find(q); want[q].forEach(function (n) { if (got.indexOf(n) < 0) bad.push(q + " ✗ " + n); }); });
+    presetSearch.value = ""; filterPresets();
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("search/the-gun-foley-words-pump-rack-empty-click-revolver-cylinder", function () {
+    // 2026-11-13: AJ picked today's Quick Reload as the pump-shotgun rack too (no duplicate preset), so "pump" and "rack"
+    // must find it; "empty" and "click" find Dry Fire (an empty gun's click), "revolver" and "cylinder" Revolver Spin; and
+    // "click" keeps its UI meanings (a name match and its first aliases outrank Dry Fire).
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); };
+    const want = { pump: ["Quick Reload"], rack: ["Quick Reload"], empty: ["Dry Fire"], click: ["Dry Fire", "Latch Click"], revolver: ["Revolver Spin"], cylinder: ["Revolver Spin"] };
+    const bad = [];
+    Object.keys(want).forEach(function (q) { const got = find(q); want[q].forEach(function (n) { if (got.indexOf(n) < 0) bad.push(q + " ✗ " + n); }); });
+    presetSearch.value = ""; filterPresets();
+    return ok(!bad.length, bad.join(" · "));
+  });
+  t("search/the-jingles-victory-achievement-defeat-success-fail", function () {
+    // 2026-11-14: five new game-state cues. Each is found by its own name, and by the words a dev types instead: "win" and
+    // "trophy" a Victory, "trophy" and "unlock" an Achievement, "lose" a Defeat and a Fail.
+    const find = function (q) { presetSearch.value = q; filterPresets(); return Array.from(document.querySelectorAll("#presets details button")).filter(function (b) { return b.style.display !== "none" && b.closest("details").style.display !== "none"; }).map(function (b) { return b.textContent; }); }
+    const want = { victory: ["Victory"], achievement: ["Achievement"], defeat: ["Defeat"], success: ["Success"], fail: ["Fail"],
+      win: ["Victory", "Success"], trophy: ["Victory", "Achievement"], unlock: ["Unlock", "Achievement"], lose: ["Fail", "Defeat"] };
+    const bad = [];
+    Object.keys(want).forEach(function (q) { const got = find(q); want[q].forEach(function (n) { if (got.indexOf(n) < 0) bad.push(q + " ✗ " + n); }); });
+    presetSearch.value = ""; filterPresets();
+    return ok(!bad.length, bad.join(" · "));
+  });
   // ---- the second usability round (2026-10-15, "Sam": a Godot platformer dev, no synth knowledge) ----
   // 3: presets on the first screen; the header button says what a click does; the tour lands on the top of the presets
   t("sam/presets-on-the-first-screen-the-riff-folded-on-a-first-visit", function () {
@@ -387,7 +997,10 @@
     const hurt = run("hurt"), pu = run("power up"), pu2 = run("power-up"), pu3 = run("powerup"), boom = run("explode"), heal = run("heal");
     presetSearch.value = ""; filterPresets();
     const bad = [];
-    if (hurt.all.length > 30 || hurt.all.indexOf("Hit") < 0 || hurt.best[0] !== "Hit" || hurt.all.indexOf("Sword Swing") >= 0) bad.push("hurt: " + hurt.all.length + " " + hurt.best.slice(0, 3));
+    // since 2026-11-13 two presets SAY "hurt" (the voice engine's Hurt Grunt and Woman Hurt Cry), and a name match outranks an
+    // alias by design, so they lead the row; Sam's point stands as: the first preset an ALIAS finds is Hit
+    const hurtAlias = hurt.best.filter(function (n) { return !/\bhurt\b/i.test(n); });
+    if (hurt.all.length > 30 || hurt.all.indexOf("Hit") < 0 || hurtAlias[0] !== "Hit" || hurt.all.indexOf("Sword Swing") >= 0) bad.push("hurt: " + hurt.all.length + " " + hurt.best.slice(0, 3));
     [pu, pu2, pu3].forEach(function (r, i) { if (r.all.indexOf("Powerup") < 0 || r.all.indexOf("Robot Power Up") < 0 || r.all.indexOf("Power Down") >= 0) bad.push("power up #" + i + ": " + r.all.length); });
     if (JSON.stringify(pu.all) !== JSON.stringify(pu2.all) || pu.all.length < 10) bad.push("power up " + pu.all.length + " vs power-up " + pu2.all.length + " vs powerup " + pu3.all.length);
     if (boom.best.indexOf("Explosion") < 0) bad.push("explode: " + boom.best.slice(0, 3));
@@ -398,28 +1011,30 @@
   // 5 + 9: the first click is the preset; again = a variation, named apart; files never reuse a name for another sound
   t("sam/first-click-is-the-preset-again-is-a-named-variation", function () {
     const bad = [], btn = function (n) { return Array.from(document.querySelectorAll("#presets details button")).find(function (b) { return b.textContent === n; }); };
+    // A preset with no `_alts` (2026-11-14): Coin was this row's preset until the jingle round gave it two alts, and a click on
+    // a preset with alts plays "version N of M" through its takes, which is a different contract (the alts rows hold it).
     let files = [];
     files = capture(function () {
       btn("Jump").click();
-      btn("Coin").click();
-      const exact = snapshotState(); applyPreset(PRESETS["Coin"], "Coin");
-      if (!sameState(exact, snapshotState()) || soundName() !== "Coin") bad.push("first click was not the preset: " + soundName());
-      presetTake = { name: "Coin", state: snapshotState() };
-      exportWav();                                             // coin.wav
-      btn("Coin").click();
-      if (soundName() !== "Coin v2" || histItems[0].name !== "Coin v2" || histItems[0].label !== "Variation") bad.push("second: " + soundName() + "/" + histItems[0].name);
+      btn("Pickup Item").click();
+      const exact = snapshotState(); applyPreset(PRESETS["Pickup Item"], "Pickup Item");
+      if (!sameState(exact, snapshotState()) || soundName() !== "Pickup Item") bad.push("first click was not the preset: " + soundName());
+      presetTake = { name: "Pickup Item", state: snapshotState() };
+      exportWav();                                             // pickup_item.wav
+      btn("Pickup Item").click();
+      if (soundName() !== "Pickup Item v2" || histItems[0].name !== "Pickup Item v2" || histItems[0].label !== "Variation") bad.push("second: " + soundName() + "/" + histItems[0].name);
       if (!/variation 2/.test(document.getElementById("nowStatus").textContent)) bad.push("status: " + document.getElementById("nowStatus").textContent);
-      exportWav();                                             // coin_v2.wav
-      btn("Coin").click();
-      if (soundName() !== "Coin v3") bad.push("third: " + soundName());
-      btn("Jump").click(); btn("Coin").click();
-      if (soundName() !== "Coin") bad.push("back to the preset: " + soundName());
-      exportWav();                                             // the same Coin: coin.wav again
+      exportWav();                                             // pickup_item_v2.wav
+      btn("Pickup Item").click();
+      if (soundName() !== "Pickup Item v3") bad.push("third: " + soundName());
+      btn("Jump").click(); btn("Pickup Item").click();
+      if (soundName() !== "Pickup Item") bad.push("back to the preset: " + soundName());
+      exportWav();                                             // the same Pickup Item: pickup_item.wav again
       state.freq = state.freq * 2; play("Edit");
-      exportWav();                                             // a different sound still called Coin: coin-2.wav
+      exportWav();                                             // a different sound still called Pickup Item: pickup_item-2.wav
     });
-    if (JSON.stringify(files) !== JSON.stringify(["coin.wav", "coin_v2.wav", "coin.wav", "coin-2.wav"])) bad.push("files: " + files.join(","));
-    if (!/click again/i.test(btn("Coin").title)) bad.push("tooltip: " + btn("Coin").title);
+    if (JSON.stringify(files) !== JSON.stringify(["pickup_item.wav", "pickup_item_v2.wav", "pickup_item.wav", "pickup_item-2.wav"])) bad.push("files: " + files.join(","));
+    if (!/click again/i.test(btn("Pickup Item").title)) bad.push("tooltip: " + btn("Pickup Item").title);
     return ok(!bad.length, bad.join(" · "));
   });
   // 6: a plain-English line on every control and console
@@ -578,7 +1193,7 @@
   const sameR = function (a, b) { return a.L.length === b.L.length && a.L.every(function (v, i) { return v === b.L[i]; }) && a.R.every(function (v, i) { return v === b.R[i]; }); };
   const without = function (g, k) { const o = Object.assign({}, g); delete o[k]; return o; };
   t("extras/the-table-lists-the-drawn-waves-and-the-speech-text-with-neutral-defaults", function () {
-    return ok(JSON.stringify(SFX_EXTRAS) === JSON.stringify({ customWave: "", customWaveB: "", speechText: "" }), JSON.stringify(SFX_EXTRAS));
+    return ok(JSON.stringify(SFX_EXTRAS) === JSON.stringify({ customWave: "", customWaveB: "", speechText: "", voBody: "" }), JSON.stringify(SFX_EXTRAS));
   });
   // Bug 1: mutateGenome / crossGenome copied PARAMS only, so a bred speech sound lost its text and went silent.
   t("extras/a-bred-speech-sound-still-speaks", function () {
@@ -629,9 +1244,9 @@
   t("extras/share-link-history-and-undo-carry-every-extra", function () {
     const keep = snapshotState(), keepLabel = seqLabel;
     try {
-      applyPreset({ wave: 12, customWave: "AQID", customWaveB: "BAUG", speechText: "x" }, "Probe");
+      applyPreset({ wave: 12, customWave: "AQID", customWaveB: "BAUG", speechText: "x", voBody: "h y AH:4" }, "Probe");
       const link = decodePatch(encodePatch()).s, snap = snapshotState();
-      const all = ["customWave", "customWaveB", "speechText"].every(function (k) { return link[k] === state[k] && snap[k] === state[k]; });
+      const all = ["customWave", "customWaveB", "speechText", "voBody"].every(function (k) { return link[k] === state[k] && snap[k] === state[k]; });
       const differs = !sameState(snap, Object.assign({}, snap, { customWaveB: "" }));   // NEGATIVE: sameState sees an extra change
       return ok(all && differs && sameState(snap, JSON.parse(JSON.stringify(snap))), JSON.stringify(link));
     } finally { applyPreset(keep, keepLabel); }
@@ -687,7 +1302,7 @@
       layerAdd();                                           // built by hand: layer 2
       document.querySelectorAll("#layerBar .layer-tab")[0].click();   // back to layer 1 through its tab
       const before = soundLayers(soundSnap().layers);
-      presetClick("Coin");
+      presetClick("Pickup Item");   // one layer and no `_alts` (Coin was this row's until the jingle round gave it layered alts)
       const after = soundLayers(soundSnap().layers);
       const kept = layerSel === 0 && after.length === 1 && before.length === 1 && JSON.stringify(after[0]) === JSON.stringify(before[0]);
       return ok(kept, [layerSel, before.length, after.length].join(" "));

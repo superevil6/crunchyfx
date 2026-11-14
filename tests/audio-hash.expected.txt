@@ -1,42 +1,6 @@
-# The audio of CrunchySFX 1.2 (2026-10-16): Cow Moo, Dog Bark, Dog Bark 2 removed; the fire look-alikes Dragon Fire Breath 2, Fireball Cast 2, Fire Whoosh 2, Flamethrower 2 and Kindled Torch removed; Torch Ignite, Molten Flame and Kindled Flame reworked to stand apart. Every other sound's samples proved unchanged (932 of 932). The WAV format follows each preset's index, so later presets' lines moved. As tests/audio-hash.js prints it; a run must match EXACTLY.
-# FM env (2026-11-01, CrunchyBGM §724): rows fmEnv + fmEnvTime ADDED. Every sound's audio proved unchanged (all 1048 lines identical with the two new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the two keys, so those 11 lines and the AUDIOXHASH total moved with them.
-# Blown brass (2026-11-05, CrunchyBGM §789-§791): wave 21 "brass" and its rows brassBreath, brassLips, brassBell, brassTube ADDED, with Blown Trombone, Blown Trumpet and Blown Tuba. Every sound's audio proved unchanged (all 1048 lines identical with the four new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the four keys, so those 11 lines and the AUDIOXHASH total moved with them, and the three presets' lines and the AUDIOHASH total are new.
-# Bowed strings (2026-11-06, CrunchyBGM §792): wave 22 "bowed" and its rows bowSpeed, bowPressure, bowPos, bowTone, bowString ADDED, with Bowed Violin, Bowed Cello and Bowed Contrabass. Every sound's audio proved unchanged (all lines identical with the five new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the five keys, so those 11 lines and the AUDIOXHASH total moved with them, and the three presets' lines and the AUDIOHASH total are new.
-# Reeds (2026-11-06, CrunchyBGM §794): wave 23 "reed" and its rows reedBore, reedBreath, reedTongue, reedBell, reedWobble, reedTone ADDED, with Blown Clarinet, Blown Saxophone and Blown Low Reed. Every sound's audio proved unchanged (all lines identical with the six new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the six keys, so those 11 lines and the AUDIOXHASH total moved with them, and the three presets' lines and the AUDIOHASH total are new.
-# Struck bars (2026-11-06, CrunchyBGM §796): wave 24 "bar" and its rows barType, barMallet, barRing, barMotor ADDED, with Struck Marimba, Struck Xylophone and Struck Glockenspiel. Every sound's audio proved unchanged (all lines identical with the four new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the four keys, so those 11 lines and the AUDIOXHASH total moved with them, and the three presets' lines and the AUDIOHASH total are new.
-# Piano (2026-11-06, CrunchyBGM §798): wave 25 "piano" and its rows pianoHammer, pianoStretch, pianoRing, pianoStrings ADDED, with Struck Piano. Every sound's audio proved unchanged (all lines identical with the four new keys left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names the four keys, so those 11 lines and the AUDIOXHASH total moved with them, and the preset's line and the AUDIOHASH total are new.
-# Tine (2026-11-06, CrunchyBGM §801): bar type 4 "tine" APPENDED to barType's enum (a clamped tine, 1 : 6.27 : 17.55), with Plucked Music Box. Its line and the AUDIOHASH total are new. Struck Piano's line MOVED with NO audio change: it sits one place later in the list and the hash rotates each preset's WAV export format by its position (FORMATS[i % 3]); with the new preset removed every line is identical to the previous file. The x: lines (seeded Breed/Variations/Wizard) are unchanged — widening the enum moved no draw.
-# SFX 1.3 layered presets (2026-10-28): the seven Layered lines below were ADDED; the AUDIOHASH total moved with them. Every other line is unchanged.
-# SFX care pass (2026-10-29): Transformer Buzz ADDED (AJ's pick, round electric-buzz); the AUDIOHASH total moved with it.
-# SFX care pass round 2 (2026-10-29): Double Jump, Checkpoint and Dash ADDED (AJ's picks); the AUDIOHASH total moved with them.
-# SFX care pass round 3 (2026-10-29): ten presets ADDED (AJ's picks); the AUDIOHASH total moved with them.
-# SFX care pass round 4 (2026-10-29): Wood Break ADDED (AJ's pick); the AUDIOHASH total moved with it.
-# Footsteps by surface (2026-11-01): the eleven surface footsteps ADDED (Grass … Carpet Footstep, the suite's surface names); the AUDIOHASH total moved with them. Every other line is unchanged.
-# SFX 1.3 foundation (2026-10-28): the lines below were ADDED (x: custom IR, granular over a sample, seeded Breed/Variations, the pack's .tres and zip bytes; their own AUDIOXHASH total). Every line above is unchanged. Recorded on the 1.3 code; the same fixtures run on 1.2.1 (HEAD 32c21d8) gave identical lines except x:breed:1, x:breed:2 and x:breed:cross, which moved because bug 1 is fixed (a bred speech / drawn-wave child keeps its text / drawing).
-# SFX 1.3 layers (2026-10-28): the four x:layers lines below were ADDED (a three-layer sound, one layer muted, Normalize off, two layers of one engine); the AUDIOXHASH total moved with them. Every line above is unchanged.
-# SFX 1.3 the Wizard (2026-10-28): the three x:wizard lines below were ADDED (three answers' nine, seeded); the AUDIOXHASH total moved with them. Every line above is unchanged.
-# SFX 1.3 Tremolo + Flicker (2026-10-28): four PARAMS rows added (neutral). Every preset line is unchanged. The random tools' fixtures MOVED (x:breed, x:vary, x:pack:zip, x:wizard): their lines hash each result's whole genome, which now carries the new keys, and Breed/Variations draw a random number per parameter, so the same seed rolls differently. No saved sound changes.
-# Footsteps by surface (2026-11-01): the twelve x:footsteps lines below were ADDED (the seeded Godot footstep set: one line per surface, its .tres and takes; one for crunchy_footsteps.gd, footsteps.tscn and the README); the AUDIOXHASH total moved with them. Every line above is unchanged.
-# Bow tremolo (2026-11-06, CrunchyBGM §803): rows bowTrem and bowTremPhase ADDED to the bowed model (wave 22), default 0 = a held bow, no preset. Every sound's audio proved unchanged (all 11 breed, vary and wizard lines identical to before with the two new keys left out of the hashed JSON, the AUDIOXHASH total with them); with the keys in, those 11 lines and the AUDIOXHASH total moved, and nothing else did.
-# Flute (2026-11-06, CrunchyBGM §804): wave 26 "flute" and its rows fluteBreath, fluteJet, fluteAim, fluteNoise, fluteTone, fluteVib ADDED, with Blown Flute APPENDED (the hash picks each preset's WAV format by position, so an insert re-hashes every preset after it). Every sound's audio proved unchanged (all lines identical with the six new keys left out of the hashed JSON, the new preset's line and the AUDIOHASH total aside); the breed, vary and wizard lines hash each genome's JSON, which now names the six keys, so those 11 lines and the AUDIOXHASH total moved with them, and the new preset's line and the AUDIOHASH total are new.
-# Membrane buzz (2026-11-06, CrunchyBGM §806): flute row fluteBuzz ADDED (default 0, byte-identical; no preset). Every sound's audio proved unchanged (all lines identical with the new key left out of the hashed JSON); the breed, vary and wizard lines hash each genome's JSON, which now names it, so those 11 lines and the AUDIOXHASH total moved, and nothing else did.
-# Flute breath law (2026-11-06, CrunchyBGM §807): fluteNoise is SQUARED now (0.4 x knob², was 0.1 x knob) so a dark flute's breath can be heard. Blown Flute (0.05) moved from 0.005 to 0.001 of the flow, both inaudible; its line and the AUDIOHASH total moved, and nothing else did.
-# Engine sweep (2026-11-10, AJ: "every engine sound is a dramatic improvement"): 35 instrument presets MOVED onto the engines built for them (waves 21-26), same names and sections, each with its own _vary (tools/make-engine-sweep.mjs --apply; SOUND-REVIEW.md). Exactly those 35 lines and the AUDIOHASH total moved; no x: line and no other preset did.
-# Chirp (2026-11-10, the chirp engine, picked by ear: AJ "literally every chirp is perfect"): wave 27 "chirp" and its rows chirpMode … chirpSeed ADDED; presets may carry `_alts` (ARCHETYPES: other versions only the preset BUTTON plays). Bird Chirp, Bird Trill and Cricket Chirp gained three alts each; Songbird Phrase and Night Insects APPENDED (their lines are new). Cricket Chirp`s attack 0 -> 0.001 (it started on a step: a click), so ITS line moved, and with attack 0 it is proved identical. Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the eighteen chirp keys, so those 11 lines moved, and are proved identical with the chirp keys left out of the hashed JSON. The thirteen x:alt lines are new (each alt rendered whole, layered ones too); the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Creature (2026-11-10, the creature voice engine, picked by ear: it won all five of AJ's rounds): wave 28 "creature" and its rows crSize … crFlutterRate ADDED (17; the prototype's crGap dropped: a call is timed by the envelope). Cat Meow, Monster Growl and Wolf Howl REPLACED by AJ's picks (their lines moved, deliberately); Cow Moo and Dog Bark APPENDED (the names the 1.2 formant presets left; their lines are new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the seventeen creature keys, so those 11 lines moved, and are proved identical with the creature keys left out of the hashed JSON. The three x:alt lines for Cat Meow and Monster Growl are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Weather (2026-11-10, the weather engine, picked by ear: it won all five of AJ`s rounds): wave 29 "weather" and its rows wxType … wxSeed ADDED (25; the prototype`s sheet rate fixed at 0.8 Hz, its width and whistle pitch read from the patch`s width and freq). Rain, Wind Gust and Howling Squall REPLACED by AJ`s picks (their lines moved, deliberately); Thunder and Heavy Rain keep their base UNCHANGED and gained alts. Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the twenty-five weather keys, so those 11 lines moved, and are proved identical with the wx keys left out of the hashed JSON. The twelve x:alt lines (Thunder 3, Heavy Rain 3, Rain 2, Wind Gust 2, Howling Squall 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Motor (2026-11-10, the motor engine, picked by ear: it won all five of AJ`s rounds): wave 30 "motor" and its rows motorType … motorSeed ADDED (39; the rpm curve is the engine`s own rows, the amp envelope stays the gain; the prototype`s burst Q follows the type, its tail-rotor pulse is fixed at 1 ms and its clack spacing at 0.19 s). Chainsaw, Helicopter and Train REPLACED by AJ`s picks (their lines moved, deliberately); Car Engine keeps its base UNCHANGED and gained three alts; Motorcycle APPENDED (its line is new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the thirty-nine motor keys, so those 11 lines moved, and are proved identical with the motor keys left out of the hashed JSON. The nine x:alt lines (Car Engine 3, Chainsaw 2, Helicopter 1, Train 1, Motorcycle 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Blast (2026-11-11, the blast engine, picked by ear: it won all five of AJ`s rounds): wave 31 "blast" and its rows blastSize … blastSeed ADDED (19; the stereo spread is the patch`s own width; Peak control 0-2 is the app`s own lookahead limiter on the blast alone, before the chain, in one or two passes, so no blast preset needs the master Limiter). Explosion, Grenade Blast, Distant Boom, Pistol Shot and Sniper Rifle REPLACED by AJ`s picks (their lines moved, deliberately), and with Explosion the lines that render it: nonorm:Explosion, x:ir:Explosion:1 and :0.4, x:layers:three, :muted, :no-normalize and :same-engine (all proved identical with the five old patches swapped back in). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the nineteen blast keys, so those 11 lines moved, and are proved identical with the blast keys left out of the hashed JSON. Variations treat a blast as stretchable (no line here varies one). The x:alt line for Distant Boom is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Spring (2026-11-11, the spring engine, picked by ear: it won all five of AJ`s rounds, four with its twang type): wave 32 "spring" and its rows springType … springSeed ADDED (10; the patch`s Frequency is the spring`s pitch, the amp envelope its plain gain). Cartoon Boing, Springy Boing and Bouncy Blip REPLACED by AJ`s picks (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them); Doorstop Spring and Jaw Harp APPENDED (their lines are new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the ten spring keys, so those 11 lines moved, and are proved identical (with the three old patches swapped back in, every one of the 1106 earlier lines is identical) with the spring keys left out of the hashed JSON. Variations treat a spring as stretchable (no line here varies one). The x:alt line for Jaw Harp is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Servo (2026-11-11, the servo engine, picked by ear: it won all five of AJ`s rounds): wave 33 "servo" and its rows servoType … servoSeed ADDED (67; the power curve is the engine`s own rows, up to three powered moves or one run from a shaft already turning, the amp envelope its plain gain; the prototype`s start click (0.35 of the stop click), hold-buzz frame rate (50 Hz), first escapement tick and ratchet pitch are fixed). Servo Motor, Robot Servo, Mechanical Whir, Conveyor Belt and Clockwork Whir REPLACED by AJ`s picks, clean (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the sixty-seven servo keys, so those 11 lines moved, and are proved identical (with the five old patches swapped back in, every one of the 1109 earlier lines is identical) with the servo keys left out of the hashed JSON. The six x:alt lines (Servo Motor 1, Robot Servo 1, Mechanical Whir 2, Conveyor Belt 2) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Car Engine level (2026-11-11, AJ): its base (today's patch, kept) played ~7 dB louder than its three motor alts; gain 0.33 (was the 0.7 default) puts it at -16.0 LUFS like them. Exactly its line and the AUDIOHASH total moved.
-# Friction (2026-11-11, the friction engine, picked by ear: it won all five of AJ`s rounds): wave 34 "friction" and its rows fricBody … fricSeed ADDED (21; the push is the engine`s own rows, the drag speed and the pressure at a start and up to three later points, the speed`s stop time, the amp envelope its plain gain; the prototype`s 15 ms push ease-in, 4 kHz contact patch and 1.5% grit are fixed). Creaking Door, Trapdoor Creak, Squeaky Toy and Heavy Gate REPLACED by AJ`s picks, clean (their lines moved, deliberately; no fixture renders them, and nothing but their buttons uses them); Brake Squeal APPENDED (its line is new). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the twenty-one friction keys, so those 11 lines moved, and are proved identical (with the four old patches swapped back in and Brake Squeal left out, every one of the 1115 earlier lines is identical, both totals included) with the fric keys left out of the hashed JSON. The x:alt line for Trapdoor Creak is new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# Flow (2026-11-11, the flow engine, picked by ear: it won or matched all five of AJ`s rounds): wave 35 "flow" and its rows flowType … flowSeed ADDED (17; the stereo spread is the patch`s own width, a pour fills over the patch`s Duration). Stream Babble REPLACED by AJ`s pick (its line moved, deliberately; no fixture renders it, and nothing but its button uses it); Filling a Bottle APPENDED (its line is new); Waterfall, Ocean Surf and Wave of Water keep their base UNCHANGED and gained three alts each (each alt set within 1 dB of its base by the Limiter). Every other preset line is unchanged; the breed, vary and wizard lines hash each genome`s JSON, which now names the seventeen flow keys, so those 11 lines moved, and are proved identical (with the old Stream Babble swapped back in, Filling a Bottle and the new alts left out, every one of the 1117 earlier lines is identical, both totals included) with the flow keys left out of the hashed JSON. The ten x:alt lines (Waterfall 3, Ocean Surf 3, Wave of Water 3, Filling a Bottle 1) are new; the AUDIOHASH and AUDIOXHASH totals moved with all of that.
-# New presets on the new engines (2026-11-11, AJ: "let's add them, then if they seem odd, I'll do an ab test"): 25 ADDED — wings/coil (Mosquito, Housefly, Hummingbird, Cicada Drone, Spring Tank Crash, Slinky), wood friction (Chair Scrape, Floorboard Creak + alt, Ship Hull Creak, Rope Creak), blast (Bullet Whiz, Sniper From Afar, Canyon Blast, Mine Charge, Cannon, Dynamite, Bolt-Action Reload), electric motor (Ratchet Wrench + alt, Winding a Toy, Clock Tick + alt, Pocket Watch, Fridge Hum, Cordless Drill, Electric Car Pass, Ceiling Fan). Only their lines, the three x:alt lines and the totals are new; NO existing line moved. Same change: chirpBuzz Doppler sign (dir) fixed — no earlier preset used Buzz mode, and the new ones use seeds that fly dir +1, where the fix is a no-op; chirpPitch min 500 -> 40.
-# Creature redo (2026-11-12, AJ: "none of those should be using [formant]"; all three groups heard and kept: "a big improvement… significantly better… all named are better"): the 35 Animal / Monster presets on the formant engine MOVED onto the creature engine (wave 28), same names, sections and order — 8 animals (Rooster Crow and Owl Hoot layered one call per syllable), 4 named monsters, and the 23 adjective x noun monsters composed from two tables (tools/proto/creature-redo-family.mjs). Exactly their 35 lines and the AUDIOHASH total moved; x:alt lines for Rooster Crow (bantam) and Troll Grunt (uh-HUH) were ADDED with the AUDIOXHASH total. Every other line is unchanged.
-# Variations of a layered sound (2026-11-12, AJ): every layer varied with one shared pitch move, the arrangement kept (varySound); the seed is the WHOLE sound (soundGenome), where it used to drop every layer but the selected one. Four x:vary:layered lines (Rooster Crow) were APPENDED with the AUDIOXHASH total; every other line, the one-layer vary, pack and footstep lines included, is unchanged. Same day: the Length macro clamps Duration to durationMax (the engine's ceiling) instead of the row's 2 s; no preset's audio moves.
-# Fire redo (2026-11-12, AJ: "all of the new ones sound better"): the 24 Fire presets plus Campfire Crackle, Crackling Fire, Dragon Fire Breath and Fireball Cast MOVED in place (names, sections, order kept), each a 3-4 layer build — the weather engine's wind as the roar, driven particle crackle, a particle hiss, and an event layer (blast foomp, whoosh, friction scratch, bubble gloops, creature growl); the Searing/Kindled/Smoldering/Blazing/Molten/Infernal/Ashen family composed from two tables (tools/proto/fire-redo.mjs). Exactly their 28 lines, nonorm:Fire and the AUDIOHASH total moved; every other line, the x: fixtures included, is unchanged.
-# Horror + robot redo (2026-11-12, AJ: "all the horrors sound quite good", "robots are all better too"): 58 Horror presets (27 named; the 31 adjective x noun family composed from two tables, tools/proto/horror-redo-family.mjs) and 9 robot presets (Power Up/Down, Stomp, Servo Twitch/Drone/Chime, Robot Talk, Robot Yes/No) MOVED in place onto the newer engines (creature, bowed, friction, modal, bar, impact, blast, particle, weather, servo), most of them layered. Kept: Dead Tone, Dread Pulse, Creaking Door, Floorboard Creak, the beeps, Robot Alarm, the formant robot voices, the three servo presets. Exactly their 67 lines and the AUDIOHASH total moved; every other line, the x: fixtures included, is unchanged.
+# Mechanical fixes from the audit (2026-11-14, AJ: "I think this is good, let's go ahead and apply them"; SOUND-REVIEW.md): 33 presets replaced in place from tools/new-presets/mechanical-fixes.json (three siren copies redesigned, 15 clicking endings given their declared release, level trims on Thunderous Wallop, Bells / Mallets, the keys and the kicks, Metal Grate Step's held ring). Their 33 AUDIO lines and AUDIOHASH moved; none of them has a nonorm line, Retro Ding's two x:alt lines and AUDIOXHASH are unchanged. The envCurve NaN fix in synth.js was hashed ALONE first (old presets, new engine): all 1372 lines identical to the previous file.
+# Jingle alternates (2026-11-14, AJ: "every single one of them is an improvement … they should all go in as alts"; SOUND-REVIEW.md): 70 alts ADDED on 30 jingle presets whose bases are unchanged (70 new x:alt lines), and 5 NEW presets Victory, Achievement, Defeat, Success and Fail (5 AUDIO lines, 11 x:alt lines). Only lines were added: AUDIOHASH 1076 -> 1081 and AUDIOXHASH 207 -> 288 moved for that reason, and every existing line is unchanged.
+# Melee redo + meeting in between (2026-11-14, AJ: "all of the melee redos are actually very good" and "Meet in between I think is a good choice"; SOUND-REVIEW.md): the 38 melee redo presets MOVED onto wave 43 in Hits / Melee (34 replaced in place; Visor Clank, Sword Ting, Hit and Crossbow Bolt keep today's base, their four x:alt lines ADDED), and 61 presets on the gun, energy, gun foley, voice and melee engines RE-LEVELLED (66 takes: only their Peak control and gain moved, a short take lifted half its gap to the level of the preset it replaced; meleePeak's row widened to 0-2). Those lines, their alt and nonorm lines and the AUDIOHASH and AUDIOXHASH totals moved; every other line is unchanged.
 AUDIO Coin 47f12edd7c9e75e4
 AUDIO Laser f6c22d2b195a2a1a
 AUDIO Jump b3f0d9e61a01ac31
@@ -47,35 +11,35 @@ AUDIO Blip 657e8178755b57f9
 AUDIO Deep Impact 2483cd734e113594
 AUDIO Lush Powerup f420c416adc903ab
 AUDIO Wide Pickup 203d2e9e3cc87c07
-AUDIO Gunshot 42cd3b17fd7699fe
-AUDIO Shotgun 6c81b96a73daa5ef
-AUDIO Rifle Crack 7e304f94b341d003
-AUDIO Suppressed 016196a83db1297d
-AUDIO Full Auto 8b1b2df669a676b7
-AUDIO 3-Round Burst 8631d5e083c4f5af
+AUDIO Gunshot a09b92c1097c0e1c
+AUDIO Shotgun 18ecaca0318ea0df
+AUDIO Rifle Crack 824a9d0f6aec7360
+AUDIO Suppressed ed9102a938043230
+AUDIO Full Auto 383306d4afcc6085
+AUDIO 3-Round Burst e025b53fbc0c845c
 AUDIO Cinematic Boom 98dd5c64602892d5
 AUDIO Fire acbfca1eb9eae387
-AUDIO Ice 4a7c3b1f381fbefe
+AUDIO Ice 86fea9175ec0117e
 AUDIO Electric Crackle 723352b52082a9be
 AUDIO Thunder b1772eb49d526f6b
-AUDIO Punch / Kick 06d402ae004f148b
-AUDIO Cure 8d0bbbc8af909321
-AUDIO Poison c179160d44b5806c
+AUDIO Punch / Kick 84861695cf1e7efa
+AUDIO Cure e62e312d1513ec2a
+AUDIO Poison 35b97aa8577cbce3
 AUDIO Metal Clank 0bc4fee113108040
-AUDIO Water Ambient a63551f29f87b1f3
+AUDIO Water Ambient aedbf6127e1283bf
 AUDIO Water Drop 4218e483bd52a53e
 AUDIO Wave of Water e55fa2baa3560af3
-AUDIO Sword Swing bfc8e725c1bb6b3c
-AUDIO Sword Clash a9d3a07683881b13
-AUDIO Shield Block af7c8106f126c941
-AUDIO Glass Shatter f111b0833270be20
+AUDIO Sword Swing 028059135f1781d2
+AUDIO Sword Clash 9c5148ca7f514f5d
+AUDIO Shield Block 49f3d3430954c57c
+AUDIO Glass Shatter cf5056e35b38aa98
 AUDIO UI Click a9d8bc8764339450
 AUDIO Confirm d3604e05baf14510
 AUDIO Cancel b45622c44bc4d267
 AUDIO Error Buzz 65cbc058b7c23b11
 AUDIO Level Up 85c8cd218cba5268
 AUDIO Game Over 25946e1a5dbf5655
-AUDIO Teleport e1596732bf0f3c07
+AUDIO Teleport b8ffc19504b87c32
 AUDIO Magic Sparkle e94f8e0691d9eb2f
 AUDIO Robot Beep 59431d830855d7fe
 AUDIO Alarm Siren 443193347643f4ff
@@ -85,25 +49,25 @@ AUDIO Footstep ff9dbe808f0adee5
 AUDIO Bounce 680ee80631508bc3
 AUDIO Bubble Pop 052b4847c80dfdb8
 AUDIO Monster Growl 11a03a53208e1f82
-AUDIO Katana Slice 2cdaa70996f81cec
-AUDIO Heavy Cleave d05bb708f325f55f
-AUDIO Dagger Stab bb88d1b2983dfd21
+AUDIO Katana Slice 287266be7aa84ed1
+AUDIO Heavy Cleave d850421372ffa5da
+AUDIO Dagger Stab 26c2cfa9434cf1cc
 AUDIO Blade Sheathe 1315c538d947d2cf
-AUDIO Critical Slash da9e2d3f710a32e0
-AUDIO Hammer Smash f9dccf4b579cd468
-AUDIO War Hammer Crush 4318cfb8e047e683
+AUDIO Critical Slash fc81f7a65e4ae179
+AUDIO Hammer Smash 34622ad9eac609ce
+AUDIO War Hammer Crush 281b31b3baf9ebe6
 AUDIO Anvil Strike 65c327cefe90435d
-AUDIO Ground Slam d7c26d1e57d33c19
+AUDIO Ground Slam 421ce4aa1b570499
 AUDIO Fireball Cast d70cc2bedc4a0aff
-AUDIO Frost Bolt a8cf8d85cbe913e8
-AUDIO Lightning Strike 7dc00a11e1441176
-AUDIO Arcane Blast a693a2de71e35a9d
-AUDIO Holy Smite d4b4c58552bd1038
-AUDIO Dark Curse 073567f354ff9c66
+AUDIO Frost Bolt 7ec1b7101cc4d407
+AUDIO Lightning Strike 54ad1f2c43b25587
+AUDIO Arcane Blast 6dcbf6780598a505
+AUDIO Holy Smite de736ab43cac98e1
+AUDIO Dark Curse db9839704d118a29
 AUDIO Mana Charge 580de8f345f25d46
 AUDIO Magic Missile 5ecc7733e89ef89c
 AUDIO Crossbow Bolt 9cc8ff436587917c
-AUDIO Wind Slash acb81f6188a424e4
+AUDIO Wind Slash 78be1d4efa115edd
 AUDIO Cat Meow 7f5cfe1cf46ec01d
 AUDIO Bird Chirp c8be8ffc2eda6423
 AUDIO Frog Croak 24be238f5e17778e
@@ -117,7 +81,7 @@ AUDIO Rooster Crow 3e5f0bc9252f8f12
 AUDIO Duck Quack 8b1e46be747dd3bd
 AUDIO Elephant Trumpet f0d025e6f7f5014b
 AUDIO Rain 46d8bd695f056d6e
-AUDIO Rustling Leaves 010f3344a0f87dff
+AUDIO Rustling Leaves fc8d91607914844d
 AUDIO Waterfall 453ebf23d6a3f4fa
 AUDIO Ocean Surf 1907192caeb7e835
 AUDIO Earthquake Rumble 4e62dceb2791f748
@@ -142,26 +106,26 @@ AUDIO Radio Static d566cfbe9c66c9c1
 AUDIO Possessed Screech 5a2e0c7bf379d934
 AUDIO Dread Pulse cbb7451d53fc2c98
 AUDIO Skittering Swarm e518f1ed359ac642
-AUDIO Meteor Descent 3a3ae84fd2715bca
+AUDIO Meteor Descent 549a46986aa5e357
 AUDIO Meteor Impact a98b39d5b6ae6a1c
-AUDIO Comet Whoosh b491c7e92afc3482
-AUDIO Acid Sizzle 34d407e778f04cd4
-AUDIO Acid Splash 7acf28a711a572c8
-AUDIO Toxic Bubble 419d5f7f93cb97a8
-AUDIO Gas Leak 26c4e908521cf605
-AUDIO Gas Puff 8ae99f71decaa06a
-AUDIO Steam Vent d772e0af811d0a92
+AUDIO Comet Whoosh ce22e8cc14fe4fb1
+AUDIO Acid Sizzle 941e45b1ac5e7e3c
+AUDIO Acid Splash 1711f3061f7e0f49
+AUDIO Toxic Bubble 577ee7b30215cef6
+AUDIO Gas Leak 180969669d543eaf
+AUDIO Gas Puff b08721cf55efa95e
+AUDIO Steam Vent 5214b4db503e821a
 AUDIO Cartoon Boing 1407e0bf60c68a36
-AUDIO Slide Whistle Up cb0b7e70fb62873b
-AUDIO Slide Whistle Down e7d33f881f7e0fa9
-AUDIO Fart 757e7bdfd5b8f01e
-AUDIO Burp d73e8141eed18c98
-AUDIO Slime Splat fc473951169a0f88
+AUDIO Slide Whistle Up 21e9ee3efbb0c87d
+AUDIO Slide Whistle Down 7a2303493b91610a
+AUDIO Fart a1eaaaa36b12eaf6
+AUDIO Burp 187e0a96486be44b
+AUDIO Slime Splat a594a957115378f4
 AUDIO Squeaky Toy ecc232d5fe03e60c
 AUDIO Bubble Blorp f68e08e4f02350c1
 AUDIO Lava Bubble e8fcddb4847332b1
-AUDIO Mud Squelch 4739a824a046963b
-AUDIO Magic Fizzle f2aa8ea46be89b51
+AUDIO Mud Squelch bd7d7200bc32c04d
+AUDIO Magic Fizzle ab612ef7d002de0c
 AUDIO Flamethrower 0b59986281bf9fdd
 AUDIO Fire Whoosh 8703b20adc262899
 AUDIO Torch Ignite 9783d1585b76d141
@@ -182,9 +146,9 @@ AUDIO Scanner Ping f97be27f79fb004c
 AUDIO Data Glitch 1fd341fb28ba71c6
 AUDIO Gear Grind a8d8fbc20b6fa307
 AUDIO Servo Twitch 81871244f4e62dfb
-AUDIO Healing Aura 6edc4bb63f1e71bd
-AUDIO Curse Whoosh 3d4aa3f3fca4b5ea
-AUDIO Shield Cast 8d02f4e56e4fb228
+AUDIO Healing Aura 3b4005949cc3c95f
+AUDIO Curse Whoosh 1604c73507cbf630
+AUDIO Shield Cast cc5f6c659b79b7a6
 AUDIO Notification d8a1ab260133a4fd
 AUDIO Menu Open 2d9cdeec1814de69
 AUDIO Grenade Blast 9e7177fd23338e0a
@@ -201,19 +165,19 @@ AUDIO Jumpscare Hit 7b60876c3893c2db
 AUDIO Whispering Void 8bf7723de7a0c836
 AUDIO Pistol Shot ed97f6b2646d988b
 AUDIO Sniper Rifle 6b2c9b30c0a91191
-AUDIO Spear Thrust 45ae24afc042052e
-AUDIO Axe Chop 9962ae908a15dcef
-AUDIO Whip Crack 1f3192c66ac41feb
+AUDIO Spear Thrust 6ccaa1ea0fef99bf
+AUDIO Axe Chop 0572f3c8a1195835
+AUDIO Whip Crack 8fb80cbc76c34cff
 AUDIO Fireball Whoosh 7a70b3ba72177f63
 AUDIO Pickup Item eeb331f45c66d083
 AUDIO Extra Life 931909518e1dd25e
-AUDIO Force Field 4134464d02c0d92a
-AUDIO Warp Drive 49b51522de901ff7
-AUDIO Laser Charge 12d7a55a4f9052cd
+AUDIO Force Field dc3ef0f853397b9d
+AUDIO Warp Drive d730659260332a03
+AUDIO Laser Charge 90d4bf9648f2f3cd
 AUDIO Boing Spring 8d7a7221cfced2c8
-AUDIO Squish Pop 529cf900f2270675
+AUDIO Squish Pop 4308dc5017c7542b
 AUDIO Enchant d02299a3d0c83088
-AUDIO Summon Portal 009ec1b38aeeea2a
+AUDIO Summon Portal ca36ceca479e9dc7
 AUDIO Hex Bolt ab4c9ba7c3d867d8
 AUDIO Tab Switch 09709108a9137021
 AUDIO Unlock 6ed2a814a57c7ba5
@@ -229,19 +193,19 @@ AUDIO Troll Grunt 69c3ebe29b43a3dd
 AUDIO Demon Whisper 86ebb6433db785a6
 AUDIO Bone Crack cc6756e59db44df8
 AUDIO Cursed Chime e6f5c635a0f335c2
-AUDIO Machine Gun 2b8ef00c4ad8e48f
-AUDIO Plasma Rifle 10307ad83b75f623
-AUDIO Rapier Lunge 482d9a80b69c5055
-AUDIO Flail Swing 49bd62304286b945
+AUDIO Machine Gun df2a1a91fa909eb2
+AUDIO Plasma Rifle 594349dd01057b48
+AUDIO Rapier Lunge 1a83cd0d90c307b4
+AUDIO Flail Swing 3fdb6078ab12c409
 AUDIO Fire Burst 689770461f81b6b9
 AUDIO Retro Jump 701626d48e99e2cd
 AUDIO Game Start d2b91f5c695a15bb
-AUDIO Teleporter Hum b180483a771e2daf
-AUDIO Energy Drain ef9d3d1115af8a6a
-AUDIO Scan Complete 7f09be54a72eaa8d
-AUDIO Rubber Stretch d4570d555009213a
-AUDIO Pop Cork 0379e922c198a94d
-AUDIO Teleport 2 8debef2c77b24125
+AUDIO Teleporter Hum ab4471eaa3406b95
+AUDIO Energy Drain 971ff718962f85e1
+AUDIO Scan Complete 3902d8f6a9cbfd6d
+AUDIO Rubber Stretch 35e77e67c756b75a
+AUDIO Pop Cork 93d04d3e6945f69f
+AUDIO Teleport 2 c507366a20cb1823
 AUDIO Magic Sparkle 2 734b70394f81883c
 AUDIO UI Click 2 327266fa828c0b8f
 AUDIO Confirm 2 120d6836c0a28519
@@ -255,56 +219,56 @@ AUDIO Monster Growl 2 845774d7b1112768
 AUDIO Jump Scare Stinger 2 111cad4586a9004e
 AUDIO Ghostly Wail 2 90f2b3e39534638e
 AUDIO Heartbeat 2 a9d0bfca5eb09205
-AUDIO Gunshot 2 ace36cdd17809160
-AUDIO Shotgun 2 4b2a2be2ab8f4d81
+AUDIO Gunshot 2 aa6aa74b23911a94
+AUDIO Shotgun 2 265afab5db4b0c00
 AUDIO Rifle Crack 2 88745d41133409c6
-AUDIO Sword Clash 2 952ff1d9c773aac8
-AUDIO Hammer Smash 2 98acbd079bdc1cd4
-AUDIO Katana Slice 2 58f665cb04169c6e
+AUDIO Sword Clash 2 a6f081b07f6a3ab9
+AUDIO Hammer Smash 2 843dc530368618f5
+AUDIO Katana Slice 2 4342b212703a45b1
 AUDIO Coin 2 39489db9d644ffd4
 AUDIO Powerup 2 c2ac8e65a55d7cc8
-AUDIO Laser 2 573b5295b816a5ae
-AUDIO Warp Drive 2 8a673a0e698ed88f
+AUDIO Laser 2 68c4a2214a968d90
+AUDIO Warp Drive 2 211b25736f58273a
 AUDIO Fart 2 1926e2ff4eff750e
-AUDIO Arcane Sigil 8d09c330fb382d6f
-AUDIO Arcane Shimmer 9d158357216626da
-AUDIO Fae Glyph 0abe325577ab9a74
-AUDIO Wyrd Bloom 3c9004476b4b947e
-AUDIO Arcane Weave 2a35c276893adba1
-AUDIO Arcane Rune c32cb8670c90488a
-AUDIO Mystic Whorl 3ab3f2e25a22d37b
-AUDIO Ethereal Aura b22df06aa3446299
-AUDIO Radiant Aura 70426d87f09b7bd2
-AUDIO Astral Aura 35bf53c9d7fa129e
-AUDIO Wyrd Spark 2e36e8f330f51dba
-AUDIO Ethereal Rune 0e20c69fdf2dfebc
-AUDIO Celestial Bloom 5fc9c24f49a50fb8
-AUDIO Runic Chime 8373ffd068037dc5
-AUDIO Glimmer Whorl 252ee3c77ad48d86
-AUDIO Arcane Chime 727b57aa86f55ec3
-AUDIO Glimmer Aura de49c8aec1fc5239
-AUDIO Prism Surge 18c987a7052e6e92
-AUDIO Enchanted Bloom 0bad77307a71a953
-AUDIO Shadow Hymn 55dfbec3398854c6
-AUDIO Ethereal Spark e80c1a8e8cf2fdeb
-AUDIO Shadow Shimmer 97c53851df69e140
-AUDIO Astral Hymn ca62576c5c60ab41
-AUDIO Glimmer Weave 48e2439662e132b5
-AUDIO Fae Bloom bc1279b0b5282917
-AUDIO Astral Chime fbf67af584e530a8
-AUDIO Quick Tone 7394abf68f82841b
-AUDIO Silky Chirp fec8a5b14e8563aa
-AUDIO Quick Chirp 15522e02fff97efd
+AUDIO Arcane Sigil e11a61f2eb247b53
+AUDIO Arcane Shimmer ede0496b78ea8270
+AUDIO Fae Glyph ac03328fd7aab724
+AUDIO Wyrd Bloom 769c1b73fe254a22
+AUDIO Arcane Weave f7917c2f581fe296
+AUDIO Arcane Rune cd8487564cfbb76b
+AUDIO Mystic Whorl 17832af8a75d18fb
+AUDIO Ethereal Aura 4cc6445a0a0d3da3
+AUDIO Radiant Aura 95baa56dc121d9ba
+AUDIO Astral Aura d9593e953ba59514
+AUDIO Wyrd Spark 7e146b61a5a8e068
+AUDIO Ethereal Rune 4b3b4a02d5feac47
+AUDIO Celestial Bloom f32ae76f46828ba6
+AUDIO Runic Chime 621b6d371302035c
+AUDIO Glimmer Whorl 3bf7c6a8a5b40fdb
+AUDIO Arcane Chime db12dff9d3ce6468
+AUDIO Glimmer Aura f2c4950cf841b60f
+AUDIO Prism Surge b8989d80e85c4533
+AUDIO Enchanted Bloom 2e69845ff4286554
+AUDIO Shadow Hymn 3ef80cdcdc304fcd
+AUDIO Ethereal Spark 5ae0f34638ef74d1
+AUDIO Shadow Shimmer 14042d8c065b7443
+AUDIO Astral Hymn 106888450a91295a
+AUDIO Glimmer Weave fa19f99c05c7c743
+AUDIO Fae Bloom 74038cecbb4c3887
+AUDIO Astral Chime 69269e6f5f72dc5c
+AUDIO Quick Tone cb2ae884fad12e29
+AUDIO Silky Chirp d53f0d6c22f3fa31
+AUDIO Quick Chirp e455b8691e25ede2
 AUDIO Muted Tap b2f07cea053757c3
 AUDIO Soft Tick f69ccf8f5e59aece
 AUDIO Silky Cue eb5c2ebe9ca80e45
 AUDIO Sharp Beep 09b2a0c33002e218
 AUDIO Bright Nudge ba3cf0544dfc96e7
 AUDIO Soft Pop 9bec6a8d8d2f81dc
-AUDIO Sharp Tone 37be44ad02126656
+AUDIO Sharp Tone c6f4965727688e8e
 AUDIO Crisp Chirp a6289868cd109dab
-AUDIO Quick Beep 7d528369e9abfe42
-AUDIO Crisp Blip 2b9ba578334d9735
+AUDIO Quick Beep 285f245472e564bd
+AUDIO Crisp Blip 23bae9939924e398
 AUDIO Distant Wallop 22adf2f74cee75d4
 AUDIO Seismic Detonation 468d220153ba59ae
 AUDIO Massive Blast dc27aadf15635054
@@ -317,7 +281,7 @@ AUDIO Cavern Wallop cb7d468314ff5e76
 AUDIO Concussive Kaboom 94f8590e56fc9af9
 AUDIO Muffled Wallop 139c1effa9c01252
 AUDIO Thunderous Boom 6b547f9676c5facd
-AUDIO Thunderous Wallop 868f220a0a66f9a5
+AUDIO Thunderous Wallop 08df6ed51312659c
 AUDIO Overclocked Gear 1b6a6139b8234e28
 AUDIO Electric Whir 9caa350ccb6949c9
 AUDIO Hydraulic Hum b653c2a2092dd369
@@ -328,7 +292,7 @@ AUDIO Pneumatic Hum 6a79112ddeb7e9e2
 AUDIO Clockwork Whir b428281edf0994db
 AUDIO Grinding Motor 3cefc7b19026fa64
 AUDIO Pneumatic Buzz 5eb2995b4f596294
-AUDIO Hydraulic Piston d0fb66b2a163cb0d
+AUDIO Hydraulic Piston 6c3cc5cb5914765e
 AUDIO Digital Gear 6f45cfc458928105
 AUDIO Overclocked Ratchet 6b8fa56540ae0840
 AUDIO Broken Drone c10cc54a106184e7
@@ -339,30 +303,30 @@ AUDIO Overclocked Drone e152af400bd559d9
 AUDIO Grinding Whir dbb74c7001b25a35
 AUDIO Digital Piston f472feabc759839c
 AUDIO Hydraulic Drone fcd2d0ee765782d3
-AUDIO Hydraulic Motor 59aa4d57a392b426
+AUDIO Hydraulic Motor 83269b55931b4350
 AUDIO Broken Piston 9d7f43ef43b11f66
 AUDIO Hydraulic Glitch 534fd89a8b1a1f6b
-AUDIO Restless Hollow 41277cdbe8079246
-AUDIO Rushing Drizzle 71d5a1753215e160
-AUDIO Rushing Breeze 69c48c914c3910f0
-AUDIO Misty Rumble a82a7705811a1a4e
-AUDIO Frozen Stream 93a9cffdb327150c
-AUDIO Restless Cascade 1de5072132db3858
-AUDIO Misty Drizzle 5b4eeda3307942c6
-AUDIO Restless Drizzle e7d13e5dd95d1914
-AUDIO Windswept Gust c3cfacb98f0e420a
-AUDIO Quiet Cascade 6dc94b3c92de5307
-AUDIO Frozen Drizzle bacd937360e5c034
+AUDIO Restless Hollow fa31e4804320b8e1
+AUDIO Rushing Drizzle 8cefbc03616418a2
+AUDIO Rushing Breeze 300a12f9838c4468
+AUDIO Misty Rumble 7c36e0bfcce8960a
+AUDIO Frozen Stream ae4965f14edad342
+AUDIO Restless Cascade 48920d58d2a524e1
+AUDIO Misty Drizzle fea2b96151be15dc
+AUDIO Restless Drizzle 6eb2211722dbe1bc
+AUDIO Windswept Gust cc274f4dc0bc520a
+AUDIO Quiet Cascade 40d94d1318b39998
+AUDIO Frozen Drizzle d7870777ca844d36
 AUDIO Howling Squall 6a7f23606ece9b73
-AUDIO Rushing Tide bba7d3ff976dc9dc
-AUDIO Windswept Cascade 69a98258812422bd
-AUDIO Rushing Rumble 2f153e35a61c4926
-AUDIO Rolling Rustle 36bc4b263d0c2d27
-AUDIO Rolling Rumble 205f62299ba0e91a
-AUDIO Restless Tide ae059d926618f91f
-AUDIO Gentle Drizzle c12f8db528b1f842
-AUDIO Howling Hollow b65ad8886c7bc4fb
-AUDIO Frozen Squall 19a07437cf2eb1d4
+AUDIO Rushing Tide 8be0b9c95f03be62
+AUDIO Windswept Cascade 463acdbee814911f
+AUDIO Rushing Rumble 7986d27c9ec25b13
+AUDIO Rolling Rustle d4c6f39d067ef7f6
+AUDIO Rolling Rumble 56a071bdba935712
+AUDIO Restless Tide e34d07a07647f625
+AUDIO Gentle Drizzle 6caf336ed80a0eed
+AUDIO Howling Hollow 9386953a9b1726c9
+AUDIO Frozen Squall 1c1699c67594ecf9
 AUDIO Giant Growl cfefcfc207839ce5
 AUDIO Angry Wail 4b6ac964947648c1
 AUDIO Feral Gnash c1e4a5257950a9ba
@@ -421,43 +385,43 @@ AUDIO Whispering Murmur 0c4f597385094444
 AUDIO Hollow Rattle 1dbb097391daa832
 AUDIO Rotting Toll aa3c6881101131b6
 AUDIO Wretched Murmur e6d59c7a87497ccb
-AUDIO Rail Fire fa168a1786b24e58
-AUDIO Plasma Shot cd0ef9aadbad5963
-AUDIO Compact Fire ea1b804cb42525f9
-AUDIO Plasma Discharge 38cdd96563d327d0
-AUDIO Suppressed Crack b95fabece275fee3
-AUDIO Suppressed Fire 9a0a019b87313a56
+AUDIO Rail Fire acce317035dee10b
+AUDIO Plasma Shot ba719b02442d1cd3
+AUDIO Compact Fire 49a2985bc0c3992c
+AUDIO Plasma Discharge e1952fcbfac6bf5a
+AUDIO Suppressed Crack 5216d04b4c3cba52
+AUDIO Suppressed Fire ec1ddd08938e7b05
 AUDIO Burst Round 712f15de949dee3f
-AUDIO Magnum Fire 1331c52637cb2f6d
-AUDIO Magnum Shot 876c0a1189830b16
-AUDIO Heavy Discharge a07cdef91e83d9f6
+AUDIO Magnum Fire c5d3022793d96ff4
+AUDIO Magnum Shot bd0f5bcac17602cf
+AUDIO Heavy Discharge d984426f07592eaa
 AUDIO Rail Round 7fa6a00f61a516e6
-AUDIO Heavy Round c627634b1b2223ec
-AUDIO Snub Report 7d9a99f242b96933
-AUDIO Snub Discharge 96bb5e850b35535e
-AUDIO Reckless Chop 28d834d4f73815f9
-AUDIO Heavy Thrust 7a89ffa747dddb4c
-AUDIO Whirling Riposte ffcc05e830e46e65
-AUDIO Iron Slice 266dc2a9cbddb18c
-AUDIO Heavy Chop 75b0f7cbb9eef50e
-AUDIO Reckless Slice 5d25499c23d4c46f
-AUDIO Grim Cleave 8fcaca75efb7ba40
-AUDIO Swift Cleave 87783abe29871f25
-AUDIO Keen Cleave 57a26a9476141de7
-AUDIO Swift Thrust 9617f9c2777c2065
-AUDIO Reckless Thrust 71a7ae4dab9a3e28
-AUDIO Brutal Bash 4895a55286087863
-AUDIO Grim Chop 5f5d80bbf1e8bb82
-AUDIO Reckless Clash f7e3f115c8673744
-AUDIO Keen Swing 5b99e4b65dfc4a79
-AUDIO Whirling Swing 314fdab23296b907
-AUDIO Swift Riposte 6bef489c436dcc7d
-AUDIO Iron Clash 336c68252d217a6e
-AUDIO Razor Cleave 2e8258352029406e
-AUDIO Iron Cleave ea517d733ac07240
-AUDIO Heavy Slice 8d708465835ce79e
-AUDIO Swift Chop 41bb25b131b55406
-AUDIO Whirling Chop 0c3938d881b737c1
+AUDIO Heavy Round 3f47138b90a9a434
+AUDIO Snub Report 7b995ed86b09bb6f
+AUDIO Snub Discharge d09e4bb8c2bd12bf
+AUDIO Reckless Chop 0fc01baf72d7ec66
+AUDIO Heavy Thrust f2f9526ad82905b3
+AUDIO Whirling Riposte 8cc5e4c06933a717
+AUDIO Iron Slice 104947910d4bbe72
+AUDIO Heavy Chop 2c6fe7edcd0cc27c
+AUDIO Reckless Slice 7de715d0e23e6bef
+AUDIO Grim Cleave f34343c0af304bd5
+AUDIO Swift Cleave 0051a9f4dcd24479
+AUDIO Keen Cleave b0e3d2b256d533fb
+AUDIO Swift Thrust e5ccf33de76441e6
+AUDIO Reckless Thrust ac53777ff81f5ad0
+AUDIO Brutal Bash e8583327b8538234
+AUDIO Grim Chop 9eb62323da0f9914
+AUDIO Reckless Clash f03348652296c526
+AUDIO Keen Swing 8c3f6fe7384211de
+AUDIO Whirling Swing 10cb162d7ae5a106
+AUDIO Swift Riposte 34b8987ddd3111e0
+AUDIO Iron Clash 935c3ee14cbfd846
+AUDIO Razor Cleave e237a8540426ac09
+AUDIO Iron Cleave 6f42f3284d8ac9bb
+AUDIO Heavy Slice 9ceb8d66a6e5466f
+AUDIO Swift Chop 4ea4d6e49f2d1fc7
+AUDIO Whirling Chop b0f7833fde81c4dc
 AUDIO Searing Blaze b22aadf477e689f9
 AUDIO Searing Torch 3585676c06953a7d
 AUDIO Kindled Ignite 238e2c6db8e5e2c0
@@ -473,7 +437,7 @@ AUDIO Molten Flame 48fe4870bda09427
 AUDIO Ashen Whoosh e2420fee1209306f
 AUDIO 8-Bit Ding d04402b483ecd153
 AUDIO Pixel Fanfare 3f9b021a015bcec5
-AUDIO Retro Ding 3816b1f7884e25e0
+AUDIO Retro Ding 8af8f6e63fad29b3
 AUDIO Retro Pickup 9f5e61cb45e39e6c
 AUDIO Retro Jingle 01865b0cbd8b65a9
 AUDIO Turbo Bounce 1d2b755abc8e689d
@@ -486,41 +450,41 @@ AUDIO Chiptune Bounce 91804a55a72eae56
 AUDIO Arcade Jingle d9571d87cd2b4d4e
 AUDIO Chiptune Ding 73631b9c29e0d2f9
 AUDIO Bonus Bounce 9e36d95d8cf7b3e0
-AUDIO Ionized Leak a94c0bde1cef5601
-AUDIO Alien Surge 7706ac19336e6ea0
-AUDIO Warp Field 020d9485b4bdd52e
-AUDIO Radioactive Scan 571393fe664d535b
-AUDIO Reactor Surge 9608493e6afd9773
-AUDIO Toxic Surge 0f099272eac646a5
-AUDIO Warp Scan 97ba61c2bb78c511
-AUDIO Toxic Hum 4411b4cebe0c97fb
-AUDIO Ionized Charge fd48c0a52af948d0
-AUDIO Quantum Pulse a0e2ba701d21ac9d
-AUDIO Alien Field 7514cbd540b947fc
-AUDIO Ionized Alarm 5dd9d0cf680ed42e
-AUDIO Photon Whoosh 20e772fafaf316b1
-AUDIO Photon Charge 1c843a4d26d38fd6
-AUDIO Photon Drip fb9d4b10f782af1b
-AUDIO Ionized Beam 6b14a43f83d7787a
-AUDIO Photon Surge e04b2c1279d53acb
-AUDIO Reactor Beam 4ba35d729aae2b13
-AUDIO Reactor Charge 210a9b1bd371338c
-AUDIO Squishy Plop 48e9f72da8e9c07a
-AUDIO Goofy Plop d7619b9815a54711
-AUDIO Silly Blorp f1d10f3035dfbfa7
-AUDIO Goofy Splat 20520cc91eed9476
-AUDIO Zany Squish 38bb9e3bd94501f0
-AUDIO Silly Wobble 7603475bc95723d6
-AUDIO Zany Wobble 24042e72dfa9e15b
-AUDIO Bouncy Pop 6e7b3e6991dec1e2
-AUDIO Squishy Boing 6592983b6bc1c638
-AUDIO Zany Splat 6b2d344a55ab5987
-AUDIO Loony Wobble 7009d0098f73fc62
-AUDIO Slippery Sproing 4286866e7514eb51
-AUDIO Wobbly Plop 9e83e2962ba2a803
-AUDIO Bouncy Sproing c21df8e3befdb75a
-AUDIO Silly Boing 48cd71849a9fc8d5
-AUDIO Loony Squeak be414981add94258
+AUDIO Ionized Leak 6325d33fb4264052
+AUDIO Alien Surge aef74abf0a4ca9de
+AUDIO Warp Field 96602d0b3e4781c4
+AUDIO Radioactive Scan 0823cc05441cb986
+AUDIO Reactor Surge 96c5918881b927a3
+AUDIO Toxic Surge de82fd7bc0f4e22a
+AUDIO Warp Scan 88976f88b44e4983
+AUDIO Toxic Hum 72e572bd185ad024
+AUDIO Ionized Charge 66b4ef54139bcb43
+AUDIO Quantum Pulse b57535059a625a02
+AUDIO Alien Field 8517809dcd391f8a
+AUDIO Ionized Alarm b9cb2faec73918fd
+AUDIO Photon Whoosh a1b1a076ea21301f
+AUDIO Photon Charge da0abd494f5cbd7a
+AUDIO Photon Drip 5822b1a6a446d127
+AUDIO Ionized Beam 62be6a2bd76a4394
+AUDIO Photon Surge 1ed615bfb08dd414
+AUDIO Reactor Beam 15f09569e3e700c0
+AUDIO Reactor Charge cbf6f400c3e216bb
+AUDIO Squishy Plop 828b4ff53d5330e4
+AUDIO Goofy Plop 159aa5fe89dccf79
+AUDIO Silly Blorp 01d631ccd9601fef
+AUDIO Goofy Splat fb072f82f3128fd5
+AUDIO Zany Squish f806654e63494a4b
+AUDIO Silly Wobble 85c619cfd402af60
+AUDIO Zany Wobble 298a5032220fc8bb
+AUDIO Bouncy Pop ae4b3bbf98e9e878
+AUDIO Squishy Boing 70ea5901974ee8fc
+AUDIO Zany Splat 8d7b724e2138a279
+AUDIO Loony Wobble 75601e2cb2a937d7
+AUDIO Slippery Sproing cba4a79f5f327670
+AUDIO Wobbly Plop cd43b0302e64a50f
+AUDIO Bouncy Sproing e4ad55e290719817
+AUDIO Silly Boing c0b0add17aaaad9c
+AUDIO Loony Squeak e89322d23503f0ad
 AUDIO 8-Bit Coin 58a7036f022e9852
 AUDIO 8-Bit Jump 78668f42803a14f5
 AUDIO 8-Bit Blip 918a9acc02c04ebd
@@ -530,19 +494,19 @@ AUDIO Pocket Powerup 48b39828b12d7e09
 AUDIO Super Chime 6f01fdf9bf2c2eae
 AUDIO Super Coin 30396dd9d9a6b62c
 AUDIO Super Hit d3c0cf6d3a5f773c
-AUDIO Mega Shot 107d3fb2c9ebe1fd
+AUDIO Mega Shot b3f9f9a5f10190a6
 AUDIO Mega Bass a894707f7020250e
 AUDIO Mega Zap decf935bcd265942
 AUDIO Turbo Laser 97477f01f90a1f86
 AUDIO Turbo Powerup e38b7e09a784f19c
 AUDIO Turbo Blip 2e06b6a6131dab85
-AUDIO Woodgrain Buzz 6b9fc98297039305
+AUDIO Woodgrain Buzz 030d90e796417648
 AUDIO Woodgrain Zap 929c82867fb8a5bf
 AUDIO Woodgrain Boom 709575091dee5ff6
 AUDIO SID Bass 1b1b3fa974a07a30
 AUDIO SID Zap 477527567289e169
 AUDIO SID Lead 844d7c371734c1aa
-AUDIO 8-Bit Laser c78fd7a807bfba41
+AUDIO 8-Bit Laser bdb0550b5e4a2c06
 AUDIO 8-Bit Powerup 208ef0b2403133ff
 AUDIO 8-Bit Hit 7a16bae347e50ae0
 AUDIO 8-Bit 1UP 1a37feed2a6e03e2
@@ -565,7 +529,7 @@ AUDIO Turbo Chime 70d8f658736d66a1
 AUDIO Woodgrain Blip 7b4b72ae0bd810eb
 AUDIO Woodgrain Hit bd86d137a2d3d1ca
 AUDIO Woodgrain Jump fac62a8a63c3159f
-AUDIO Woodgrain Shot 3d0e3a163fe36669
+AUDIO Woodgrain Shot bf482646ebb5d1d1
 AUDIO SID Coin 44ad5efab4b81aed
 AUDIO SID Blip 3804f3ac9220b033
 AUDIO SID Pluck f57d339c6a215ee3
@@ -573,15 +537,15 @@ AUDIO SID Sweep 7233f75f8fee8e9c
 AUDIO Bell e8bbcbac508129d7
 AUDIO Church Bell 9ed842092001afaa
 AUDIO Hand Bell 32215ac5bb0cba94
-AUDIO Wind Chime 40a5827f39cf19fe
+AUDIO Wind Chime c4bb2ccfecbf56ae
 AUDIO Kalimba ba82df6071ae2e6f
 AUDIO Music Box Note 1312fab79b01f96c
-AUDIO Glass Ping 00f0e6cc4dd4f7b1
+AUDIO Glass Ping 8bf452a29383a76d
 AUDIO Marimba 13ad43e84412bed7
 AUDIO Vibraphone 9a49257ed0954473
 AUDIO Metal Clang bec0967e6c7eb193
 AUDIO Gong db1f7125bb1c8a02
-AUDIO Triangle Ting b93a7a86391bcf67
+AUDIO Triangle Ting de3084191c0f104a
 AUDIO Cathedral Bell f967369878217ce9
 AUDIO Spring Chime 0293053dbb3f13ec
 AUDIO Grain Cloud 81c38f7cbf5dfef5
@@ -621,11 +585,11 @@ AUDIO Frying Sizzle 1203447a5b93791f
 AUDIO Geiger Counter 7329b787f8de952e
 AUDIO Electric Sparks 7c962fc718a4737a
 AUDIO Gravel Steps 200db4441a66df59
-AUDIO Crowd Applause 85d05d4f9fd9f16c
+AUDIO Crowd Applause aeab67aeb4d0dfdf
 AUDIO Static Hiss 9728902020eb736f
-AUDIO Analog Kick 1d3b06015c61b47c
-AUDIO Classic Kick f25acb0364f12566
-AUDIO Punch Kick c17f25fc2066be87
+AUDIO Analog Kick 51d75fcc58119a03
+AUDIO Classic Kick 9ea0277f5ce4f696
+AUDIO Punch Kick dc5c3e74f6daff3f
 AUDIO Snare 4a3bee97365ad120
 AUDIO Tight Snare aca8e9e7eb8284bc
 AUDIO Rimshot 6acecb0e41732e19
@@ -710,10 +674,10 @@ AUDIO Nice Work d937e568b10e5e09
 AUDIO Self Destruct 192bead69cb64d4f
 AUDIO Ice Skid 319e7c3560ac9d22
 AUDIO Water Wade a167042228941a9f
-AUDIO Cabinet Close 78aaf9b570ccfed6
-AUDIO Metal Locker acaa6496505e7d27
-AUDIO Key Jingle 20ed1c80828ed8dd
-AUDIO Vault Door 7465047ce92e441b
+AUDIO Cabinet Close 03ca698d1bb6848e
+AUDIO Metal Locker df1c829c8473290f
+AUDIO Key Jingle 6d7d87fe118c6b69
+AUDIO Vault Door 0b7246f4c8ab874d
 AUDIO Trapdoor Creak 81510aed85dff15a
 AUDIO Reverse Piano f6b63a17f5d07b4a
 AUDIO Reverse Snare 8eb1146c43607e71
@@ -741,22 +705,22 @@ AUDIO Snow Step db8725817f92f1e2
 AUDIO Sand Step 93f858b3a313a5cc
 AUDIO Mud Step bfb9f42c31aecbe1
 AUDIO Puddle Step b8f291651ca9469e
-AUDIO Metal Grate Step fba706582b5988eb
+AUDIO Metal Grate Step 6bce9305f6158dec
 AUDIO Ladder Rung dc815e40582504d5
 AUDIO Heavy Landing 5f2b22c6cfbc9403
 AUDIO Armor Step 3e2cb244c11ebe43
 AUDIO Sprint Cadence eb3b235cf9043017
 AUDIO Cloth Rustle 9b96499e5bfd1329
-AUDIO Wooden Door Open 94622f7caa998a27
-AUDIO Door Slam 817b951dd2ac0ee8
-AUDIO Latch Click 0b4c22e46fc31f47
-AUDIO Chest Open 118af47d180af294
-AUDIO Drawer Slide e4e9938f4ef45618
+AUDIO Wooden Door Open b2f2126cb8e21de1
+AUDIO Door Slam 9138955606c2f585
+AUDIO Latch Click ac3768f6cd31fbd1
+AUDIO Chest Open 2db12fb5e5cec052
+AUDIO Drawer Slide b9e1a98a9acced83
 AUDIO Heavy Gate 8d0e643b3a370b96
-AUDIO Sliding Door d3604745b9d142ec
+AUDIO Sliding Door 3f1ee99da9578b54
 AUDIO Elevator Ding 4e1571a098d6b2bd
-AUDIO Safe Tumbler 0309e0f4368a2c31
-AUDIO Lock Bolt 03cbff49a02d6004
+AUDIO Safe Tumbler f4822d66cc0b72d7
+AUDIO Lock Bolt fc7e40aed4c2681f
 AUDIO Reverse Cymbal ec21667bef263226
 AUDIO Reverse Bell a27dd42315dae936
 AUDIO Suction Whoosh 573c76e7877ebc5e
@@ -766,14 +730,14 @@ AUDIO Backwards Splash 79033142cd76a007
 AUDIO Rewind Tape a34acb6d9a339aac
 AUDIO Reverse Impact 55d894eb478304f8
 AUDIO Springy Boing 7c3116459852d86e
-AUDIO Flying Saucer dcc9566d7149da38
+AUDIO Flying Saucer 04f80ed5c5cd2d5c
 AUDIO Ascend Chime 5d7934931a5a14ba
 AUDIO Robot Chuckle 7511d29c0142cf1b
 AUDIO Ominous Heartbeat fa76dead8a804910
 AUDIO Camera Shutter ac70b232d42c6bd1
 AUDIO Goopy Slurp 7dd435c5314ebd3a
-AUDIO Ricochet Zing 855bbbd9e72f1670
-AUDIO Stardust Chime 45887bd4b89c6985
+AUDIO Ricochet Zing 75c522bed144b6fd
+AUDIO Stardust Chime 6ae16c16fc5f32a7
 AUDIO Bouncy Blip 5be2b7f0ed06cfb5
 AUDIO Trumpet 7d6250b995583abe
 AUDIO Trombone f75e5b8091f47763
@@ -795,31 +759,31 @@ AUDIO Saw Pad cf5756a6fd994fbf
 AUDIO Additive Pad 209a8884adcf8da5
 AUDIO Organ 20fa0478ead511c1
 AUDIO Stab 00199ad94556ffd2
-AUDIO Dist Guitar 378daacb5942c11c
+AUDIO Dist Guitar d404d9586943c5b3
 AUDIO Clean Guitar 04f2fd2c634ab7a9
 AUDIO E-Piano 99a1c0b8b0a0d203
 AUDIO Brass 0cdb67b443d5622d
 AUDIO Choir 17ea775655e29113
 AUDIO 808 Bass 7303861cec5e3ff9
-AUDIO Pick Bass 32664d3743a2608e
-AUDIO Growl Bass d7b80b7ec5f083f3
-AUDIO Power Chords 9d3cb3698ba3e47e
+AUDIO Pick Bass 5a77900f21a0b67e
+AUDIO Growl Bass 7c33b026bdd00f2d
+AUDIO Power Chords d4fbbf59458f9658
 AUDIO Strings a9305f73897fd8bc
 AUDIO Palm Mute 2724f2d854af2d25
 AUDIO Screamer Lead bc4e7546733a868b
 AUDIO Pinch Harmonic c523f889efa98302
 AUDIO Anvil 1b294c789efa9ff3
 AUDIO Bass Chug 25244036a71403c5
-AUDIO Dist Bass 64483374123aa01b
+AUDIO Dist Bass e8680030c621f747
 AUDIO Chug Guitar b167080510bd3946
 AUDIO Detuned Wall 5d8eee725b5b7727
 AUDIO Doom Chord 000e27a6bda94875
 AUDIO Industrial Stab d92054f07e189ca3
-AUDIO FM Shred fc488be0ef01c16d
+AUDIO FM Shred e73727c2745c5927
 AUDIO FM Chug dbcca5d0bab9647b
 AUDIO Clang Lead ddc77dbfe227714a
 AUDIO FM Power e948a7cf445a59ce
-AUDIO FM Growl Bass 168a5093b68469be
+AUDIO FM Growl Bass d7c52829a16d0ff2
 AUDIO Sitar ee8d0df6887362d5
 AUDIO Flute f0fe3491ebede1dc
 AUDIO Ice Bells 8a3f3a5e25ed6507
@@ -832,10 +796,10 @@ AUDIO Comp Guitar e2752da84cf5b2e3
 AUDIO Upright Bass bfe5a6f54a2cb6e6
 AUDIO Bowed Bass c37ad6e8d7cb1703
 AUDIO Low Reed d6f23c7985949012
-AUDIO Glockenspiel b30af3281b3cfe07
+AUDIO Glockenspiel e8db25245334054f
 AUDIO Horn Section e366a6aacde44265
 AUDIO Wind Pad b0c77d3542679c8a
-AUDIO Piano 6a5d2ab09708decd
+AUDIO Piano a0bcbddc00b0d455
 AUDIO Harp 5805b644d20406df
 AUDIO Accordion 98601370513750d7
 AUDIO Solo Violin 135260296ab6a846
@@ -878,7 +842,7 @@ AUDIO Ocarina 05a7d9761359e62b
 AUDIO Cello 324b4bc7251c409c
 AUDIO Mandolin e6efb11ddf43ebbe
 AUDIO Ukulele e39fb1284d832a61
-AUDIO Honky-tonk 03cb1742b5f566a5
+AUDIO Honky-tonk f2042d79702c4430
 AUDIO Funk Keys 60be1458d9b7680d
 AUDIO Tape Strings cd8397154ef19914
 AUDIO Guitarron 1d5b1fc9f6796a28
@@ -888,17 +852,17 @@ AUDIO Clarinet d6b4fef7e1083b92
 AUDIO Bandoneon 3867880aac8d6263
 AUDIO Xylophone d9df84e9974d004a
 AUDIO Super Saw c065436015c5edd5
-AUDIO Jazz Piano a360cde4a90570b5
+AUDIO Jazz Piano 11405c6c0ed78745
 AUDIO Calliope de30ecdf2bc1cf02
 AUDIO Sho 2523bedff20f92d6
-AUDIO Deep Pad 855442b5acdfb5c2
+AUDIO Deep Pad 552e7f21e31a2a76
 AUDIO Bowed Metal 5cb21bdfab5debf8
 AUDIO Bass Reed 4ed049f5f68e829e
 AUDIO Koto Bass 3c816476f3a61ca5
 AUDIO Harp Comp 90145f0bb451cada
 AUDIO Reed Section 8c0fc048972ea00b
 AUDIO Didgeridoo 5d6bf420459fe799
-AUDIO Grand Piano 02f595e05cd98991
+AUDIO Grand Piano b29ef7e8da3d95a1
 AUDIO Acoustic Guitar 44c327a4c510685b
 AUDIO Mandolin Chop 7c784bba16a778a9
 AUDIO Nylon Comp 7b434d6ccc59b05f
@@ -910,18 +874,18 @@ AUDIO Cursor Tick 3779b79f6df6a1a6
 AUDIO Cursor Blip 18048679209207ce
 AUDIO Error a0afd2507dacc385
 AUDIO Denied 322f820d75057ef2
-AUDIO Paint Stroke c8094008dae3aff1
+AUDIO Paint Stroke 51fbcc37086111dc
 AUDIO Boot-Up Chime 41ac071db73bfe72
 AUDIO Processing Beeps def8d1a2afd5db13
 AUDIO Sax Riff 8d095eecd1ff53f5
 AUDIO Trumpet Fanfare 1e7a511928d784e8
-AUDIO Door Knock 1db0e82b54b45332
-AUDIO Crowd Cheer 40f485254c9bf7de
-AUDIO Shop Bell b71eae4e529c506d
-AUDIO Vortex Whoosh d9e1abd17cfb3648
+AUDIO Door Knock 0b26096de8e95dde
+AUDIO Crowd Cheer 33595470a9253cdb
+AUDIO Shop Bell 76c895ec7152a0ad
+AUDIO Vortex Whoosh 2dbf40e9f7882062
 AUDIO Heavenly Chime b8a53889a1eb96f8
 AUDIO Heavenly Fizzle f44cfd9bbd0a75b6
-AUDIO Glass Clink f3d260961502a4b1
+AUDIO Glass Clink 8094a9d4a444e893
 AUDIO TV Power Off bae05882a92667e1
 AUDIO Thud 67b09df88e537777
 AUDIO Airplane Takeoff c5f651e907eec8d2
@@ -933,16 +897,16 @@ AUDIO Typewriter Clack 176d20082b5672df
 AUDIO Cello Pluck bb7934af31faa564
 AUDIO Kazoo 8c34904c4feca3ed
 AUDIO Cluck f885dd64e27f7e59
-AUDIO Chain Clink 24c5ef378553ffe4
+AUDIO Chain Clink 369c5e203bd78985
 AUDIO Sword Ting 00f8f640fe29c37f
 AUDIO Countdown Beep d9dff93e231f6b6b
 AUDIO Countdown Go ed4aa9583705b041
 AUDIO Modem Chirp e2259fd3f96e3a7c
 AUDIO Servo Chime def1e8ce460946ef
-AUDIO Tesla Coil 5182c41a07db6185
+AUDIO Tesla Coil 895a37b203efe353
 AUDIO Bubbling Flask b898f5dd2e7a4f18
 AUDIO Knife Switch e9d1b604e18f3491
-AUDIO Shears Snip eb1aa3d172a9e40c
+AUDIO Shears Snip 1945970333626ce6
 AUDIO Petal Scatter 451e9eb7e6681616
 AUDIO Cape Whoosh 7a3a72e54a9a466e
 AUDIO Finger Snap 6c6c0de89227f107
@@ -953,20 +917,20 @@ AUDIO Van Horn 7da36ccd6007f3d8
 AUDIO Watering Can c97752814d4f4b20
 AUDIO Spade Dig f6051d6526a5f666
 AUDIO Teacup Ting 2d10774df566ae88
-AUDIO Wax Seal 8ab42daf8a50ae34
-AUDIO Cell Door Clang b886f2aecd1cd1d1
-AUDIO Knuckle Crack 00b79206843a2ae1
-AUDIO Brush Clatter cbed27fcf0b3bb95
+AUDIO Wax Seal bd32ec15569540f0
+AUDIO Cell Door Clang 3ea4d4d62ea9d505
+AUDIO Knuckle Crack cb139d6bf2e1e02a
+AUDIO Brush Clatter ec46a9c1c7e0bb0a
 AUDIO Dead Tone c6d405d04d208171
 AUDIO Void Thump ec6303f48a1cf3d3
-AUDIO Brush Tap 5ec5f0e0eb9f7d91
+AUDIO Brush Tap af5000e1f27f6e40
 AUDIO Contented Hum a91b80628dd3e2df
-AUDIO Palette Scrape 132b23d7ee092168
+AUDIO Palette Scrape 71bdc9cc90b5c04b
 AUDIO Visor Clank 297cf5c87055acfd
 AUDIO Gauntlet Creak 0732624a14940ab7
 AUDIO Triumphant Clank ecc5a3b558134b90
 AUDIO Coin Tumble 265bfd259c0fc5ca
-AUDIO Gold Bar Clunk b96cdc43b99e26ac
+AUDIO Gold Bar Clunk d50dd7c73b9f338e
 AUDIO Distant Cluck 892a9639db2bb4b0
 AUDIO Feather Rustle c8d63e8e70cb773f
 AUDIO Chord Swell 34adae8622b18479
@@ -982,8 +946,8 @@ AUDIO Double Jump 87814ad2c95222bf
 AUDIO Checkpoint a92f8f5ebb5a621b
 AUDIO Dash 78681232d4f958c5
 AUDIO Quick Reload 104c2a618cc6d924
-AUDIO Shell Casing 559e8b9c5106b1a7
-AUDIO Enemy Death a620f8a1bf89f298
+AUDIO Shell Casing 1f5d9a06379a453b
+AUDIO Enemy Death c405ab2063691d97
 AUDIO Retro Enemy Death 8c387b6833d0a0b9
 AUDIO Knockout 05a9c891f3302724
 AUDIO Crawl 487b42d94a2ac678
@@ -1014,9 +978,9 @@ AUDIO Blown Saxophone 22168d3a34361c89
 AUDIO Blown Low Reed 3d772c7c89e15fbf
 AUDIO Struck Marimba 0e8fabafd013e0e6
 AUDIO Struck Xylophone 2bff511306c9e9b8
-AUDIO Struck Glockenspiel ac55ee1f82b66e0e
+AUDIO Struck Glockenspiel 1ea740823eafb27b
 AUDIO Plucked Music Box f10da6412ce342a4
-AUDIO Struck Piano b04b25b1a78dee7a
+AUDIO Struck Piano 8bb763bff3c43a06
 AUDIO Blown Flute b6f82c2b0b04d816
 AUDIO Songbird Phrase 08ea985ef799327d
 AUDIO Night Insects 349bb12260c9c411
@@ -1037,13 +1001,13 @@ AUDIO Chair Scrape 78b79b0891ea8bd5
 AUDIO Floorboard Creak db7abee6dfee6b45
 AUDIO Rope Creak 672edad2f4924b63
 AUDIO Ship Hull Creak b0f4a5846866fc25
-AUDIO Bullet Whiz 15d7c9e034cc590d
+AUDIO Bullet Whiz 0b10ac87136b9570
 AUDIO Sniper From Afar 05eee6aceddaa4fd
 AUDIO Canyon Blast 1545f5b103b6ff92
 AUDIO Mine Charge bae80116881489f3
 AUDIO Cannon 3d8c4510383bd729
 AUDIO Dynamite 0b1a6c48284ca5cb
-AUDIO Bolt-Action Reload f5614ecf8c106802
+AUDIO Bolt-Action Reload 1b89d60ccf5781a9
 AUDIO Ratchet Wrench 401ed19acd5c858d
 AUDIO Winding a Toy 1e3b309812a72a5f
 AUDIO Clock Tick 798bd3411949efd8
@@ -1052,6 +1016,30 @@ AUDIO Fridge Hum 08712b390e81c60e
 AUDIO Cordless Drill c67c15929587de59
 AUDIO Electric Car Pass 1d31ded6f40ad5d5
 AUDIO Ceiling Fan 2366863fef75de10
+AUDIO Window Smash 486d4a49f3126bb2
+AUDIO Bottle Break b96c23ed0cdea7d2
+AUDIO Pot Smash 8c91f72d5de96036
+AUDIO Stadium Chant 2302e098878764bb
+AUDIO Audience Ooh 10ca49d078ec9dcf
+AUDIO Audience Aww 92f8978ae91e2ed1
+AUDIO Audience Gasp 1b7b335216bb28d1
+AUDIO Crowd Chatter aaefb8899e671f2c
+AUDIO Seagull Squabble 8297a5a42eda7255
+AUDIO Pulse Rifle 87eeb4df5be6f17a
+AUDIO Chip Machine Gun e47e4728f79a57db
+AUDIO Revolver Spin a0e094fb6e31a5c6
+AUDIO Dry Fire 1f91de5d7aeba9da
+AUDIO Battle Cry 83ba070efd76114b
+AUDIO Sword Cry 4e92aecb99c0c6c8
+AUDIO Jump Hup 97338b1aeb8b6f63
+AUDIO Falling Scream e6b263599663f478
+AUDIO Hurt Grunt e5f36269bc9cee40
+AUDIO Woman Hurt Cry db2af556c8009cf5
+AUDIO Victory 9e9172ccb70f9851
+AUDIO Achievement bac3dbd67e5235b7
+AUDIO Defeat be5a0551df86bfee
+AUDIO Success bf16f938711ee5b5
+AUDIO Fail 187f9b59c30936aa
 AUDIO nonorm:Coin 9b44f2f52967386e
 AUDIO nonorm:Laser bfdaabc91508b1fe
 AUDIO nonorm:Jump 29a16949ca59543e
@@ -1062,40 +1050,40 @@ AUDIO nonorm:Blip 6edf1f4db1145a56
 AUDIO nonorm:Deep Impact abd02a588678c545
 AUDIO nonorm:Lush Powerup 3fbd4ff16137fa00
 AUDIO nonorm:Wide Pickup ab6049323c2c8df5
-AUDIO nonorm:Gunshot b8cdb296d2dd522b
-AUDIO nonorm:Shotgun 73b1c976365eb48b
-AUDIO nonorm:Rifle Crack 3eca0a334f964606
-AUDIO nonorm:Suppressed 6042e8e08999db93
-AUDIO nonorm:Full Auto 502137df316d3132
-AUDIO nonorm:3-Round Burst 3c53dc2a794c5435
+AUDIO nonorm:Gunshot 1abc96703110b53b
+AUDIO nonorm:Shotgun 05fe3486914d3f5f
+AUDIO nonorm:Rifle Crack 941011ca5dac5d97
+AUDIO nonorm:Suppressed 59ce73adc335ac12
+AUDIO nonorm:Full Auto bec86691206f9d1a
+AUDIO nonorm:3-Round Burst 62c0fb7ff7eea18e
 AUDIO nonorm:Cinematic Boom e2197a4835837faf
 AUDIO nonorm:Fire 0f7ce22b63a4b78e
-AUDIO nonorm:Ice 0ed10914e57bedf7
+AUDIO nonorm:Ice f86cf922cf332e2f
 AUDIO nonorm:Electric Crackle 0f0fe8146740b2ff
 AUDIO nonorm:Thunder 88b7e9da786a47a3
-AUDIO nonorm:Punch / Kick c759fb9d050eed86
-AUDIO nonorm:Cure 09098092f84b8cbd
-AUDIO nonorm:Poison 2d5d2cdce5f813e3
+AUDIO nonorm:Punch / Kick bc108849d255b302
+AUDIO nonorm:Cure 1af556e4f9aa8b4d
+AUDIO nonorm:Poison 1046a4cb460cd8ac
 AUDIO nonorm:Metal Clank 0a372b7f919450fa
-AUDIO nonorm:Water Ambient 766a6cc6a135e425
+AUDIO nonorm:Water Ambient 1e33d0ee317d9321
 AUDIO nonorm:Water Drop 41929e016109bc6c
 AUDIO nonorm:Wave of Water adf7bf983073a1ef
-AUDIO nonorm:Sword Swing 6edad24ed0cfe621
-AUDIO nonorm:Sword Clash 77fa675f493b95d2
-AUDIO nonorm:Shield Block 76c9d99ca065647b
-AUDIO nonorm:Glass Shatter 2612c8ec4faf3419
+AUDIO nonorm:Sword Swing e3f9c4b9a429b166
+AUDIO nonorm:Sword Clash d7d0566f26074a0a
+AUDIO nonorm:Shield Block e76d4d27530a71a8
+AUDIO nonorm:Glass Shatter cdb5335d208edec6
 AUDIO nonorm:UI Click 80be37498638caae
 AUDIO nonorm:Confirm 3d507741cd9a6176
 AUDIO nonorm:Cancel c67e14fae192c9d1
 AUDIO nonorm:Error Buzz c6ca02dd08a85396
 AUDIO nonorm:Level Up 9b70ff67a892ebc6
 AUDIO nonorm:Game Over 0a8da96e0c2b0f05
-AUDIO nonorm:Teleport c8f66725a65cf38a
+AUDIO nonorm:Teleport e600104c50d47281
 AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH de02e2ccae92fddd over 1057
+AUDIOHASH 459228254156cfc0 over 1081
 AUDIO x:ir:Coin:1 5cfd7548039d3a9d
 AUDIO x:ir:Coin:0.4 ffce912929480e8c
 AUDIO x:ir:Laser:1 a6950da6aeefe1fb
@@ -1104,23 +1092,23 @@ AUDIO x:ir:Explosion:1 d82778eda76b30d8
 AUDIO x:ir:Explosion:0.4 e37a6339a4bdc5aa
 AUDIO x:granular-sample:0 bd22e8753db266c6
 AUDIO x:granular-sample:1 45c852229e3e1273
-AUDIO x:breed:0 9f9f242c275b60b5
-AUDIO x:breed:1 0cf7601a2d231783
-AUDIO x:breed:2 e6017aaef8c83255
-AUDIO x:breed:cross 98172fcc6acb99e9
-AUDIO x:vary:0 5b4bff35c7a657f8
-AUDIO x:vary:1 fefb78635bd55120
-AUDIO x:vary:2 fb8a73c4e2c97f51
-AUDIO x:vary:3 83cf656ebfc1b2bd
+AUDIO x:breed:0 b0ec189b283472cc
+AUDIO x:breed:1 9db90b4bfe2792fe
+AUDIO x:breed:2 82502ca999ca5b4c
+AUDIO x:breed:cross ca0348eb7f978978
+AUDIO x:vary:0 34ad1b1ac09cd0a1
+AUDIO x:vary:1 bba00ba43b312ac1
+AUDIO x:vary:2 c977bc61a0bbe0fc
+AUDIO x:vary:3 16be97797591e08c
 AUDIO x:pack:tres 0ee5611ee441bcfb
 AUDIO x:pack:zip f8d79bb8f0a928cb
 AUDIO x:layers:three f3f231f50efc13f8
 AUDIO x:layers:muted aef549e49a75c01b
 AUDIO x:layers:no-normalize 791384b1ee9f82be
 AUDIO x:layers:same-engine 794b64a73f5aa826
-AUDIO x:wizard:gunshot-metal e454f3dd631027dc
-AUDIO x:wizard:explosion-fire-stone-8bit-9 89c8f94986bbf786
-AUDIO x:wizard:pickup-1 95ea0e1710cbf6f4
+AUDIO x:wizard:gunshot-metal 20220ae650e1b78d
+AUDIO x:wizard:explosion-fire-stone-8bit-9 73767e842784b593
+AUDIO x:wizard:pickup-1 0060ad3c4f8155bd
 AUDIO x:footsteps:grass 620a03050d7a103e
 AUDIO x:footsteps:dirt 60e4248d12df2110
 AUDIO x:footsteps:sand 222f3e2a92cab9bf
@@ -1133,16 +1121,56 @@ AUDIO x:footsteps:ice c62a524fa8979ae4
 AUDIO x:footsteps:water ad1a4602f35b7b71
 AUDIO x:footsteps:carpet e88b77a5b41eecb8
 AUDIO x:footsteps:helper 3a7108e7e586554e
+AUDIO x:alt:Coin:1 623ee2991237f69e
+AUDIO x:alt:Coin:2 9c2bd72a7e4509e5
+AUDIO x:alt:Hit:1 c4abe30342eacee6
+AUDIO x:alt:Powerup:1 6a2341b11c355c9c
+AUDIO x:alt:Powerup:2 32df1e8a824aa65b
+AUDIO x:alt:Shotgun:1 2f911d683a492183
+AUDIO x:alt:Ice:1 5743cbb43bfd0b49
 AUDIO x:alt:Thunder:1 1fbf2fd728e93588
 AUDIO x:alt:Thunder:2 e36fe9135d9e8384
 AUDIO x:alt:Thunder:3 bced8b60ed50b9b3
+AUDIO x:alt:Punch / Kick:1 2a25a6d1272319ac
+AUDIO x:alt:Punch / Kick:2 7da0c7adf54cc948
+AUDIO x:alt:Punch / Kick:3 f5c00d28d5129b7d
+AUDIO x:alt:Cure:1 e93b94f371dd66c4
+AUDIO x:alt:Poison:1 0096059edd5212d1
+AUDIO x:alt:Water Drop:1 ba0270b93259d02a
 AUDIO x:alt:Wave of Water:1 4596107f08015002
 AUDIO x:alt:Wave of Water:2 c7f29658ddee1533
 AUDIO x:alt:Wave of Water:3 0c814bb07f3f47cb
+AUDIO x:alt:Glass Shatter:1 7ca1d39ecb0f66f3
+AUDIO x:alt:Glass Shatter:2 d93348fa8b4e8159
+AUDIO x:alt:Level Up:1 16201c822c9ddda7
+AUDIO x:alt:Level Up:2 a300e290eb7f9f51
+AUDIO x:alt:Level Up:3 338845ebbc349fbe
+AUDIO x:alt:Level Up:4 556234bdcf3a43e8
+AUDIO x:alt:Game Over:1 6e30248d2ad6706a
+AUDIO x:alt:Game Over:2 8bbefc830ac75fe6
+AUDIO x:alt:Game Over:3 682530adf39fc016
+AUDIO x:alt:Game Over:4 ec493f8c221f64f5
+AUDIO x:alt:Game Over:5 709b800966996f50
+AUDIO x:alt:Teleport:1 1a15b5c664646a37
+AUDIO x:alt:Magic Sparkle:1 8732a1db7a336f88
 AUDIO x:alt:Wind Gust:1 6202b7b70eda9384
 AUDIO x:alt:Wind Gust:2 79cc30f439073c81
+AUDIO x:alt:Boulder Rumble:1 6cdbd14dd35d7430
+AUDIO x:alt:Boulder Rumble:2 b8e9b653f484d64a
+AUDIO x:alt:Footstep:1 5046dcac77e8b1f3
+AUDIO x:alt:Footstep:2 e6f6c50346462d98
+AUDIO x:alt:Bubble Pop:1 387eb75165930efe
+AUDIO x:alt:Bubble Pop:2 284c473ed209cb97
 AUDIO x:alt:Monster Growl:1 a3d7a041160b7c5e
 AUDIO x:alt:Monster Growl:2 5b7084458377dc9e
+AUDIO x:alt:Frost Bolt:1 5ef5cdb585ecbfa6
+AUDIO x:alt:Lightning Strike:1 56edbc280307715f
+AUDIO x:alt:Arcane Blast:1 32706e1d67e65e24
+AUDIO x:alt:Holy Smite:1 316660d792337b66
+AUDIO x:alt:Dark Curse:1 58c20cf4f2a577c7
+AUDIO x:alt:Mana Charge:1 d94fdb35ba985858
+AUDIO x:alt:Magic Missile:1 a3729444f80026eb
+AUDIO x:alt:Crossbow Bolt:1 66f8ef685732eb8b
 AUDIO x:alt:Cat Meow:1 8fb6f425f296f7b6
 AUDIO x:alt:Bird Chirp:1 bfdde28501c60e96
 AUDIO x:alt:Bird Chirp:2 79b04b45f9936ee6
@@ -1159,19 +1187,108 @@ AUDIO x:alt:Waterfall:3 a8d15a33b585fe7c
 AUDIO x:alt:Ocean Surf:1 fad34bfc879f3517
 AUDIO x:alt:Ocean Surf:2 bc30f4ae7fd599d5
 AUDIO x:alt:Ocean Surf:3 07503ef961150fd4
+AUDIO x:alt:Earthquake Rumble:1 f39090cd8ff6f3a2
+AUDIO x:alt:Dripping Cave:1 e7c9f1fde8eaf076
+AUDIO x:alt:Slide Whistle Up:1 7ccb530923824d08
+AUDIO x:alt:Slide Whistle Up:2 e9dd82f7d7763f8a
+AUDIO x:alt:Slide Whistle Down:1 549b18e99bb849f4
+AUDIO x:alt:Slide Whistle Down:2 dc0bbeb3ca1b98f8
+AUDIO x:alt:Fart:1 096e3e118392fcee
+AUDIO x:alt:Fart:2 4186df6de4b84676
+AUDIO x:alt:Burp:1 772fe7a156adecf6
+AUDIO x:alt:Slime Splat:1 73c78b033a6ffb44
+AUDIO x:alt:Bubble Blorp:1 29e4286278412833
+AUDIO x:alt:Bubble Blorp:2 c1e9faf5297019c6
+AUDIO x:alt:Magic Fizzle:1 bdd858773e93d346
 AUDIO x:alt:Robot Servo:1 cce2da7d136e601e
 AUDIO x:alt:Mechanical Whir:1 b3f485993ce0a7fe
 AUDIO x:alt:Mechanical Whir:2 3f4845ada0e00d96
+AUDIO x:alt:Curse Whoosh:1 849f936efafd574b
+AUDIO x:alt:Shield Cast:1 07773a7423b729a7
 AUDIO x:alt:Distant Boom:1 0727200471311527
 AUDIO x:alt:Servo Motor:1 c2195a6da8ec4fce
 AUDIO x:alt:Bird Trill:1 9e57fb7deb6a3750
 AUDIO x:alt:Bird Trill:2 7052416113ef925c
 AUDIO x:alt:Bird Trill:3 77d21be1d6e47b58
+AUDIO x:alt:Extra Life:1 0ead378d1fc546de
+AUDIO x:alt:Extra Life:2 433214a9a264ab86
+AUDIO x:alt:Boing Spring:1 f93962c3c20efe1e
+AUDIO x:alt:Squish Pop:1 c38e9d78754fe237
+AUDIO x:alt:Enchant:1 a2a8d0971ea001ee
+AUDIO x:alt:Summon Portal:1 d8731993798ff2f8
+AUDIO x:alt:Hex Bolt:1 2e63d8c7ce35520e
+AUDIO x:alt:Unlock:1 ba964768d13d58b3
+AUDIO x:alt:Unlock:2 8ef578d2852daad3
 AUDIO x:alt:Conveyor Belt:1 e8d4cc6d9fe92a8e
 AUDIO x:alt:Conveyor Belt:2 a2f66aed2a2ab7e6
+AUDIO x:alt:Thunderclap:1 c3f7516b1f6ddb80
+AUDIO x:alt:Thunderclap:2 689c1a45f294aaee
 AUDIO x:alt:Troll Grunt:1 82f1caedc56d37a6
+AUDIO x:alt:Game Start:1 ac39e42993879fce
+AUDIO x:alt:Game Start:2 64cad045ba60bf06
+AUDIO x:alt:Rubber Stretch:1 892f22e90ec7a2de
+AUDIO x:alt:Pop Cork:1 ec8d989f541eb758
+AUDIO x:alt:Teleport 2:1 3ea216c486a0733f
+AUDIO x:alt:Magic Sparkle 2:1 4cc3f292bea4d747
+AUDIO x:alt:Thunder 2:1 ee40e53fd9173824
+AUDIO x:alt:Thunder 2:2 b16350acf3d6e287
+AUDIO x:alt:Wind Gust 2:1 5ec8d11a33c4cf4f
+AUDIO x:alt:Wind Gust 2:2 0233d1d2c8facdb1
+AUDIO x:alt:Coin 2:1 8a0b9dc561912e46
+AUDIO x:alt:Coin 2:2 39d4e5a72bf029b8
+AUDIO x:alt:Arcane Shimmer:1 b7d7b63e804e5ed9
+AUDIO x:alt:Ethereal Aura:1 e7338c951677c418
+AUDIO x:alt:Celestial Bloom:1 4b79000a29ea8251
+AUDIO x:alt:Runic Chime:1 4aabfd4c63ff6747
+AUDIO x:alt:Glimmer Whorl:1 bdc87360e44a00db
+AUDIO x:alt:Arcane Chime:1 fdd786abe89d7d74
+AUDIO x:alt:Ethereal Spark:1 1a43449737e38aa4
+AUDIO x:alt:Shadow Shimmer:1 6772b689d3c98002
+AUDIO x:alt:Astral Chime:1 222c82a5593e90c2
 AUDIO x:alt:Howling Squall:1 72733b0365b09cdc
 AUDIO x:alt:Howling Squall:2 4ceee56c9760d9dd
+AUDIO x:alt:8-Bit Ding:1 d7cecf8b460e0f0e
+AUDIO x:alt:8-Bit Ding:2 24d7d6003121297f
+AUDIO x:alt:Pixel Fanfare:1 b75afc6bf067d9ea
+AUDIO x:alt:Pixel Fanfare:2 ea7cf50d66c7a556
+AUDIO x:alt:Pixel Fanfare:3 b300e36d2064eb26
+AUDIO x:alt:Retro Ding:1 d57e44328151ebd3
+AUDIO x:alt:Retro Ding:2 1604dcfa0318e0f1
+AUDIO x:alt:Retro Jingle:1 63aee2c150162356
+AUDIO x:alt:Retro Jingle:2 d51c0e8ec7e75843
+AUDIO x:alt:High Jingle:1 a0a9b33d269a7576
+AUDIO x:alt:High Jingle:2 7a6e74d92dd4f3ee
+AUDIO x:alt:8-Bit Fanfare:1 6bede752e760579d
+AUDIO x:alt:8-Bit Fanfare:2 1d9ff5f5665731ce
+AUDIO x:alt:8-Bit Fanfare:3 04cb249017e5976d
+AUDIO x:alt:Arcade Jingle:1 65345b4dae807ee6
+AUDIO x:alt:Arcade Jingle:2 3d456d5eea67298b
+AUDIO x:alt:Chiptune Ding:1 c836c835d85a0322
+AUDIO x:alt:Chiptune Ding:2 d5838c472f775ac2
+AUDIO x:alt:Bonus Bounce:1 3fcd5ba14b5cca66
+AUDIO x:alt:Bonus Bounce:2 9d36a1fde194d92e
+AUDIO x:alt:8-Bit Coin:1 f4e9f68146fac70e
+AUDIO x:alt:8-Bit Coin:2 011cd18147c96e0e
+AUDIO x:alt:Pocket Coin:1 8334fa4d3b6f3f46
+AUDIO x:alt:Pocket Coin:2 dc7458f92938f0f6
+AUDIO x:alt:Super Chime:1 5d3644aaa4b5e687
+AUDIO x:alt:Super Chime:2 3f3fa33219a6fdb5
+AUDIO x:alt:Super Coin:1 91084d813055494c
+AUDIO x:alt:Super Coin:2 6bddd46005335ceb
+AUDIO x:alt:Mega Shot:1 b30dd1c76575ab58
+AUDIO x:alt:8-Bit Laser:1 1c291825e831b4c6
+AUDIO x:alt:8-Bit 1UP:1 531a93195180fe46
+AUDIO x:alt:8-Bit 1UP:2 a169fde5175d17ce
+AUDIO x:alt:Super Fanfare:1 cd5d82859d00b106
+AUDIO x:alt:Super Fanfare:2 8fbb0b42882322b1
+AUDIO x:alt:Super Fanfare:3 64ef25aaa46363a1
+AUDIO x:alt:Turbo Coin:1 75fd0ccdec382a2e
+AUDIO x:alt:Turbo Coin:2 c3551fe1910b41ae
+AUDIO x:alt:Turbo Chime:1 84aca2e7b2d78c0c
+AUDIO x:alt:Turbo Chime:2 aa7fca2cd980688f
+AUDIO x:alt:Woodgrain Shot:1 2c382e41d56595c6
+AUDIO x:alt:SID Coin:1 a9bab8818455ab3e
+AUDIO x:alt:SID Coin:2 2f2c4fadac69d156
 AUDIO x:alt:Heavy Rain:1 51d268cc0a828b01
 AUDIO x:alt:Heavy Rain:2 bd8a941250599963
 AUDIO x:alt:Heavy Rain:3 df15b0250d5b9b52
@@ -1183,6 +1300,33 @@ AUDIO x:alt:Train:1 41ef9e8f2b679294
 AUDIO x:alt:Chainsaw:1 c02f866947270a56
 AUDIO x:alt:Chainsaw:2 f95fe371d5db25fe
 AUDIO x:alt:Trapdoor Creak:1 7d38d8b9bfdac8fa
+AUDIO x:alt:Sliding Door:1 66c6960746ad2cee
+AUDIO x:alt:Ascend Chime:1 79bab1722eb7c2c1
+AUDIO x:alt:Ascend Chime:2 ecaf74b07acfd3d3
+AUDIO x:alt:Stardust Chime:1 e9650cee05f9ec53
+AUDIO x:alt:Paint Stroke:1 47f096c1bae5b2fe
+AUDIO x:alt:Boot-Up Chime:1 7763480dfa9090ea
+AUDIO x:alt:Boot-Up Chime:2 1e24e31312a60cc8
+AUDIO x:alt:Boot-Up Chime:3 a6994ef8501ae5ab
+AUDIO x:alt:Trumpet Fanfare:1 87348b78b221c747
+AUDIO x:alt:Trumpet Fanfare:2 bfde8f0745283506
+AUDIO x:alt:Trumpet Fanfare:3 b344ff3764b78346
+AUDIO x:alt:Door Knock:1 f513b511efa8d242
+AUDIO x:alt:Crowd Cheer:1 8965238e93961feb
+AUDIO x:alt:Crowd Cheer:2 37e5ea39822a90de
+AUDIO x:alt:Heavenly Chime:1 ad2917237517fe44
+AUDIO x:alt:Heavenly Chime:2 c95d0e17ef0c50d0
+AUDIO x:alt:Glass Clink:1 f0f3ab5168fca93c
+AUDIO x:alt:Glass Clink:2 01c376fcf6196ce5
+AUDIO x:alt:Glass Clink:3 a41571abb280714e
+AUDIO x:alt:Sword Ting:1 5f02bd0dc4e14610
+AUDIO x:alt:Shears Snip:1 9f1ff03282ad0c99
+AUDIO x:alt:Wax Seal:1 1f57f54872cad667
+AUDIO x:alt:Brush Tap:1 3c41c364fde249cf
+AUDIO x:alt:Visor Clank:1 3f9f3ee26cc0539b
+AUDIO x:alt:Gold Bar Clunk:1 00276c7c5eedaf91
+AUDIO x:alt:Chord Swell:1 e59a39483a40ace9
+AUDIO x:alt:Enemy Death:1 3322cef57e9e817e
 AUDIO x:alt:Songbird Phrase:1 266646ca7909aa3d
 AUDIO x:alt:Songbird Phrase:2 dfd12a44a5ca2c5f
 AUDIO x:alt:Night Insects:1 c6e7bff78e4963b2
@@ -1194,8 +1338,38 @@ AUDIO x:alt:Filling a Bottle:1 9e786858632611db
 AUDIO x:alt:Floorboard Creak:1 4e26932b46b5f9a2
 AUDIO x:alt:Ratchet Wrench:1 ff26e315e21df1e6
 AUDIO x:alt:Clock Tick:1 b9c6d8f5dc3eb4f8
-AUDIO x:vary:layered:0 64938bc96b36b9d6
-AUDIO x:vary:layered:1 6e7627c323ee5cfc
-AUDIO x:vary:layered:2 c2737aa489a6c8f9
-AUDIO x:vary:layered:3 1577a095b3306400
-AUDIOXHASH 30de6009a0039b1a over 102
+AUDIO x:alt:Window Smash:1 2cfb463535c70746
+AUDIO x:alt:Bottle Break:1 9c3a827e4cb239cd
+AUDIO x:alt:Bottle Break:2 78301a0a28c37ded
+AUDIO x:alt:Pot Smash:1 1981a28778e3b7a2
+AUDIO x:alt:Pot Smash:2 7416993a1845fabb
+AUDIO x:alt:Stadium Chant:1 a04fbe38b5909691
+AUDIO x:alt:Audience Ooh:1 521762cbbf4b0e90
+AUDIO x:alt:Audience Aww:1 39134f6092f6f829
+AUDIO x:alt:Audience Aww:2 38dbbf2db6c31c46
+AUDIO x:alt:Seagull Squabble:1 e487797675ed62d3
+AUDIO x:alt:Chip Machine Gun:1 5f2f6969fff23fe6
+AUDIO x:alt:Battle Cry:1 eb2fe7ad3dbef7ae
+AUDIO x:alt:Battle Cry:2 44be6ad98117af6e
+AUDIO x:alt:Sword Cry:1 28a6c6f9c9c9d70e
+AUDIO x:alt:Sword Cry:2 6a95bb19417304ce
+AUDIO x:alt:Jump Hup:1 a950245d15815b8e
+AUDIO x:alt:Jump Hup:2 4fe9697df52d2946
+AUDIO x:alt:Falling Scream:1 ba99ea22a544b96d
+AUDIO x:alt:Falling Scream:2 c724b0b2a45b4d17
+AUDIO x:alt:Victory:1 279ec5052c9031d6
+AUDIO x:alt:Victory:2 9f48e4feb7df7a77
+AUDIO x:alt:Victory:3 e5cd1035e3330808
+AUDIO x:alt:Achievement:1 fd1fdffddd51399e
+AUDIO x:alt:Achievement:2 a7f819d3a5b6555c
+AUDIO x:alt:Defeat:1 8217da3daef2afc6
+AUDIO x:alt:Defeat:2 4c22823e582eeb9d
+AUDIO x:alt:Success:1 89a911890cd7a256
+AUDIO x:alt:Success:2 8f7006c0267d98d5
+AUDIO x:alt:Fail:1 7e360501a62026f6
+AUDIO x:alt:Fail:2 170519b9edaf6350
+AUDIO x:vary:layered:0 9e4bf6185507b6fb
+AUDIO x:vary:layered:1 9a38cc7ae44d3e69
+AUDIO x:vary:layered:2 b81a7555c1deee0c
+AUDIO x:vary:layered:3 41e26eaa612c92b1
+AUDIOXHASH 42a497c660ff678d over 288

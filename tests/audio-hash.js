@@ -164,7 +164,10 @@
       // Meow and Monster Growl; the weather engine's on Thunder, Heavy Rain, Rain, Wind Gust and Howling Squall; the motor engine's on Car Engine,
       // Chainsaw, Helicopter, Train and Motorcycle; the blast engine's on Distant Boom; the spring engine's on Jaw Harp; the servo engine's on Servo Motor, Robot
       // Servo, Mechanical Whir and Conveyor Belt; the friction engine's on Trapdoor Creak; the flow engine's on Waterfall,
-      // Ocean Surf, Wave of Water and Filling a Bottle). The
+      // Ocean Surf, Wave of Water and Filling a Bottle; the glass engine's on Glass Shatter, Glass Clink, Window Smash,
+      // Bottle Break and Pot Smash; the crowd engine's on Crowd Cheer, Stadium Chant, Audience Ooh and Audience Aww; the gun
+      // engine's on Shotgun; the chip gun engine's on Woodgrain Shot, Mega Shot, 8-Bit Laser and Chip Machine Gun; the voice
+      // engine's on Battle Cry, Sword Cry, Jump Hup and Falling Scream, and today's formant yell on Enemy Death). The
       // preset lines above hash the BASE, as every other reader of PRESETS does, so each alt is fingerprinted here,
       // layered ones whole.
       normalizeOut = true;
