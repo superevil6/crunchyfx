@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 143319e by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 84b1658c3264871b59f2acfff287c128de6494bc278ebd86d02a4ff1d71ce28d */
+/* GENERATED from crunchyCore/crunchy-base.css @ b7833f6 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 0af4b186f9dd072b47955898cc3beafa0f3a8d2db787b3b37f08215a2c0c2525 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 16;
+  --base-build: 17;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -554,3 +554,32 @@ canvas.pick-on { cursor: pointer; }
 .pick-from b { color: var(--ink); }
 .pick-from button { font-size: 12px; padding: 3px 10px; }
 .pick-from .pick-from-x { padding: 3px 7px; }
+
+/* THE VISUAL RAMP PICKER (ramp-pick.js, base-build 17; CrunchyTexture §28, moved here for the texture generator's window):
+   a button showing the chosen ramp as a strip of its steps and its name, over a hidden <select>; the open grid of strips
+   under headings floats above everything (a modal window passes its overlay as the grid's parent). A strip longer than 12
+   steps narrows its steps rather than crowding the name. */
+.rp-hidden { display: none !important; }
+.rp-btn { display: inline-flex; align-items: center; gap: 8px; min-width: 170px; max-width: 300px; text-align: left; padding: 3px 6px; }
+.rp-btn .rp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-btn .rp-caret { color: var(--muted); }
+.rp-strip { display: inline-flex; flex: none; max-width: 96px; border: 1px solid #000; }
+.rp-strip i { display: block; width: 7px; height: 14px; }
+.rp-strip[hidden] { display: none; }
+.rp-opt .rp-strip i { width: 8px; }
+.rp-tag { flex: none; font-size: 10px; padding: 0 4px; border: 1px solid var(--line2); color: var(--muted); line-height: 14px; }
+.rp-pop { position: fixed; z-index: 300; width: 340px; max-width: calc(100vw - 16px); max-height: min(440px, calc(100vh - 16px)); overflow: auto;
+          display: flex; flex-direction: column; gap: 6px; background: var(--panel); border: 2px solid var(--accent); box-shadow: var(--lift);
+          padding: 8px; scrollbar-color: var(--line) #0e0d12; }
+.rp-pop[hidden] { display: none; }
+.rp-pop input { width: 100%; }
+.rp-group { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin: 4px 2px 0; }
+.rp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.rp-opt { display: flex; align-items: center; gap: 6px; padding: 3px 5px; border: 2px solid transparent; cursor: pointer; color: var(--ink); font-size: 12px; min-width: 0; }
+.rp-opt .rp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-opt:hover { border-color: var(--line); }
+.rp-opt.on { border-color: var(--accent); background: #2b2734; }
+.rp-opt:focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+.rp-opt.wide { grid-column: 1 / -1; }
+.rp-opt[aria-disabled="true"] { opacity: .5; cursor: default; }
+.rp-none { color: var(--muted); padding: 4px; }
