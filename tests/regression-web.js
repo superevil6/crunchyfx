@@ -867,6 +867,85 @@
     } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
     return ok(!bad.length, bad.slice(0, 5).join(" · "));
   });
+  // 2026-11-14. THE STRUCK KEYS' PEAK CONTROL (AJ: "I think the peak control for the piano and bell engines is a good
+  // idea"; SOUND-REVIEW.md). pianoPeak (Piano panel) and barPeak (Bar panel) are gunPeak's control on the piano (25) and
+  // bar (24) engines: drawn only by a sound of their own engine (so Breed and Variations leave them alone elsewhere),
+  // shown only in their engine's panel, 0-2 by 0.05, default 0, with help. 0 is BYTE-IDENTICAL to the key absent on
+  // every piano and bar preset (the engine runs in the loop as it always has; the audio hash holds every other preset).
+  // The seven quiet keys were levelled with it alone ("meet in between": half the gap from the audit's level to their
+  // section's median, as soundtests/fixes/KEY.md item 4 computed it): each lands within 0.3 LU of that halfway mark
+  // (BS.1770, Normalize on, as Play sounds), at least 3.5 LU over the same preset at Peak 0, with gain <= 1, no master
+  // Limiter, no other key moved from the audit's measurement, under 0.98, no DC; and a Variations pack still levels.
+  t("keys/peak-control-drawn-only-for-its-engine-0-byte-identical-and-the-seven-keys-at-their-planned-levels", function () {
+    const bad = [];
+    [["pianoPeak", "Piano", 25, "Piano", "Glockenspiel"], ["barPeak", "Bar", 24, "Glockenspiel", "Piano"]].forEach(function (e) {
+      const k = e[0], p = PARAM_BY_KEY[k];
+      if (!p || p[2] !== 0 || p[3] !== 2 || p[4] !== 0.05 || p[5] !== 0 || p[7] !== e[1]) bad.push(k + " row " + JSON.stringify(p));
+      if (!PARAM_HELP[k]) bad.push(k + " has no help");
+      const own = withState(PRESETS[e[3]], genomeFromState), other = withState(PRESETS[e[4]], genomeFromState), coin = withState(PRESETS["Coin"], genomeFromState);
+      if (undrawn(k, own) || !undrawn(k, other) || !undrawn(k, coin)) bad.push(k + " drawn wrong");
+      applyPreset(PRESETS[e[3]], e[3]);
+      const panel = document.querySelector('#panels [data-group="' + e[1] + '"]');
+      if (!panel || panel.hidden || !panel.querySelector('[data-key="' + k + '"]')) bad.push(k + " not in the shown " + e[1] + " panel");
+      applyPreset(PRESETS["Coin"], "Coin");
+      if (!panel || !panel.hidden) bad.push(e[1] + " panel shown for a Coin");
+      // 0 is byte-identical on every preset (and alt) of the engine, with the key absent, 0, and Normalize off
+      Object.keys(PRESETS).forEach(function (n) {
+        [PRESETS[n]].concat(PRESETS[n]._alts || []).forEach(function (a, j) {
+          if (Math.round(a.wave) !== e[2] || "layers" in a) return;
+          const off = Object.assign({}, a); delete off[k];
+          const zero = Object.assign({}, off); zero[k] = 0;
+          if (audio(withState(off, render)) !== audio(withState(zero, render))) bad.push(n + " #" + j + ": " + k + " 0 is not byte-identical");
+        });
+      });
+    });
+    // BS.1770 (K-weighting, 400 ms blocks at 75% overlap, -70 LUFS absolute and -10 LU relative gates)
+    const bq = function (x, b0, b1, b2, a0, a1, a2) { const y = new Float64Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      for (let i = 0; i < x.length; i++) { const v = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v; } return y; };
+    const kw = function (x) {
+      const A = Math.pow(10, 4 / 40), w = 2 * Math.PI * 1500 / SR, c = Math.cos(w), al = Math.sin(w) / Math.SQRT2, sa = 2 * Math.sqrt(A) * al;
+      const s = bq(x, A * ((A + 1) + (A - 1) * c + sa), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - sa), (A + 1) - (A - 1) * c + sa, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - sa);
+      const w2 = 2 * Math.PI * 38 / SR, c2 = Math.cos(w2), al2 = Math.sin(w2);
+      return bq(s, (1 + c2) / 2, -(1 + c2), (1 + c2) / 2, 1 + al2, -2 * c2, 1 - al2);
+    };
+    const lufs = function (r) {
+      const kl = kw(r.L), kr = kw(r.R), B = Math.round(0.4 * SR), H = Math.round(0.1 * SR), ms = [];
+      const blk = function (a, b) { let s = 0; for (let i = a; i < b; i++) s += kl[i] * kl[i] + kr[i] * kr[i]; return s / (b - a); };
+      if (r.L.length <= B) ms.push(blk(0, r.L.length)); else for (let a = 0; a + B <= r.L.length; a += H) ms.push(blk(a, a + B));
+      const l = function (m) { return -0.691 + 10 * Math.log10(m || 1e-12); }, mean = function (g) { return g.reduce(function (t, m) { return t + m; }, 0) / g.length; };
+      let g = ms.filter(function (m) { return l(m) > -70; }); if (!g.length) return -70;
+      const rel = l(mean(g)) - 10; g = g.filter(function (m) { return l(m) > rel; });
+      return l(mean(g));
+    };
+    // [preset, Peak key, the audit's level, its section's median] (soundtests/audit-untouched/REPORT.md item 6)
+    const KEYS = [["Struck Piano", "pianoPeak", -24.2, -7.4], ["Glockenspiel", "barPeak", -23.7, -7.4], ["Piano", "pianoPeak", -21.8, -7.4],
+      ["Jazz Piano", "pianoPeak", -21.3, -7.4], ["Grand Piano", "pianoPeak", -21.2, -7.4], ["Honky-tonk", "pianoPeak", -25.9, -10.9],
+      ["Struck Glockenspiel", "barPeak", -24.6, -8.1]];
+    const keepN = normalizeOut; normalizeOut = true;
+    try {
+      KEYS.forEach(function (e) {
+        const p = PRESETS[e[0]], half = (e[2] + e[3]) / 2;
+        if (!p || (p._alts || []).length || "layers" in p) { bad.push(e[0] + " missing or has takes"); return; }
+        if (!(p[e[1]] > 0 && p[e[1]] <= 2) || (p.gain == null ? 0.7 : p.gain) > 1 || (p.limiter || 0) > 0) bad.push(e[0] + ": " + e[1] + " " + p[e[1]] + ", gain " + p.gain + ", limiter " + p.limiter);
+        const r = withState(p, render), r0 = withState(Object.assign({}, p, { [e[1]]: 0 }), render), lv = lufs(r), lv0 = lufs(r0);
+        let pk = 0, dc = 0, nan = 0;
+        for (let i = 0; i < r.L.length; i++) { if (r.L[i] !== r.L[i] || r.R[i] !== r.R[i]) nan++; pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); dc += r.L[i] + r.R[i]; }
+        if (Math.abs(lv - half) > 0.3 || lv - lv0 < 3.5) bad.push(e[0] + " at " + lv.toFixed(2) + " LUFS (halfway " + half.toFixed(2) + ", Peak 0 " + lv0.toFixed(2) + ")");
+        if (nan || pk > 0.98 || Math.abs(dc / (2 * r.L.length)) > 1e-4) bad.push(e[0] + " peak " + pk.toFixed(3) + " nan " + nan + " dc " + (dc / (2 * r.L.length)).toExponential(1));
+      });
+    } finally { normalizeOut = keepN; }
+    const rnd = Math.random; let rs = 24; Math.random = function () { rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0; return rs / 4294967296; };
+    try {
+      ["Struck Piano", "Honky-tonk", "Struck Glockenspiel"].forEach(function (n) {
+        applyPreset(PRESETS[n], n); varCountEl.value = "6"; seedVariations();
+        const m = varGenomes.map(function (g) { const r = renderVariation(g); return { rms: 20 * Math.log10(gatedRms(r.L, r.R)), pk: 20 * Math.log10(peakOf(r.L, r.R)) }; });
+        const rms = m.map(function (x) { return x.rms; }), spread = Math.max.apply(null, rms) - Math.min.apply(null, rms);
+        const pk = Math.max.apply(null, m.map(function (x) { return x.pk; }));
+        if (spread > 1 || pk > -2.9) bad.push(n + " pack spread " + spread.toFixed(2) + " dB, peak " + pk.toFixed(1));
+      });
+    } finally { Math.random = rnd; varCountEl.value = "8"; document.getElementById("varClose").click(); }
+    return ok(!bad.length, bad.slice(0, 5).join(" · "));
+  });
   t("search/the-voice-words-toriya-kiai-hyah-hup-ugh-scream", function () {
     // 2026-11-13: the voice engine's cries are found by the sound people type ("toriya", "hiyah", "hup", "ugh") and by
     // what they are; "hurt", "pain", "ouch", "oof" and "jump" keep their old aliases first and gain the cries.

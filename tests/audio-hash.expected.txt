@@ -1,3 +1,4 @@
+# The brass attack and the keys Peak control (2026-11-14, AJ: "I think the peak control for the piano and bell engines is a good idea, and I think the better attack makes more sense on the brass"; SOUND-REVIEW.md): new rows pianoPeak / barPeak (default 0) hashed ALONE first, old presets: every line identical except the 15 breed/vary/wizard/vary:layered lines and AUDIOXHASH, which moved only because the genomes gain the two keys (all 1372 lines identical with pianoPeak/barPeak stripped from the hashed JSON). Then 6 brass presets (`attack` -> 0.01, mechanical-fixes-brass.json) and 7 keys (`pianoPeak` / `barPeak` only, keys-peak-level.json): their 13 AUDIO lines and AUDIOHASH moved; none has an alt or nonorm line; every other line is unchanged.
 # Mechanical fixes from the audit (2026-11-14, AJ: "I think this is good, let's go ahead and apply them"; SOUND-REVIEW.md): 33 presets replaced in place from tools/new-presets/mechanical-fixes.json (three siren copies redesigned, 15 clicking endings given their declared release, level trims on Thunderous Wallop, Bells / Mallets, the keys and the kicks, Metal Grate Step's held ring). Their 33 AUDIO lines and AUDIOHASH moved; none of them has a nonorm line, Retro Ding's two x:alt lines and AUDIOXHASH are unchanged. The envCurve NaN fix in synth.js was hashed ALONE first (old presets, new engine): all 1372 lines identical to the previous file.
 # Jingle alternates (2026-11-14, AJ: "every single one of them is an improvement … they should all go in as alts"; SOUND-REVIEW.md): 70 alts ADDED on 30 jingle presets whose bases are unchanged (70 new x:alt lines), and 5 NEW presets Victory, Achievement, Defeat, Success and Fail (5 AUDIO lines, 11 x:alt lines). Only lines were added: AUDIOHASH 1076 -> 1081 and AUDIOXHASH 207 -> 288 moved for that reason, and every existing line is unchanged.
 # Melee redo + meeting in between (2026-11-14, AJ: "all of the melee redos are actually very good" and "Meet in between I think is a good choice"; SOUND-REVIEW.md): the 38 melee redo presets MOVED onto wave 43 in Hits / Melee (34 replaced in place; Visor Clank, Sword Ting, Hit and Crossbow Bolt keep today's base, their four x:alt lines ADDED), and 61 presets on the gun, energy, gun foley, voice and melee engines RE-LEVELLED (66 takes: only their Peak control and gain moved, a short take lifted half its gap to the level of the preset it replaced; meleePeak's row widened to 0-2). Those lines, their alt and nonorm lines and the AUDIOHASH and AUDIOXHASH totals moved; every other line is unchanged.
@@ -740,10 +741,10 @@ AUDIO Ricochet Zing 75c522bed144b6fd
 AUDIO Stardust Chime 6ae16c16fc5f32a7
 AUDIO Bouncy Blip 5be2b7f0ed06cfb5
 AUDIO Trumpet 7d6250b995583abe
-AUDIO Trombone f75e5b8091f47763
-AUDIO French Horn 2dfa13d8030204d9
+AUDIO Trombone ece2061d838980dc
+AUDIO French Horn 3d81ad117493ed0e
 AUDIO Tuba 91e68f6f93116c9e
-AUDIO Brass Section 1f6a120a2d778047
+AUDIO Brass Section b70b918896a6b565
 AUDIO Brass Stab 89b9b8838f3a60f4
 AUDIO Muted Trumpet 1968744dbe9e88c2
 AUDIO Sci-Fi Brass d5669737b85c18d8
@@ -762,7 +763,7 @@ AUDIO Stab 00199ad94556ffd2
 AUDIO Dist Guitar d404d9586943c5b3
 AUDIO Clean Guitar 04f2fd2c634ab7a9
 AUDIO E-Piano 99a1c0b8b0a0d203
-AUDIO Brass 0cdb67b443d5622d
+AUDIO Brass a8609c4cdcd39a55
 AUDIO Choir 17ea775655e29113
 AUDIO 808 Bass 7303861cec5e3ff9
 AUDIO Pick Bass 5a77900f21a0b67e
@@ -796,10 +797,10 @@ AUDIO Comp Guitar e2752da84cf5b2e3
 AUDIO Upright Bass bfe5a6f54a2cb6e6
 AUDIO Bowed Bass c37ad6e8d7cb1703
 AUDIO Low Reed d6f23c7985949012
-AUDIO Glockenspiel e8db25245334054f
+AUDIO Glockenspiel b962fc309e831b4f
 AUDIO Horn Section e366a6aacde44265
 AUDIO Wind Pad b0c77d3542679c8a
-AUDIO Piano a0bcbddc00b0d455
+AUDIO Piano 043fb054e942f475
 AUDIO Harp 5805b644d20406df
 AUDIO Accordion 98601370513750d7
 AUDIO Solo Violin 135260296ab6a846
@@ -842,7 +843,7 @@ AUDIO Ocarina 05a7d9761359e62b
 AUDIO Cello 324b4bc7251c409c
 AUDIO Mandolin e6efb11ddf43ebbe
 AUDIO Ukulele e39fb1284d832a61
-AUDIO Honky-tonk f2042d79702c4430
+AUDIO Honky-tonk 56d886c41becee4d
 AUDIO Funk Keys 60be1458d9b7680d
 AUDIO Tape Strings cd8397154ef19914
 AUDIO Guitarron 1d5b1fc9f6796a28
@@ -852,7 +853,7 @@ AUDIO Clarinet d6b4fef7e1083b92
 AUDIO Bandoneon 3867880aac8d6263
 AUDIO Xylophone d9df84e9974d004a
 AUDIO Super Saw c065436015c5edd5
-AUDIO Jazz Piano 11405c6c0ed78745
+AUDIO Jazz Piano 65888082c155dd51
 AUDIO Calliope de30ecdf2bc1cf02
 AUDIO Sho 2523bedff20f92d6
 AUDIO Deep Pad 552e7f21e31a2a76
@@ -862,7 +863,7 @@ AUDIO Koto Bass 3c816476f3a61ca5
 AUDIO Harp Comp 90145f0bb451cada
 AUDIO Reed Section 8c0fc048972ea00b
 AUDIO Didgeridoo 5d6bf420459fe799
-AUDIO Grand Piano b29ef7e8da3d95a1
+AUDIO Grand Piano 9a127f8c4ca75e69
 AUDIO Acoustic Guitar 44c327a4c510685b
 AUDIO Mandolin Chop 7c784bba16a778a9
 AUDIO Nylon Comp 7b434d6ccc59b05f
@@ -967,8 +968,8 @@ AUDIO Snow Footstep 3ed8103c173971b9
 AUDIO Ice Footstep fc8eefebc0354af4
 AUDIO Water Footstep dd6bb1b64cb4c4df
 AUDIO Carpet Footstep 9a14080ea27ddd0d
-AUDIO Blown Trombone 9668a7ad152c9ba8
-AUDIO Blown Trumpet 4f2c502611362b1d
+AUDIO Blown Trombone 89fe51bbe08faf90
+AUDIO Blown Trumpet 1cf3d0cfac1c0f0c
 AUDIO Blown Tuba 911286dcd9578711
 AUDIO Bowed Violin ccc7647e0e1fcd9b
 AUDIO Bowed Cello f45350dbad5b68ae
@@ -978,9 +979,9 @@ AUDIO Blown Saxophone 22168d3a34361c89
 AUDIO Blown Low Reed 3d772c7c89e15fbf
 AUDIO Struck Marimba 0e8fabafd013e0e6
 AUDIO Struck Xylophone 2bff511306c9e9b8
-AUDIO Struck Glockenspiel 1ea740823eafb27b
+AUDIO Struck Glockenspiel 60115b7597a51102
 AUDIO Plucked Music Box f10da6412ce342a4
-AUDIO Struck Piano 8bb763bff3c43a06
+AUDIO Struck Piano 62f9f07521f33fca
 AUDIO Blown Flute b6f82c2b0b04d816
 AUDIO Songbird Phrase 08ea985ef799327d
 AUDIO Night Insects 349bb12260c9c411
@@ -1083,7 +1084,7 @@ AUDIO nonorm:Magic Sparkle 4f3f8bfe0c42b7bb
 AUDIO sample:0 942b8c757e677266
 AUDIO sample:1 0b9d934993027dc6
 AUDIONAN 0
-AUDIOHASH 459228254156cfc0 over 1081
+AUDIOHASH 4466a08d5e04d65e over 1081
 AUDIO x:ir:Coin:1 5cfd7548039d3a9d
 AUDIO x:ir:Coin:0.4 ffce912929480e8c
 AUDIO x:ir:Laser:1 a6950da6aeefe1fb
@@ -1092,23 +1093,23 @@ AUDIO x:ir:Explosion:1 d82778eda76b30d8
 AUDIO x:ir:Explosion:0.4 e37a6339a4bdc5aa
 AUDIO x:granular-sample:0 bd22e8753db266c6
 AUDIO x:granular-sample:1 45c852229e3e1273
-AUDIO x:breed:0 b0ec189b283472cc
-AUDIO x:breed:1 9db90b4bfe2792fe
-AUDIO x:breed:2 82502ca999ca5b4c
-AUDIO x:breed:cross ca0348eb7f978978
-AUDIO x:vary:0 34ad1b1ac09cd0a1
-AUDIO x:vary:1 bba00ba43b312ac1
-AUDIO x:vary:2 c977bc61a0bbe0fc
-AUDIO x:vary:3 16be97797591e08c
+AUDIO x:breed:0 22e292d7da1dddcc
+AUDIO x:breed:1 c42481ef27f2473e
+AUDIO x:breed:2 2e62696938e2f38c
+AUDIO x:breed:cross b354d2cf30944b88
+AUDIO x:vary:0 c22b7e568fe4cf21
+AUDIO x:vary:1 1253f4f869bbd2c1
+AUDIO x:vary:2 88612039e9e0e45c
+AUDIO x:vary:3 99a497918716727c
 AUDIO x:pack:tres 0ee5611ee441bcfb
 AUDIO x:pack:zip f8d79bb8f0a928cb
 AUDIO x:layers:three f3f231f50efc13f8
 AUDIO x:layers:muted aef549e49a75c01b
 AUDIO x:layers:no-normalize 791384b1ee9f82be
 AUDIO x:layers:same-engine 794b64a73f5aa826
-AUDIO x:wizard:gunshot-metal 20220ae650e1b78d
-AUDIO x:wizard:explosion-fire-stone-8bit-9 73767e842784b593
-AUDIO x:wizard:pickup-1 0060ad3c4f8155bd
+AUDIO x:wizard:gunshot-metal 0169c6b2ce33022d
+AUDIO x:wizard:explosion-fire-stone-8bit-9 688dc06849118ad3
+AUDIO x:wizard:pickup-1 e5d08e348015117d
 AUDIO x:footsteps:grass 620a03050d7a103e
 AUDIO x:footsteps:dirt 60e4248d12df2110
 AUDIO x:footsteps:sand 222f3e2a92cab9bf
@@ -1368,8 +1369,8 @@ AUDIO x:alt:Success:1 89a911890cd7a256
 AUDIO x:alt:Success:2 8f7006c0267d98d5
 AUDIO x:alt:Fail:1 7e360501a62026f6
 AUDIO x:alt:Fail:2 170519b9edaf6350
-AUDIO x:vary:layered:0 9e4bf6185507b6fb
-AUDIO x:vary:layered:1 9a38cc7ae44d3e69
-AUDIO x:vary:layered:2 b81a7555c1deee0c
-AUDIO x:vary:layered:3 41e26eaa612c92b1
-AUDIOXHASH 42a497c660ff678d over 288
+AUDIO x:vary:layered:0 d611780ced5ffbcb
+AUDIO x:vary:layered:1 f004672a07cd7a79
+AUDIO x:vary:layered:2 d5d62b59e25b99fc
+AUDIO x:vary:layered:3 f1f524aeae774e31
+AUDIOXHASH 3ab97e93caa3e24e over 288

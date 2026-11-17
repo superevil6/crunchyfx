@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.3.0",
   "url": "https://sevi66.itch.io/crunchysfx",
-  "notes": "Fixes: no more clicking noise or silent playback after a long stretch without sounds (e.g. saving a Sound Kit to the Library), and a clearer message when your audio output is off."
+  "notes": "New: gunshots built for games, Layers (up to four engines in one sound), and the Wizard: three questions, nine sounds. Plus 23 new engines, 106 new presets and 502 reworked ones."
 }

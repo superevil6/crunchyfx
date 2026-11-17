@@ -1399,10 +1399,75 @@ matched the expected file on all 1372 lines. `tests/synth-bundle.test.mjs` 6c ho
 burst and a burst layer, at `envCurve` 1/3, 0.5, 2/3 and 1 (9 of its 11 rows fail on the old bundle; 2/3 is the
 control, since an odd exponent went negative and was clamped).
 
-**Pending AJ, not applied:** the **blown brass attack** (`mechanical-fixes-brass.json`: `attack` → 0.01 on six brass
-presets, which brings short notes from 9-19 cents flat to within a few cents but makes the start a tongued one rather
-than a swell; a taste call), and the **options** (`mechanical-fixes-options.json`: Thunderous Wallop redesigned on the
-blast engine, and the keys pushed to halfway with the master Limiter).
+**Decided (2026-11-14), see the next section:** AJ: **"I think the peak control for the piano and bell engines is a
+good idea, and I think the better attack makes more sense on the brass."** The blown brass attack landed as proposed;
+the keys went to halfway through a new Peak control on the piano and bar engines rather than through the master
+Limiter, so the options file's limiter keys were not applied. Thunderous Wallop's blast redesign in
+`mechanical-fixes-options.json` was not part of that answer and stays unapplied.
+
+## The brass attack and the keys' Peak control (2026-11-14)
+
+AJ, on the two items the mechanical fixes left open: **"I think the peak control for the piano and bell engines is a
+good idea, and I think the better attack makes more sense on the brass."** Measured on the exported engine, Normalize on
+(as Play sounds), loudness BS.1770.
+
+**The brass attack** (`tools/new-presets/mechanical-fixes-brass.json`, `soundtests/fixes/KEY.md` item 6): `attack` →
+0.01 on Brass, Blown Trumpet, Blown Trombone, Trombone, French Horn and Brass Section, nothing else (checked key by key
+against presets.js before writing; none has `_alts`). On these presets the amp envelope is the breath, and a 50-70 ms
+breath-in left a short note silent for 110-135 ms and then flat while the lips caught up; now it speaks in 35-50 ms and
+a 0.25 s note sits within 1-4 cents (Brass Section 19 → 11 flat). **The tubas are deliberately left alone**: at 87 Hz
+the lips take ~80 ms to lock whatever the breath does, and a short attack cracks their onset; their scoop needs the
+engine (the bore pre-loaded with the note's steady state, KEY.md's "engine route", not built).
+
+**The Peak control on the piano (25) and bar (24) engines.** `pianoPeak` (Piano panel) and `barPeak` (Bar panel), 0-2
+by 0.05, **default 0**: gunPeak's / meleePeak's control. The engine's output alone, before the chain, is brought to a
+0.9 peak and run through the app's own lookahead limiter (`limiterProcess`) at min(Peak, 1); past 1 a second full pass
+at Peak - 1 (`keyPeakControl`, dsp.js). Then, unlike the newer engines (which end on their own RMS level), it goes back
+to the engine's OWN peak, since these two never had a level stage: with Normalize off the strike stays where it was and
+only the ring comes up. The limiter acts on the struck note before the reverb and the master stage, so `gain` stays a
+plain level and Variations still matches a pack through it. Each row has help, sits in its engine's PARAMS group and is
+in DRAWN_IF_USED for its engine only. The modal engine (10) has none: none of the seven is modal.
+- **Byte-identical at 0.** The piano and bar are ticked sample by sample in the render loop; with the control on,
+  synth.js builds the note UP FRONT (the gun's way) by repeating the loop's pitch and damper arithmetic, and at 0 none of
+  that runs, so the loop is the code it always was. Proved three ways: every preset, every `_alts` take and every layer
+  of a layered preset rendered on the old and new bundles, Normalize on and off (3407 renders): **all identical** (a
+  64-bit hash over every sample's bytes, and the length);
+  the audio hash with the engine change alone matched every line once the two keys were stripped from the hashed
+  genomes; and `tests/synth-bundle.test.mjs` 6d shows a Peak too small to limit (1e-7) renders the loop's own note to the
+  last bit on a sweep, a vibrato with an onset, an arpeggiated burst and an early release.
+
+**The keys, "meet in between"** (`tools/new-presets/keys-peak-level.json`): half the gap from the audit's level to the
+section median (Keys & Mallets -7.4; Honky-tonk against Guitars & Plucked -10.9; Struck Glockenspiel against Bells /
+Mallets -8.1), the halfway marks KEY.md item 4 computed. Only the Peak key moved in each (gain already 1 from the
+mechanical fixes, no master Limiter, no `_alts`), the value on the row's 0.05 step nearest the mark. Every one is
+reached well short of Peak 1, peaks at 0.90, no NaN, no clipping, DC under 1.3e-7, and a Variations pack of Struck Piano,
+Honky-tonk and Struck Glockenspiel levels within 1 dB.
+
+| Preset | Section median | Audit | Now (gain 1) | Halfway | Peak | After |
+|---|---|---|---|---|---|---|
+| Struck Piano | -7.4 | -24.2 | -21.1 | -15.8 | `pianoPeak` 0.45 | -15.7 |
+| Glockenspiel | -7.4 | -23.7 | -20.6 | -15.6 | `barPeak` 0.45 | -15.5 |
+| Piano | -7.4 | -21.8 | -18.7 | -14.6 | `pianoPeak` 0.35 | -14.6 |
+| Jazz Piano | -7.4 | -21.3 | -18.2 | -14.4 | `pianoPeak` 0.3 | -14.4 |
+| Grand Piano | -7.4 | -21.2 | -18.1 | -14.3 | `pianoPeak` 0.3 | -14.3 |
+| Honky-tonk | -10.9 | -25.9 | -22.8 | -18.4 | `pianoPeak` 0.35 | -18.6 |
+| Struck Glockenspiel | -8.1 | -24.6 | -21.5 | -16.4 | `barPeak` 0.5 | -16.5 |
+
+| Brass preset | `attack` | LUFS before → after |
+|---|---|---|
+| Brass | 0.05 → 0.01 | -9.2 → -8.9 |
+| Blown Trumpet | 0.05 → 0.01 | -10.1 → -9.9 |
+| Blown Trombone | 0.05 → 0.01 | -10.2 → -10.1 |
+| Trombone | 0.05 → 0.01 | -10.3 → -10.2 |
+| French Horn | 0.07 → 0.01 | -9.9 → -9.7 |
+| Brass Section | 0.05 → 0.01 | -11.7 → -11.5 |
+
+**Audio hash:** the engine change alone, every line identical except the 15 breed / vary / wizard / vary:layered
+fixture lines and AUDIOXHASH, which moved only because the genomes gain `pianoPeak` / `barPeak` (all 1372 lines
+identical with those two keys stripped from the hashed JSON). Then the 13 presets' AUDIO lines and AUDIOHASH moved; none
+of them has an alt or a nonorm line, and every other line is unchanged. The web suite's
+`keys/peak-control-…-planned-levels` row holds the rows, Peak 0's byte identity on every piano and bar preset, and the
+seven levels (within 0.3 LU of halfway, at least 3.5 LU over Peak 0).
 
 ## The gap list (game sounds with no preset, 2026-10-29; a name check, so it overstates coverage)
 

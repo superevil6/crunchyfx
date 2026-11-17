@@ -3,9 +3,9 @@
  *  Everything here is compiled from the CrunchySFX sources; edit those and re-export instead.
  *  Exposes exactly one global: CrunchySynth { render, renderLayers, masterStage, encodeWav, decodePatch, DEFAULTS, PARAMS, SR, VERSION, BUILT, SHA256 }.
  *
- *    source   crunchysfx v1.2.1 (5dffdd1 — DIRTY WORKING TREE)
+ *    source   crunchysfx v1.2.1 (2286194)
  *    from     dsp.js + synth.js + the PARAMS defaults
- *    sha256   7f0f221055e4ee954d466e221c4187638382fbe6c76944421a9125fc5482605b   (of everything below this banner, with the SHA256 field blanked)
+ *    sha256   c6d62b0d8ddcf33e19c8db1f76a4566441c0d2ed456535dbc85b6d48d7af4225   (of everything below this banner, with the SHA256 field blanked)
  *
  *  Regenerate:  python3 tools/export-synth.py          (in the crunchysfx repo)
  *  Re-vendor:   python3 tools/pull-synth.py            (in the crunchyvfx repo)
@@ -11494,8 +11494,8 @@ for (const p of PARAMS) DEFAULTS[p[0]] = p[5];
 
 root.CrunchySynth = {
   VERSION: "1.2.1",
-  BUILT: "5dffdd1-dirty",
-  SHA256: "7f0f221055e4ee954d466e221c4187638382fbe6c76944421a9125fc5482605b",
+  BUILT: "2286194",
+  SHA256: "c6d62b0d8ddcf33e19c8db1f76a4566441c0d2ed456535dbc85b6d48d7af4225",
   SR: SR,
   PARAMS: PARAMS,
   DEFAULTS: DEFAULTS,

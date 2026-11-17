@@ -156,13 +156,15 @@ ok(!same(S.render(patch({ wave: 0, noise: 0.4, duration: 0.25 })), S.render(patc
   const maxDiff = (a, b) => { let m = 0; for (let i = 0; i < a.L.length; i++) m = Math.max(m, Math.abs(a.L[i] - b.L[i]), Math.abs(a.R[i] - b.R[i])); return m; };
   const CASES = [["plain", {}], ["sweep", { sweep: -0.3 }], ["vibrato", { vibDepth: 0.4, vibRate: 6, vibOnset: 0.1 }],
     ["burst + arp", { repeat: 3, rate: 6, arpStep: 4 }], ["early release", { release: 0.3, duration: 0.8 }]];
-  for (const [wave, key, extra] of [[25, "pianoPeak", { freq: 262 }], [24, "barPeak", { freq: 523, barType: 2 }]]) {
+  for (const [wave, key, extra] of [[25, "pianoPeak", { freq: 262 }], [24, "barPeak", { freq: 523, barType: 2, barMallet: 0.9 }]]) {
     for (const [lbl, over] of CASES) {
       const base = patch(Object.assign({ wave, duration: 0.6, reverb: 0.2 }, extra, over));
       const off = S.render(base), zero = S.render(Object.assign({}, base, { [key]: 0 })), tiny = S.render(Object.assign({}, base, { [key]: 1e-7 }));
       ok(same(off, zero) && maxDiff(off, tiny) < 2e-6, key + " " + lbl + ": 0 is byte-identical, and a Peak the limiter cannot touch renders the loop's own note (max diff " + maxDiff(off, tiny).toExponential(1) + ")");
     }
-    const base = patch(Object.assign({ wave, duration: 1.2 }, extra)), r0 = S.render(base);
+    // the key presets' own shape (no drive, the filter open, the damper held): the patch defaults' drive 0.1 flattens the
+    // strike on its own, so there a Peak has little left to tame and the lift reads as nothing
+    const base = patch(Object.assign({ wave, attack: 0, hold: 0, decay: 0, sustain: 1, release: 2.5, drive: 0, cutoff: 18000, duration: 2 }, extra)), r0 = S.render(base);
     for (const v of [0.5, 1, 2]) {
       const r = S.render(Object.assign({}, base, { [key]: v })), pk = peak(r);
       let fin = true; for (let i = 0; i < r.L.length; i++) if (!Number.isFinite(r.L[i]) || !Number.isFinite(r.R[i])) { fin = false; break; }
