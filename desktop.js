@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/desktop.js @ 2946011 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 23437ac9a6d4f4d10beb0386f8e4fa1bd4bb054d2fcb8fabe7002c07fcb1cdb1
+// GENERATED from crunchyCore/desktop.js @ f58de9f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 8d3af94b59b2cd11ec2cb41f7289b5b6cac30c63b9fdbcd09eb4a787ea88310a
 "use strict";
 // THE DESKTOP GATE AND THE WEB'S ONE INVITATION (CONSOLIDATION-PLAN.md §2–§3; crunchyTile TILE-DESIGN.md §11).
 //
@@ -46,7 +46,7 @@
 //   The pitch names the price when suite.js gives the tool a `price` (desktopTourPitch).
 // Entry points: the web's "Get the desktop app" (desktopMount) opens it; settings.js (build 3) adds a row for it.
 
-const DESKTOP_BUILD = 4;
+const DESKTOP_BUILD = 5;
 
 function desktopIs() { return typeof window !== "undefined" && !!window.__TAURI__; }
 
@@ -107,6 +107,8 @@ const DESKTOP_TOUR_APPS = {
                exts: [".gdshader", ".tres"], uses: "level_1.tscn", art: "crt" },
   character: { noun: "characters", where: "your scenes", samples: ["Hero", "Goblin", "Knight", "Mage", "Villager"],
                exts: [".png", ".tres", ".tscn"], uses: "level_1.tscn", art: "figure" },
+  texture:   { noun: "textures and models", where: "your 3D scenes", samples: ["Oak Chest", "Catacomb", "Hospital", "Mossy Wall", "Old Barrel"],
+               exts: ["model.glb", "atlas.png", "model.tscn"], uses: "level_1.tscn", art: "bricks" },
 };
 
 function desktopTourChild(self, engine) {
@@ -437,6 +439,24 @@ const DESKTOP_TOUR_ART = {
       px("rgb(" + ch(0) + "," + ch(1) + "," + ch(2) + ")", x, y);
     }
     [[0, 0], [n - 1, 0], [0, n - 1], [n - 1, n - 1]].forEach(function (c) { px("#1c1a24", c[0], c[1]); });
+  } },
+  bricks: { size: 16, draw: function (px, n, rnd, name, i) {           // a texture: a PS1 wall of bricks, lit edges, grime
+    const sets = [["#6b5a4a", "#9c8670", "#3a3029", "#2a221d"], ["#5a6170", "#8d95a6", "#33363f", "#24262d"],
+                  ["#7a3f2e", "#b06a4c", "#45241b", "#2e1912"], ["#4f5e3a", "#7f9457", "#2f3823", "#1f2617"],
+                  ["#6e6a5c", "#a5a08a", "#3e3b33", "#2b2924"]];
+    const c = sets[i % sets.length];
+    for (let row = 0; row < 4; row++) {
+      const off = row % 2 ? 4 : 0;
+      for (let b = -1; b < 3; b++) {
+        const x0 = b * 8 + off, y0 = row * 4;
+        for (let y = 0; y < 3; y++) for (let x = 0; x < 7; x++) {
+          const xx = x0 + x;
+          if (xx < 0 || xx >= n) continue;
+          px(y === 0 || x === 0 ? c[1] : y === 2 || x === 6 ? c[2] : c[0], xx, y0 + y);
+        }
+      }
+    }
+    for (let k = 0; k < 6; k++) px(c[3], Math.floor(rnd() * n), Math.floor(rnd() * n));
   } },
   figure: { size: 24, draw: function (px, n, rnd, name, i, accent) {    // a character: a little pixel figure
     const goblin = /goblin|orc|slime/.test(name);

@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 2946011 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 7be377fde736ec43f3da4b7b5f1be8557814b26912ab1ef9dba324c089b86151
+// GENERATED from crunchyCore/suite.js @ f58de9f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 5d57f6383e0d9d9dcd288826082b5160bd6bfd675e12cb33e009e51909006087
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -25,7 +25,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 16;
+const SUITE_BUILD = 17;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -55,6 +55,10 @@ const CRUNCHY_SUITE = [
   { id: "shader", name: "CrunchyShader", icon: "◐", pxi: "shade", accent: "#36d6e7",
     what: "Pixel-art shaders: looks, eras, CRT, sprite flashes and screen transitions, ready for Godot and the web.",
     web: "https://crunchyshader.com/", desktop: "https://sevi66.itch.io/crunchyshader", price: "$6" },   // desktop 1.0.0, 2026-10-23
+  // Added 2026-11-17 (build 17): CrunchyTexture. The web link and the store page are set on its launch day (its RELEASE.md).
+  { id: "texture", name: "CrunchyTexture", icon: "▤", pxi: "layers", accent: "#c9a26b",
+    what: "PS1-era textures, models and walkable places: dungeon sets, props and towns, ready for Godot, Unity and Blender.",
+    web: "", desktop: "" },
 ];
 // The mission statement's one line (crunchy-suite.md §1). Quoted, never reworded.
 const SUITE_LINE = "Crunchy tools make the art and sound for your game, so you can spend your time on the game.";
