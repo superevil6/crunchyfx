@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/crunchy-icons.js @ 02e6b4f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 127f78dd9285581628f0e286e26052736833cd0245273db263d5c70ee557fea6
+// GENERATED from crunchyCore/crunchy-icons.js @ d3ad1e7 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 618d100a67dbaa9c591efdbe6ecb1b8122bb94be2147c833463b716fddc379a0
 // CRUNCHY ICONS — the suite's pixel icons, drawn in code (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
 //
 // CANONICAL HERE; every Crunchy tool copies it unchanged, with crunchy-base.css (which styles `.pxi`). Emoji read
@@ -14,7 +14,7 @@
 // preview sheet shows them in); a name is never reused or removed. Add a batch per adoption round, not one per idea:
 // every stamp bump is a follow-up in every app that has pulled (pull-core moves the app's `want` for it).
 
-const CRUNCHY_ICONS_BUILD = 12;
+const CRUNCHY_ICONS_BUILD = 13;
 
 const CRUNCHY_ICONS = {
   // DOWNLOAD, LINK and GRID (build 2) — the three a header still needed an emoji for. Drawn for
@@ -778,6 +778,38 @@ const CRUNCHY_ICONS = {
     ".#..#.#.###.",
     ".##.#.#####.",
     "..########..",
+    "....####....",
+  ],
+  // THE PROMISE LINE (suite.js suitePromise, build 13): the suite's two promises under every app's header.
+  // CODE: angle brackets and a slash, "made by code", for "No generative AI". 1 px strokes: at 12 px the slash needs a
+  // clear column on each side or it fuses with a bracket.
+  code: [
+    "............",
+    "............",
+    ".......#....",
+    "..#....#.#..",
+    ".#....#...#.",
+    "#.....#....#",
+    "#....#.....#",
+    ".#...#....#.",
+    "..#.#....#..",
+    "....#.......",
+    "............",
+    "............",
+  ],
+  // CC0: the "zero" of the CC0 mark, a slashed zero in a ring.
+  cc0: [
+    "....####....",
+    "..##....##..",
+    ".#........#.",
+    ".#...##...#.",
+    "#...#..#...#",
+    "#...#.##...#",
+    "#...##.#...#",
+    "#...#..#...#",
+    ".#...##...#.",
+    ".#........#.",
+    "..##....##..",
     "....####....",
   ],
 };

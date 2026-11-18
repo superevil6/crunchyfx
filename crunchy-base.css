@@ -1,5 +1,5 @@
-/* GENERATED from crunchyCore/crunchy-base.css @ 02e6b4f by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
-/* sha256 0af4b186f9dd072b47955898cc3beafa0f3a8d2db787b3b37f08215a2c0c2525 */
+/* GENERATED from crunchyCore/crunchy-base.css @ d3ad1e7 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull. */
+/* sha256 2fadc3075599b3bab7d208c92e42cec6fb7a45a1b02104f42f2c59948c9b2658 */
 /* CRUNCHY BASE — the Crunchy suite's shared look (CONSOLIDATION-PLAN.md §9, TILE-DESIGN.md §105).
  *
  * CANONICAL HERE; every Crunchy tool copies it unchanged. It is linked BEFORE the app's own stylesheet, which
@@ -18,7 +18,7 @@
  * (sizes, padding, fonts on a particular control). An app's own stylesheet loads after this one, so it wins any tie.
  */
 :root {
-  --base-build: 17;
+  --base-build: 18;
   color-scheme: dark;
 
   /* FLOOR. The neutrals: one set for the whole suite. CONSUMERS MEASURE AGAINST THESE: CrunchyUI scores every kit's
@@ -197,6 +197,32 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
 .suite-here { color: var(--tool, var(--accent)); font-weight: 700; }
 .suite-foot { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
 @media (max-width: 520px) { .suite-tool { flex-wrap: wrap; } .suite-go { flex-direction: row; } }
+
+/* THE PROMISE LINE (suite.js suitePromise, base-build 18): the suite's two promises in one slim line right under the
+   header, in normal flow, one line tall: the header's own ground, the words in --muted, the icons in the app's --accent,
+   so it reads as the header's second row, never as a banner. Too narrow, suite.js shortens it (`.short`). DEFAULT, except
+   the square corners and the hard step on the popover (FLOOR). */
+.crunchy-promise { flex: none; display: flex; align-items: center; gap: 10px; height: 20px; padding: 0 14px; overflow: hidden;
+                   white-space: nowrap; background: var(--panel); border-bottom: 1px solid var(--line); color: var(--muted);
+                   font: 11.5px/20px var(--font); }
+.crunchy-promise .cp-part { display: inline-flex; align-items: center; min-width: 0; margin: 0; padding: 0; border: 0;
+                            background: none; box-shadow: none; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
+.crunchy-promise .cp-part:hover { color: var(--ink); background: none; text-decoration: underline; text-underline-offset: 2px; }
+.crunchy-promise .cp-part:active { transform: none; box-shadow: none; }
+.crunchy-promise .cp-part:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.crunchy-promise .cp-part .pxi { color: var(--accent); margin-right: 5px; vertical-align: 0; }
+.crunchy-promise .cp-sep { color: var(--muted); }
+.crunchy-promise .cp-short { display: none; }
+.crunchy-promise.short .cp-long { display: none; }
+.crunchy-promise.short .cp-short { display: inline; }
+.crunchy-promise-pop[hidden] { display: none !important; }
+.crunchy-promise-pop { position: fixed; z-index: 270; width: 320px; max-width: calc(100vw - 16px); padding: 10px 12px;
+                       background: var(--panel); border: 1px solid var(--line2); box-shadow: var(--lift); color: var(--ink);
+                       font: 12.5px/1.5 var(--font); white-space: normal; }
+.crunchy-promise-pop:focus { outline: none; }
+.crunchy-promise-pop .cp-pop-head { display: flex; align-items: center; font: 700 12px/1.4 var(--head); text-transform: uppercase;
+                                    letter-spacing: .04em; color: var(--accent); }
+.crunchy-promise-pop p { margin: 6px 0 0; color: var(--muted); }
 
 /* THE SETTINGS DIALOG (settings.js): a row per preference, the label and its explanation left, the control right. */
 .set-overlay[hidden] { display: none !important; }
