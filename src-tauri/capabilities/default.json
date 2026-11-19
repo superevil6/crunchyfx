@@ -46,6 +46,12 @@
           "url": "https://crunchybgm.com/*"
         },
         {
+          "url": "https://crunchyshader.com/*"
+        },
+        {
+          "url": "https://crunchytexture.com/*"
+        },
+        {
           "url": "mailto:*"
         }
       ]

@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ d3ad1e7 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 33c208d4b5f86fcb5e0d8f653751e08c7dc3072dbd463575505856b40174292b
+// GENERATED from crunchyCore/suite.js @ 4e7c941 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 961b917eceb6867fcb8ae99b17c4055200af8207ba942b35f07cfe1c03571edb
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -29,7 +29,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 19;
+const SUITE_BUILD = 21;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -45,7 +45,7 @@ const CRUNCHY_SUITE = [
     web: "https://crunchyvfx.com/", desktop: "https://sevi66.itch.io/crunchyvfx", price: "$6" },
   { id: "bgm", name: "CrunchyBGM", icon: "♫", pxi: "music", accent: "#3ddc97",
     what: "Background music: whole game scores in seamless loops, with layers your engine mixes live.",
-    web: "https://crunchybgm.com/", desktop: "" },
+    web: "https://crunchybgm.com/", desktop: "https://sevi66.itch.io/crunchybgm", price: "$6" },   // launch: build 21, 2026-11-19
   // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. No domain or store page yet.
   { id: "character", name: "CrunchyCharacter", icon: "♟", pxi: "person", accent: "#ff5c8a",
     what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
@@ -59,10 +59,10 @@ const CRUNCHY_SUITE = [
   { id: "shader", name: "CrunchyShader", icon: "◐", pxi: "shade", accent: "#36d6e7",
     what: "Pixel-art shaders: looks, eras, CRT, sprite flashes and screen transitions, ready for Godot and the web.",
     web: "https://crunchyshader.com/", desktop: "https://sevi66.itch.io/crunchyshader", price: "$6" },   // desktop 1.0.0, 2026-10-23
-  // Added 2026-11-17 (build 17): CrunchyTexture. The web link and the store page are set on its launch day (its RELEASE.md).
+  // Added 2026-11-17 (build 17): CrunchyTexture. Build 20 (2026-11-18): its launch day's links and price (its RELEASE.md).
   { id: "texture", name: "CrunchyTexture", icon: "▤", pxi: "layers", accent: "#c9a26b",
     what: "Retro 3D textures, low-poly models and walkable places: dungeon sets, props and towns, ready for Godot, Unity and Blender.",
-    web: "", desktop: "" },
+    web: "https://crunchytexture.com/", desktop: "https://sevi66.itch.io/crunchytexture", price: "$6" },   // launch: build 20, 2026-11-18
 ];
 // The mission statement's one line (crunchy-suite.md §1). Quoted, never reworded.
 const SUITE_LINE = "Crunchy tools make the art and sound for your game, so you can spend your time on the game.";
