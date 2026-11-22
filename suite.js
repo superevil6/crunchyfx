@@ -1,5 +1,5 @@
-// GENERATED from crunchyCore/suite.js @ 7e9bc7b by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
-// sha256 961b917eceb6867fcb8ae99b17c4055200af8207ba942b35f07cfe1c03571edb
+// GENERATED from crunchyCore/suite.js @ 3a2ad24 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// sha256 4765dcc3aff2f8114f55e1216decf4e6353eadf12c0ff48335fe4028932b8129
 "use strict";
 // THE CRUNCHY SUITE (TILE-DESIGN.md §80): one button, one dialog listing every Crunchy tool with a line
 // about what it makes and where to get it. AJ, 2026-10-09: "A Crunchy Suite Button that pops open a modal
@@ -29,7 +29,7 @@
 // PRICE (build 9): `price` is the desktop app's one-time price as shown ("$6"), set only beside a `desktop` link;
 // desktop.js's tour says it in its pitch. Change it HERE when the store page's price changes.
 
-const SUITE_BUILD = 21;
+const SUITE_BUILD = 22;
 const CRUNCHY_SUITE = [
   { id: "tile", name: "CrunchyTile", icon: "▦", pxi: "grid", accent: "#ff7a45",
     what: "Tilesets, backdrops, objects and rooms for top-down and side-scrolling games, ready for Godot and Unity.",
@@ -46,10 +46,11 @@ const CRUNCHY_SUITE = [
   { id: "bgm", name: "CrunchyBGM", icon: "♫", pxi: "music", accent: "#3ddc97",
     what: "Background music: whole game scores in seamless loops, with layers your engine mixes live.",
     web: "https://crunchybgm.com/", desktop: "https://sevi66.itch.io/crunchybgm", price: "$6" },   // launch: build 21, 2026-11-19
-  // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. No domain or store page yet.
+  // Added 2026-10-09 (build 3) from CrunchyCharacter, at AJ's request. Build 22 (2026-11-21): live on the web at
+  // crunchycharacter.com (AJ: "so people know to look for it"); no store page yet, so no desktop link or price.
   { id: "character", name: "CrunchyCharacter", icon: "♟", pxi: "person", accent: "#ff5c8a",
     what: "Animated pixel-art characters for top-down RPGs: idle and walk in every facing, ready for Godot and RPG Maker.",
-    web: "", desktop: "" },
+    web: "https://crunchycharacter.com/", desktop: "" },   // web launch: build 22, 2026-11-21
   // Added 2026-10-13 (build 6) as CrunchyItems (SUITE-LINKS §5). Build 11 (2026-10-18): renamed CrunchyItem (AJ: "misnamed
   // by me"), live on the web at crunchyitem.com. The id stays "items" (every app's tests and links key on it).
   { id: "items", name: "CrunchyItem", icon: "⚔", pxi: "sword", accent: "#a6e22e",
