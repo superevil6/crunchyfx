@@ -88,6 +88,28 @@
       "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
     },
     {
+      // THE WHOLE COMMIT ROUND (crunchyCore tools/suite-commit.mjs, added as a task 2026-11-22): commits and pushes the core
+      // (its tests first), then in each app a plain pull, what it would commit SPLIT into the pulled core copies and that
+      // app's OWN changes, and commit [Y] / message [m] / skip [s] / diff [d], then push; a table at the end. Unlike "Commit
+      // crunchyCore and every app", the apps' own changes go in too (you see each list first). Answer s to skip an app
+      // (CrunchyCharacter is Dowel's).
+      "label": "Commit round: crunchyCore + every app",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/suite-commit.mjs\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+    },
+    {
+      // The same round as a plan only: changes NOTHING (no pull, commit or push; the pulls predicted in throwaway copies).
+      "label": "Commit round: dry run (changes nothing)",
+      "type": "shell",
+      "command": "node \"${workspaceFolder}/../crunchyCore/tools/suite-commit.mjs\" --dry",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+    },
+    {
       // crunchyCore, then EVERY app (crunchyCore tools/core-sync.mjs, AJ 2026-10-12): commits and pushes the core, then in
       // Tile, UI, SFX, VFX and BGM pulls it and commits ONLY what the pull changed (the copies, the hook, index.html's
       // wants), with the core's message. Your own changes in each app stay uncommitted; an app with anything already
