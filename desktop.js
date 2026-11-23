@@ -1,4 +1,4 @@
-// GENERATED from crunchyCore/desktop.js @ 96185e8 by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
+// GENERATED from crunchyCore/desktop.js @ a1ba1cd by tools/pull-core.mjs. DO NOT EDIT HERE: edit crunchyCore, then pull.
 // sha256 8d3af94b59b2cd11ec2cb41f7289b5b6cac30c63b9fdbcd09eb4a787ea88310a
 "use strict";
 // THE DESKTOP GATE AND THE WEB'S ONE INVITATION (CONSOLIDATION-PLAN.md §2–§3; crunchyTile TILE-DESIGN.md §11).
