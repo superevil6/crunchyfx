@@ -4440,9 +4440,16 @@ async function copyShareLink() {
 }
 // Hand the current sound straight to a sibling app: same ?s= patch link, pointed at its domain,
 // opened in a new tab. The sibling reads ?s= on load + renders it via the vendored engine — no
-// copy/paste. Web only for now; the desktop (Tauri) shell opener is deferred.
+// copy/paste. On the desktop (Tauri) window.open does nothing, so there the OS browser opens it through the opener plugin
+// (2026-11-24, the cross-link audit: the buttons were dead on the desktop; crunchyvfx.com and crunchybgm.com are in its scope).
 function sendSoundTo(baseUrl, appName, target) {
   const enc = encodePatch(shareName.value);
+  if (window.__TAURI__ && window.__TAURI__.opener && typeof window.__TAURI__.opener.openUrl === "function") {
+    window.__TAURI__.opener.openUrl(baseUrl + "?s=" + enc);
+    shareMsg.textContent = "↗ Opening " + appName + " in your browser…";
+    setTimeout(() => { shareMsg.textContent = ""; }, 2500);
+    return;
+  }
   // A named `target` REUSES an already-open tab (navigates it) instead of piling up new tabs;
   // "_blank" always opens a fresh one. noopener is dropped for a named target — it severs the
   // tab link that name-reuse relies on, and these are our own sibling apps (cross-origin, so the
